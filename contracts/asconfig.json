@@ -1,0 +1,17 @@
+{
+  "targets": {
+    "release": {
+      "outFile": "build/prediction.wasm",
+      "textFile": "build/prediction.wat",
+      "sourceMap": true,
+      "debug": false,
+      "optimizeLevel": 3,
+      "shrinkLevel": 0,
+      "converge": false,
+      "noAssert": false
+    }
+  },
+  "options": {
+    "bindings": "esm"
+  }
+}
