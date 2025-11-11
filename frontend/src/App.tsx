@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ConnectWallet } from '@proton/web-sdk';
+import ConnectWallet from '@proton/web-sdk';
 import './App.css';
 import MarketsList from './components/MarketsList';
 import MarketDetail from './components/MarketDetail';
