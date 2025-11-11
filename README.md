@@ -107,124 +107,41 @@ proton-prediction-market/
 - **Fee Structure**: 0.01% charged to taker, maker receives full amount minus fee
 - **Price Discovery**: Market-driven through order book (0-1 XPR per share)
 
-## Setup Instructions
+## Installation
 
-### Prerequisites
+For detailed installation, deployment, and configuration instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
-- **Node.js v22.x** (recommended for production) or v16.x/v18.x/v20.x
-  - Use [nvm](https://github.com/nvm-sh/nvm) to manage Node.js versions
-  - For AlmaLinux/RHEL: `gcc-c++`, `make`, `python3`, `openssl-devel` (for native module compilation)
-- **npm** (comes with Node.js) or **yarn**
-- **Proton testnet account** with XPR tokens
-  - Create at https://testnet.protonchain.com
+The installation guide covers:
+- Prerequisites and system requirements (Node.js 22, AlmaLinux packages)
+- Smart contract setup and deployment
+- Frontend setup and configuration
+- **cPanel deployment** (step-by-step with .htaccess configuration)
+- Other hosting providers (Vercel, Netlify, GitHub Pages)
+- User testing guide (for traders and admins)
+- Troubleshooting common issues
 
-### Smart Contract Setup
+### Quick Start
 
-1. **Install Node.js 22** (recommended):
 ```bash
-# Using nvm (Node Version Manager)
-nvm install 22
-nvm use 22
+# Install Node.js 22
+nvm install 22 && nvm use 22
+
+# Smart contract
+cd contracts && npm install && npm run build
+
+# Frontend - copy example.env and configure
+cd ../frontend
+cp example.env .env
+# Edit .env with your contract account name
+npm install && npm start
 ```
 
-2. **Navigate to the contracts directory**:
-```bash
-cd contracts
-```
+**Environment Configuration:**
+- Copy `frontend/example.env` to `frontend/.env`
+- Update `REACT_APP_CONTRACT_NAME` with your deployed contract account
+- See [INSTALLATION.md](INSTALLATION.md) for detailed configuration options
 
-3. **Install dependencies**:
-```bash
-npm install
-```
-This will install `proton-asc` (AssemblyScript compiler), `proton-tsc` (SDK), and other dependencies.
-
-4. **Compile the smart contract**:
-```bash
-npm run build
-```
-This runs `proton-asc assembly/prediction.contract.ts --target release` to compile the contract.
-
-5. **Verify the build**:
-The compiled WASM and ABI files will be in `assembly/target/`:
-- `prediction.contract.wasm` - Compiled WebAssembly binary
-- `prediction.contract.abi` - Contract ABI (Application Binary Interface)
-
-### Frontend Setup
-
-1. **Ensure Node.js 22 is active**:
-```bash
-nvm use 22
-node --version  # Should show v22.x.x
-```
-
-2. **Navigate to the frontend directory**:
-```bash
-cd frontend
-```
-
-3. **Install dependencies**:
-```bash
-npm install
-```
-This will install React, @proton/web-sdk, and other dependencies. The `postinstall` script will automatically apply patches via `patch-package` to fix Node.js 22 compatibility issues.
-
-4. **Configure environment variables**:
-Create a `.env` file in the `frontend/` directory with the following:
-```env
-REACT_APP_PROTON_ENDPOINT=https://testnet.protonchain.com
-REACT_APP_CONTRACT_NAME=your-contract-account
-REACT_APP_CHAIN_ID=71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd
-```
-Replace `your-contract-account` with your deployed contract account name.
-
-5. **Start the development server**:
-```bash
-npm start
-```
-The app will be available at `http://localhost:3000` and will automatically reload when you make changes.
-
-## Deployment
-
-### Smart Contract Deployment
-
-1. **Create a Proton testnet account**:
-   - Visit https://testnet.protonchain.com
-   - Create an account and fund it with testnet XPR tokens
-
-2. **Install Proton CLI** (if not already installed):
-```bash
-npm install -g @proton/cli
-```
-
-3. **Deploy the contract**:
-```bash
-cd contracts
-proton contract deploy your-contract-account ./assembly/target/prediction.contract.wasm ./assembly/target/prediction.contract.abi
-```
-Replace `your-contract-account` with your Proton account name.
-
-4. **Set contract permissions**:
-Configure the contract to allow inline actions and set appropriate permissions for admin operations.
-
-### Frontend Deployment
-
-1. **Build the production bundle**:
-```bash
-cd frontend
-npm run build
-```
-This creates an optimized production build in the `build/` directory.
-
-2. **Deploy to hosting provider**:
-   - **Vercel**: `vercel deploy`
-   - **Netlify**: Drag and drop the `build/` folder or use Netlify CLI
-   - **GitHub Pages**: Push the `build/` folder to a `gh-pages` branch
-   - **Any static host**: Upload the contents of the `build/` directory
-
-3. **Configure environment variables** on your hosting provider:
-   - `REACT_APP_PROTON_ENDPOINT` - Your Proton RPC endpoint
-   - `REACT_APP_CONTRACT_NAME` - Your deployed contract account
-   - `REACT_APP_CHAIN_ID` - Proton chain ID
+For production deployment (including cPanel), see [INSTALLATION.md](INSTALLATION.md).
 
 ## Usage Guide
 
@@ -273,73 +190,6 @@ This creates an optimized production build in the `build/` directory.
 - Advanced order types (stop-loss, take-profit)
 - Liquidity incentives and market maker rewards
 - Mobile app with native wallet integration
-
-## Development Notes
-
-### Node.js Version Compatibility
-
-**Node.js 22 Support (Recommended for Production)**
-
-This project now supports Node.js 22 for both smart contract compilation and frontend builds. Node.js 22 is recommended for production deployments, especially on AlmaLinux systems.
-
-**Smart Contract Build:**
-- Uses `proton-asc` compiler (proton-tsc CLI is not available in v0.3.58)
-- Builds successfully with Node.js 16, 18, 20, and 22
-- Minor deprecation warning from AssemblyScript on Node.js 22 (non-blocking)
-
-**Frontend Build:**
-- Requires patch-package to fix @proton/js ESM import compatibility
-- Patch automatically applied via postinstall script
-- Builds successfully with Node.js 22
-
-**Quick Start with Node.js 22:**
-```bash
-nvm install 22
-nvm use 22
-
-# Smart contract
-cd contracts && npm install && npm run build
-
-# Frontend
-cd ../frontend && npm install && npm run build
-```
-
-**Legacy Node.js 16 Support:**
-Node.js 16 is still supported but no longer required. Use nvm to manage Node versions:
-```bash
-nvm install 16
-nvm use 16
-```
-
-### AlmaLinux Deployment Requirements
-
-For deploying on AlmaLinux 8/9 with Node.js 22, ensure the following system packages are installed for native module compilation (particularly secp256k1):
-
-```bash
-# AlmaLinux 8/9
-sudo dnf install -y gcc-c++ make python3 openssl-devel
-
-# Verify installations
-gcc --version
-make --version
-python3 --version
-```
-
-These packages are required for building native dependencies during `npm install`.
-
-### AssemblyScript Version
-
-The project uses AssemblyScript v0.18 (required by proton-asc). Do not upgrade to newer versions as they are incompatible.
-
-### Testing
-
-The smart contract should be thoroughly tested on Proton testnet before mainnet deployment:
-
-1. Create test markets with various scenarios
-2. Test order matching with multiple users
-3. Verify collateral handling for short positions
-4. Test market resolution and claiming
-5. Verify fee calculations
 
 ## Contributing
 
