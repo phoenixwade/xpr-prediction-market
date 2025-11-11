@@ -107,62 +107,45 @@ proton-prediction-market/
 - **Fee Structure**: 0.01% charged to taker, maker receives full amount minus fee
 - **Price Discovery**: Market-driven through order book (0-1 XPR per share)
 
-## Setup Instructions
+## Installation
 
-### Prerequisites
+For detailed installation, deployment, and configuration instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
 
-- Node.js v16.x (required for proton-tsc compatibility)
-- npm or yarn
-- Proton testnet account with XPR tokens
+The installation guide covers:
+- Prerequisites and system requirements (Node.js 22, AlmaLinux packages)
+- Smart contract setup and deployment
+- Frontend setup and configuration
+- **cPanel deployment** (step-by-step with .htaccess configuration)
+- Other hosting providers (Vercel, Netlify, GitHub Pages)
+- User testing guide (for traders and admins)
+- Troubleshooting common issues
 
-### Smart Contract Setup
+### Quick Start
 
-1. Navigate to the contracts directory:
 ```bash
-cd contracts
+# Install Node.js 22
+nvm install 22 && nvm use 22
+
+# Smart contract
+cd contracts && npm install && npm run build
+
+# Frontend - copy example.env and configure
+cd ../frontend
+cp example.env .env
+# Edit .env with your contract account name
+npm install && npm start
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Compile the smart contract:
-```bash
-npm run build
-```
-
-The compiled WASM and ABI files will be in `assembly/target/`.
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Configure environment variables in `.env`:
-```
-REACT_APP_PROTON_ENDPOINT=https://testnet.protonchain.com
-REACT_APP_CONTRACT_NAME=your-contract-account
-REACT_APP_CHAIN_ID=71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd
-```
-
-4. Start the development server:
-```bash
-npm start
-```
-
-The app will be available at `http://localhost:3000`.
+**Environment Configuration:**
+- Copy `frontend/example.env` to `frontend/.env`
+- Update `REACT_APP_CONTRACT_NAME` with your deployed contract account
+- See [INSTALLATION.md](INSTALLATION.md) for detailed configuration options
 
 ## Deployment
 
-### Quick Start - cPanel Deployment
+For production deployment (including cPanel), see [INSTALLATION.md](INSTALLATION.md).
+
+### Automated Deployment Scripts
 
 This project includes automated deployment scripts for cPanel hosting:
 
@@ -181,36 +164,10 @@ This project includes automated deployment scripts for cPanel hosting:
 # Upload deploy-package/ contents to /home/pawnline/public_html/
 ```
 
-📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions**, including:
-- Environment configuration
-- cPanel setup guide
-- Troubleshooting tips
-- Security best practices
-
-### Smart Contract Deployment
-
-1. Create a Proton testnet account at https://testnet.protonchain.com
-
-2. Deploy the contract using Proton CLI:
-```bash
-proton contract deploy your-contract-account ./assembly/target/prediction.contract.wasm ./assembly/target/prediction.contract.abi
-```
-
-3. Set contract permissions to allow inline actions
-
-### Other Hosting Providers
-
-For Vercel, Netlify, GitHub Pages, or other hosting:
-
-1. Build the production bundle:
-```bash
-cd frontend
-npm run build
-```
-
-2. Deploy the `build/` directory to your hosting provider
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for additional deployment automation details**, including:
+- Automated deployment script usage
+- .htaccess configuration for React Router
+- Deployment troubleshooting tips
 
 ## Usage Guide
 
@@ -259,31 +216,6 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 - Advanced order types (stop-loss, take-profit)
 - Liquidity incentives and market maker rewards
 - Mobile app with native wallet integration
-
-## Development Notes
-
-### Node.js Version
-
-The smart contract compilation requires Node.js v16.x due to proton-tsc dependencies. Use nvm to manage Node versions:
-
-```bash
-nvm install 16
-nvm use 16
-```
-
-### AssemblyScript Version
-
-The project uses AssemblyScript v0.18 (required by proton-asc). Do not upgrade to newer versions as they are incompatible.
-
-### Testing
-
-The smart contract should be thoroughly tested on Proton testnet before mainnet deployment:
-
-1. Create test markets with various scenarios
-2. Test order matching with multiple users
-3. Verify collateral handling for short positions
-4. Test market resolution and claiming
-5. Verify fee calculations
 
 ## Contributing
 

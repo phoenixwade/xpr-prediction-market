@@ -1,0 +1,13 @@
+diff --git a/node_modules/@proton/js/dist/index.mjs b/node_modules/@proton/js/dist/index.mjs
+index 5d6701e..d9e4f9b 100644
+--- a/node_modules/@proton/js/dist/index.mjs
++++ b/node_modules/@proton/js/dist/index.mjs
+@@ -1115,7 +1115,7 @@ var signatureToString = function(signature) {
+     }
+ };
+ // src/rpc/index.ts
+-import "abortcontroller-polyfill/dist/polyfill-patch-fetch";
++import "abortcontroller-polyfill/dist/polyfill-patch-fetch.js";
+ var arrayToHex = function(data) {
+     var result = "";
+     var _iteratorNormalCompletion = true, _didIteratorError = false, _iteratorError = undefined;
