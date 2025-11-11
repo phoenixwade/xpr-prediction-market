@@ -279,3 +279,6 @@ For issues, questions, or feature requests, please open an issue on GitHub.
 - Built on the Proton blockchain
 - Inspired by Polymarket, Kalshi, and PredictIt
 - Uses Proton WebAuth for seamless wallet integration
+
+---
+*This is a verification change to test the PR workflow.*
