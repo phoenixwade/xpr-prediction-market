@@ -96,7 +96,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   {market.resolved ? 'Resolved' : 'Active'}
                 </span>
                 <span className="market-expiry">
-                  Expires: {new Date(market.expire * 1000).toLocaleDateString()}
+                  Expires: {new Date(market.expire).toLocaleDateString()}
                 </span>
               </div>
               {market.resolved && (
