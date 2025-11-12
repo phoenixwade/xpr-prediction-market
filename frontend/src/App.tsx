@@ -49,7 +49,7 @@ function App() {
         linkOptions: {
           endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com'],
           chainId: process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd',
-          restoreSession: true,
+          storagePrefix: process.env.REACT_APP_NAME || 'proton-prediction-market',
         },
         transportOptions: {
           requestAccount: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
@@ -65,9 +65,21 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (session) {
-      session.link.removeSession(session.auth.actor, session.auth.permission);
+      try {
+        const appIdentifier = process.env.REACT_APP_NAME || 'proton-prediction-market';
+        const chainId = process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd';
+        await session.link.removeSession(appIdentifier, session.auth, chainId);
+        
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const storagePrefix = appIdentifier;
+          localStorage.removeItem(`${storagePrefix}-wallet-type`);
+          localStorage.removeItem(`${storagePrefix}-user-auth`);
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
       setSession(null);
     }
   };
