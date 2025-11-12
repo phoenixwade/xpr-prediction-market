@@ -29,12 +29,15 @@ class Transfer {
 
 @contract
 export class PredictionMarketContract extends Contract {
-  marketsTable: TableStore<MarketTable> = new TableStore<MarketTable>(this.receiver, this.receiver);
-  balancesTable: TableStore<BalanceTable> = new TableStore<BalanceTable>(this.receiver, this.receiver);
-  configTable: TableStore<ConfigTable> = new TableStore<ConfigTable>(this.receiver, this.receiver);
+  marketsTable: TableStore<MarketTable>;
+  balancesTable: TableStore<BalanceTable>;
+  configTable: TableStore<ConfigTable>;
 
   constructor(receiver: Name, firstReceiver: Name, action: Name) {
     super(receiver, firstReceiver, action);
+    this.marketsTable = new TableStore<MarketTable>(this.receiver, this.receiver);
+    this.balancesTable = new TableStore<BalanceTable>(this.receiver, this.receiver);
+    this.configTable = new TableStore<ConfigTable>(this.receiver, this.receiver);
   }
 
   @action("transfer", notify)
