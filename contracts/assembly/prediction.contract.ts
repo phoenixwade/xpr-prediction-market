@@ -416,7 +416,12 @@ export class PredictionMarketContract extends Contract {
   }
 
   private getNextMarketId(): u64 {
-    const config = this.getConfig();
+    let config = this.configTable.get(0);
+    if (config == null) {
+      config = new ConfigTable(0, 2, 1);
+      this.configTable.set(config, this.receiver);
+      return 1;
+    }
     const id = config.nextMarketId;
     config.nextMarketId += 1;
     this.configTable.update(config, this.receiver);
@@ -424,7 +429,12 @@ export class PredictionMarketContract extends Contract {
   }
 
   private getNextOrderId(): u64 {
-    const config = this.getConfig();
+    let config = this.configTable.get(0);
+    if (config == null) {
+      config = new ConfigTable(0, 1, 2);
+      this.configTable.set(config, this.receiver);
+      return 1;
+    }
     const id = config.nextOrderId;
     config.nextOrderId += 1;
     this.configTable.update(config, this.receiver);
