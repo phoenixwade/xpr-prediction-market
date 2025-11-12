@@ -12,7 +12,7 @@ import {
   InlineAction,
   PermissionLevel
 } from "proton-tsc";
-import { MarketTable, OrderTable, PositionTable, BalanceTable } from "./tables";
+import { MarketTable, OrderTable, PositionTable, BalanceTable, ConfigTable } from "./tables";
 
 const XPR_SYMBOL = new Symbol("XPR", 4);
 const ONE_XPR: i64 = 10000;
@@ -29,11 +29,9 @@ class Transfer {
 
 @contract
 export class PredictionMarketContract extends Contract {
-  marketsTable: TableStore<MarketTable> = new TableStore<MarketTable>(this.receiver);
-  balancesTable: TableStore<BalanceTable> = new TableStore<BalanceTable>(this.receiver);
-
-  private nextMarketId: u64 = 1;
-  private nextOrderId: u64 = 1;
+  marketsTable: TableStore<MarketTable> = new TableStore<MarketTable>(this.receiver, this.receiver);
+  balancesTable: TableStore<BalanceTable> = new TableStore<BalanceTable>(this.receiver, this.receiver);
+  configTable: TableStore<ConfigTable> = new TableStore<ConfigTable>(this.receiver, this.receiver);
 
   constructor(receiver: Name, firstReceiver: Name, action: Name) {
     super(receiver, firstReceiver, action);
@@ -408,11 +406,28 @@ export class PredictionMarketContract extends Contract {
     }
   }
 
+  private getConfig(): ConfigTable {
+    let config = this.configTable.get(0);
+    if (config == null) {
+      config = new ConfigTable(0, 1, 1);
+      this.configTable.set(config, this.receiver);
+    }
+    return config;
+  }
+
   private getNextMarketId(): u64 {
-    return this.nextMarketId++;
+    const config = this.getConfig();
+    const id = config.nextMarketId;
+    config.nextMarketId += 1;
+    this.configTable.update(config, this.receiver);
+    return id;
   }
 
   private getNextOrderId(): u64 {
-    return this.nextOrderId++;
+    const config = this.getConfig();
+    const id = config.nextOrderId;
+    config.nextOrderId += 1;
+    this.configTable.update(config, this.receiver);
+    return id;
   }
 }
