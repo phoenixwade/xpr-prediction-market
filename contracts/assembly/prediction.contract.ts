@@ -418,9 +418,9 @@ export class PredictionMarketContract extends Contract {
   private getNextMarketId(): u64 {
     let config = this.configTable.get(0);
     if (config == null) {
-      config = new ConfigTable(0, 2, 1);
+      config = new ConfigTable(0, 101, 1);
       this.configTable.set(config, this.receiver);
-      return 1;
+      return 100;
     }
     const id = config.nextMarketId;
     config.nextMarketId += 1;
