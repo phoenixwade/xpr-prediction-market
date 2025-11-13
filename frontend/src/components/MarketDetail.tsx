@@ -68,27 +68,74 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
     setLoading(true);
     try {
-      const priceAmount = parseFloat(price) * 10000;
+      const priceFloat = parseFloat(price);
+      const priceAmount = priceFloat * 10000;
       const quantityInt = parseInt(quantity);
 
-      await session.transact({
-        actions: [{
-          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-          name: 'placeorder',
+      const isBid = (orderType === 'buy') !== (outcome === 'no');
+
+      let lockAmount = 0;
+
+      if (isBid) {
+        lockAmount = priceFloat * quantityInt;
+      } else {
+        const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+        const positionResult = await rpc.get_table_rows({
+          code: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          scope: session.auth.actor,
+          table: 'positions',
+          lower_bound: marketId,
+          upper_bound: marketId,
+          limit: 1,
+        });
+
+        let heldShares = 0;
+        if (positionResult.rows.length > 0) {
+          const position = positionResult.rows[0];
+          heldShares = outcome === 'yes' ? position.yes_shares : position.no_shares;
+        }
+
+        const shortedShares = Math.max(0, quantityInt - heldShares);
+        lockAmount = shortedShares * 1.0;
+      }
+
+      const actions: any[] = [];
+
+      if (lockAmount > 0) {
+        actions.push({
+          account: process.env.REACT_APP_TOKEN_CONTRACT || 'eosio.token',
+          name: 'transfer',
           authorization: [{
             actor: session.auth.actor,
             permission: session.auth.permission,
           }],
           data: {
-            account: session.auth.actor,
-            market_id: marketId,
-            outcome: outcome,
-            bid: orderType === 'buy',
-            price: `${priceAmount.toFixed(0)} XPR`,
-            quantity: quantityInt,
+            from: session.auth.actor,
+            to: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+            quantity: `${lockAmount.toFixed(4)} XPR`,
+            memo: `Deposit for order ${marketId}`,
           },
+        });
+      }
+
+      actions.push({
+        account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+        name: 'placeorder',
+        authorization: [{
+          actor: session.auth.actor,
+          permission: session.auth.permission,
         }],
+        data: {
+          account: session.auth.actor,
+          market_id: marketId,
+          outcome: outcome,
+          bid: orderType === 'buy',
+          price: `${priceAmount.toFixed(0)} XPR`,
+          quantity: quantityInt,
+        },
       });
+
+      await session.transact({ actions });
 
       alert('Order placed successfully!');
       setPrice('');

@@ -5,6 +5,7 @@ import MarketsList from './components/MarketsList';
 import MarketDetail from './components/MarketDetail';
 import Portfolio from './components/Portfolio';
 import AdminPanel from './components/AdminPanel';
+import Footer from './components/Footer';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -148,6 +149,8 @@ function App() {
           <AdminPanel session={session} />
         )}
       </main>
+      
+      <Footer />
     </div>
   );
 }
