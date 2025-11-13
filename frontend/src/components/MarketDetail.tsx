@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JsonRpc } from '@proton/js';
+import Tooltip from './Tooltip';
 
 interface Order {
   order_id: number;
@@ -173,10 +174,20 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
       <div className="market-content">
         <div className="order-book">
-          <h3>Order Book</h3>
+          <h3>
+            Order Book
+            <Tooltip text="The order book shows all active buy (bids) and sell (asks) orders. Orders are matched automatically when prices meet." position="right">
+              <span className="tooltip-icon">ℹ</span>
+            </Tooltip>
+          </h3>
           <div className="order-book-grid">
             <div className="bids">
-              <h4>Bids (Buy)</h4>
+              <h4>
+                Bids (Buy)
+                <Tooltip text="Buy orders for 'Yes' shares. Higher prices are shown first." position="right">
+                  <span className="tooltip-icon">ℹ</span>
+                </Tooltip>
+              </h4>
               <div className="order-list">
                 {bids.length === 0 ? (
                   <div className="no-orders">No bids</div>
@@ -191,7 +202,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
             </div>
             <div className="asks">
-              <h4>Asks (Sell)</h4>
+              <h4>
+                Asks (Sell)
+                <Tooltip text="Sell orders for 'Yes' shares. Lower prices are shown first." position="right">
+                  <span className="tooltip-icon">ℹ</span>
+                </Tooltip>
+              </h4>
               <div className="order-list">
                 {asks.length === 0 ? (
                   <div className="no-orders">No asks</div>
@@ -209,7 +225,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         </div>
 
         <div className="trade-form">
-          <h3>Place Order</h3>
+          <h3>
+            Place Order
+            <Tooltip text="Fill out the form to place an order. XPR will be automatically transferred from your wallet when you submit." position="left">
+              <span className="tooltip-icon">ℹ</span>
+            </Tooltip>
+          </h3>
           {!session ? (
             <p>Connect your wallet to trade</p>
           ) : market.resolved ? (
@@ -217,7 +238,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           ) : (
             <div className="form-content">
               <div className="form-group">
-                <label>Order Type</label>
+                <label>
+                  Order Type
+                  <Tooltip text="Buy to purchase shares, Sell to sell shares you own or short sell." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </label>
                 <div className="button-group">
                   <button
                     className={orderType === 'buy' ? 'active' : ''}
@@ -235,7 +261,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
 
               <div className="form-group">
-                <label>Outcome</label>
+                <label>
+                  Outcome
+                  <Tooltip text="Choose Yes if you think the event will happen, No if you think it won't." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </label>
                 <div className="button-group">
                   <button
                     className={outcome === 'yes' ? 'active' : ''}
@@ -253,7 +284,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
 
               <div className="form-group">
-                <label>Price (XPR per share)</label>
+                <label>
+                  Price (XPR per share)
+                  <Tooltip text="Price per share in XPR (0.0001 to 0.9999). Winning shares pay 1.0000 XPR each." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </label>
                 <input
                   type="number"
                   step="0.0001"
@@ -264,7 +300,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
 
               <div className="form-group">
-                <label>Quantity (shares)</label>
+                <label>
+                  Quantity (shares)
+                  <Tooltip text="Number of shares to trade. Total cost = price × quantity." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </label>
                 <input
                   type="number"
                   value={quantity}

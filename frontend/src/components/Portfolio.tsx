@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JsonRpc } from '@proton/js';
+import Tooltip from './Tooltip';
 
 interface Position {
   market_id: number;
@@ -144,20 +145,37 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
 
   return (
     <div className="portfolio">
-      <h2>My Portfolio</h2>
+      <h2>
+        My Portfolio
+        <Tooltip text="View your available balance, positions in markets, and claim winnings from resolved markets." position="right">
+          <span className="tooltip-icon">ℹ</span>
+        </Tooltip>
+      </h2>
 
       <div className="balance-card">
-        <h3>Available Balance</h3>
+        <h3>
+          Available Balance
+          <Tooltip text="Your internal balance from deposits, trade profits, cancelled orders, and claimed winnings. Withdraw to send XPR back to your wallet." position="right">
+            <span className="tooltip-icon">ℹ</span>
+          </Tooltip>
+        </h3>
         <div className="balance-amount">
           {balance ? balance.funds : '0.0000 XPR'}
         </div>
-        <button onClick={handleWithdraw} className="withdraw-button">
-          Withdraw
-        </button>
+        <Tooltip text="Withdraw XPR from your internal balance back to your wallet. Enter the amount when prompted." position="top">
+          <button onClick={handleWithdraw} className="withdraw-button">
+            Withdraw
+          </button>
+        </Tooltip>
       </div>
 
       <div className="positions-section">
-        <h3>My Positions</h3>
+        <h3>
+          My Positions
+          <Tooltip text="Shares you own in each market. When markets resolve, claim your winnings if you predicted correctly." position="right">
+            <span className="tooltip-icon">ℹ</span>
+          </Tooltip>
+        </h3>
         {positions.length === 0 ? (
           <div className="no-positions">No positions yet</div>
         ) : (
@@ -186,12 +204,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                   </div>
                   {market.resolved && (position.yes_shares > 0 || position.no_shares > 0) && (
                     <div className="position-actions">
-                      <button
-                        onClick={() => handleClaim(position.market_id)}
-                        className="claim-button"
-                      >
-                        Claim Winnings
-                      </button>
+                      <Tooltip text="Claim your winnings from this resolved market. Winning shares pay 1.0000 XPR each." position="top">
+                        <button
+                          onClick={() => handleClaim(position.market_id)}
+                          className="claim-button"
+                        >
+                          Claim Winnings
+                        </button>
+                      </Tooltip>
                     </div>
                   )}
                   {market.resolved && (

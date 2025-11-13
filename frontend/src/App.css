@@ -881,3 +881,246 @@ body {
     align-items: center;
   }
 }
+
+/* Tooltip Styles */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-content {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.98);
+  color: #f1f5f9;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: normal;
+  max-width: 300px;
+  z-index: 1000;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.tooltip-top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.tooltip-left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltip-right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.tooltip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 0.5rem;
+  color: #a78bfa;
+  cursor: help;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid #a78bfa;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.tooltip-icon:hover {
+  background: rgba(124, 58, 237, 0.2);
+  color: #7c3aed;
+  border-color: #7c3aed;
+}
+
+/* How To Use Page Styles */
+.how-to-use-container {
+  min-height: calc(100vh - 200px);
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+}
+
+.how-to-use-content {
+  max-width: 900px;
+  margin: 0 auto;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 16px;
+  padding: 3rem;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.how-to-use-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.how-to-use-intro {
+  font-size: 1.125rem;
+  color: #cbd5e1;
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 12px;
+  border-left: 4px solid #7c3aed;
+}
+
+.how-to-use-section {
+  margin-bottom: 3rem;
+}
+
+.how-to-use-section h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #a78bfa;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid rgba(124, 58, 237, 0.3);
+}
+
+.how-to-use-step {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.how-to-use-step h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin-bottom: 1rem;
+}
+
+.how-to-use-step p {
+  color: #cbd5e1;
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.how-to-use-step ul,
+.how-to-use-step ol {
+  color: #cbd5e1;
+  line-height: 1.75;
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.how-to-use-step li {
+  margin-bottom: 0.5rem;
+}
+
+.how-to-use-step strong {
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.how-to-use-step a {
+  color: #7c3aed;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.how-to-use-step a:hover {
+  color: #a78bfa;
+}
+
+.how-to-use-tips ul {
+  list-style: none;
+  margin-left: 0;
+}
+
+.how-to-use-tips li {
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.how-to-use-tips li::before {
+  content: "💡";
+  position: absolute;
+  left: 0;
+}
+
+.how-to-use-help ul {
+  list-style: none;
+  margin-left: 0;
+}
+
+.how-to-use-help li {
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.how-to-use-help li::before {
+  content: "ℹ️";
+  position: absolute;
+  left: 0;
+}
+
+.how-to-use-footer {
+  text-align: center;
+  padding: 2rem;
+  margin-top: 3rem;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 12px;
+}
+
+.how-to-use-footer p {
+  font-size: 1.125rem;
+  color: #f1f5f9;
+}
+
+.how-to-use-footer a {
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.how-to-use-footer a:hover {
+  color: #a78bfa;
+}
+
+@media (max-width: 768px) {
+  .how-to-use-content {
+    padding: 1.5rem;
+  }
+  
+  .how-to-use-title {
+    font-size: 1.875rem;
+  }
+  
+  .how-to-use-section h2 {
+    font-size: 1.5rem;
+  }
+  
+  .tooltip-content {
+    max-width: 250px;
+    font-size: 0.8125rem;
+  }
+}

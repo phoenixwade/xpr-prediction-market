@@ -1,6 +1,10 @@
 import React from 'react';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+  onShowHelp: () => void;
+}
+
+const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
   const year = new Date().getFullYear();
   
   return (
@@ -26,6 +30,9 @@ const Footer: React.FC = () => {
         </div>
         
         <div className="footer-section footer-links">
+          <a href="#" onClick={(e) => { e.preventDefault(); onShowHelp(); }}>
+            How to Use
+          </a>
           <a href="https://xprnetwork.org/" target="_blank" rel="noopener noreferrer">
             About XPR Network
           </a>

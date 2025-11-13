@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { JsonRpc } from '@proton/js';
+import Tooltip from './Tooltip';
 
 interface Market {
   id: number;
@@ -56,26 +57,37 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
   return (
     <div className="markets-list">
       <div className="markets-header">
-        <h2>Prediction Markets</h2>
+        <h2>
+          Prediction Markets
+          <Tooltip text="Browse all available prediction markets. Click on any market to view details and place orders." position="right">
+            <span className="tooltip-icon">ℹ</span>
+          </Tooltip>
+        </h2>
         <div className="filter-buttons">
-          <button
-            className={filter === 'all' ? 'active' : ''}
-            onClick={() => setFilter('all')}
-          >
-            All
-          </button>
-          <button
-            className={filter === 'active' ? 'active' : ''}
-            onClick={() => setFilter('active')}
-          >
-            Active
-          </button>
-          <button
-            className={filter === 'resolved' ? 'active' : ''}
-            onClick={() => setFilter('resolved')}
-          >
-            Resolved
-          </button>
+          <Tooltip text="Show all markets regardless of status" position="bottom">
+            <button
+              className={filter === 'all' ? 'active' : ''}
+              onClick={() => setFilter('all')}
+            >
+              All
+            </button>
+          </Tooltip>
+          <Tooltip text="Show only markets that are still open for trading" position="bottom">
+            <button
+              className={filter === 'active' ? 'active' : ''}
+              onClick={() => setFilter('active')}
+            >
+              Active
+            </button>
+          </Tooltip>
+          <Tooltip text="Show only markets that have been resolved with final outcomes" position="bottom">
+            <button
+              className={filter === 'resolved' ? 'active' : ''}
+              onClick={() => setFilter('resolved')}
+            >
+              Resolved
+            </button>
+          </Tooltip>
         </div>
       </div>
 

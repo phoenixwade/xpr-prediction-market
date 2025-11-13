@@ -6,11 +6,14 @@ import MarketDetail from './components/MarketDetail';
 import Portfolio from './components/Portfolio';
 import AdminPanel from './components/AdminPanel';
 import Footer from './components/Footer';
+import HowToUse from './components/HowToUse';
+import Tooltip from './components/Tooltip';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin'>('markets');
+  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help'>('markets');
+  const [showHelp, setShowHelp] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'Proton Prediction Market';
@@ -91,12 +94,16 @@ function App() {
         <h1>{process.env.REACT_APP_NAME || 'Proton Prediction Market'}</h1>
         <div className="header-actions">
           {!session ? (
-            <button onClick={handleLogin} className="connect-button">
-              Connect Wallet
-            </button>
+            <Tooltip text="Connect your Proton wallet to start trading. You'll need XPR tokens to place orders." position="bottom">
+              <button onClick={handleLogin} className="connect-button">
+                Connect Wallet
+              </button>
+            </Tooltip>
           ) : (
             <div className="user-info">
-              <span>Connected: {session.auth.actor}</span>
+              <Tooltip text="Your connected Proton account. Click Disconnect to log out." position="bottom">
+                <span>Connected: {session.auth.actor}</span>
+              </Tooltip>
               <button onClick={handleLogout} className="disconnect-button">
                 Disconnect
               </button>
@@ -108,20 +115,20 @@ function App() {
       <nav className="nav-tabs">
         <button
           className={activeTab === 'markets' ? 'active' : ''}
-          onClick={() => setActiveTab('markets')}
+          onClick={() => { setActiveTab('markets'); setShowHelp(false); }}
         >
           Markets
         </button>
         <button
           className={activeTab === 'portfolio' ? 'active' : ''}
-          onClick={() => setActiveTab('portfolio')}
+          onClick={() => { setActiveTab('portfolio'); setShowHelp(false); }}
           disabled={!session}
         >
           Portfolio
         </button>
         <button
           className={activeTab === 'admin' ? 'active' : ''}
-          onClick={() => setActiveTab('admin')}
+          onClick={() => { setActiveTab('admin'); setShowHelp(false); }}
           disabled={!session}
         >
           Admin
@@ -129,28 +136,31 @@ function App() {
       </nav>
 
       <main className="main-content">
-        {activeTab === 'markets' && !selectedMarket && (
+        {!showHelp && activeTab === 'markets' && !selectedMarket && (
           <MarketsList
             session={session}
             onSelectMarket={setSelectedMarket}
           />
         )}
-        {activeTab === 'markets' && selectedMarket && (
+        {!showHelp && activeTab === 'markets' && selectedMarket && (
           <MarketDetail
             session={session}
             marketId={selectedMarket}
             onBack={() => setSelectedMarket(null)}
           />
         )}
-        {activeTab === 'portfolio' && session && (
+        {!showHelp && activeTab === 'portfolio' && session && (
           <Portfolio session={session} />
         )}
-        {activeTab === 'admin' && session && (
+        {!showHelp && activeTab === 'admin' && session && (
           <AdminPanel session={session} />
+        )}
+        {showHelp && (
+          <HowToUse />
         )}
       </main>
       
-      <Footer />
+      <Footer onShowHelp={() => setShowHelp(true)} />
     </div>
   );
 }
