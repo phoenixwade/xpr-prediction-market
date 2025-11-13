@@ -977,6 +977,22 @@ body {
   }
 }
 
+/* Admin Panel Empty State */
+.empty-state {
+  color: #cbd5e1;
+  opacity: 0.92;
+  font-size: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.loading-message {
+  color: #a78bfa;
+  font-size: 1rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
 /* Tooltip Styles */
 .tooltip-wrapper {
   position: relative;
@@ -991,9 +1007,13 @@ body {
   padding: 0.75rem 1rem;
   border-radius: 8px;
   font-size: 0.875rem;
-  line-height: 1.5;
+  line-height: 1.4;
   white-space: normal;
-  max-width: 300px;
+  word-break: normal;
+  overflow-wrap: break-word;
+  writing-mode: horizontal-tb;
+  min-width: 220px;
+  max-width: 320px;
   z-index: 1000;
   border: 1px solid rgba(124, 58, 237, 0.3);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
@@ -1153,12 +1173,25 @@ body {
 .how-to-use-tips li {
   padding-left: 1.5rem;
   position: relative;
+  color: #cbd5e1;
 }
 
 .how-to-use-tips li::before {
   content: "💡";
   position: absolute;
   left: 0;
+}
+
+.how-to-use-tips strong {
+  color: #a78bfa;
+}
+
+.how-to-use-help {
+  color: #cbd5e1;
+}
+
+.how-to-use-help p {
+  color: #cbd5e1;
 }
 
 .how-to-use-help ul {
@@ -1169,6 +1202,7 @@ body {
 .how-to-use-help li {
   padding-left: 1.5rem;
   position: relative;
+  color: #cbd5e1;
 }
 
 .how-to-use-help li::before {

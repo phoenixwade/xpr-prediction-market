@@ -79,7 +79,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     
     setLoadingMarkets(true);
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || 'https://proton.greymass.com');
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
       const result = await rpc.get_table_rows({
@@ -90,17 +90,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
         limit: 1000,
       });
 
+      const nowSec = Math.floor(Date.now() / 1000);
+
       const allMarkets: Market[] = result.rows.map((row: any) => ({
         id: row.id,
-        admin: row.admin,
+        admin: row.admin || null,
         question: row.question,
         category: row.category,
-        resolved: row.resolved,
-        expireTime: row.expireTime,
+        resolved: row.resolved || false,
+        expireTime: row.expireTime || row.expire?.seconds || 0,
       }));
 
       const eligibleMarkets = allMarkets.filter(
-        market => !market.resolved && market.admin === session.auth.actor
+        market => !market.resolved && market.expireTime > 0 && market.expireTime <= nowSec
       );
 
       setMarkets(eligibleMarkets);
@@ -223,9 +225,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
         <div className="admin-section">
           <h3>Resolve Market</h3>
           {loadingMarkets ? (
-            <p>Loading your markets...</p>
+            <p className="loading-message">Loading markets...</p>
           ) : markets.length === 0 ? (
-            <p>No unresolved markets found where you are the admin.</p>
+            <p className="empty-state">No expired, unresolved markets found.</p>
           ) : (
             <form onSubmit={handleResolveMarket} className="admin-form">
               <div className="form-group">
