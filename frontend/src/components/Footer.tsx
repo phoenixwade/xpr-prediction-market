@@ -10,7 +10,8 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
   return (
     <div className="footer">
       <div className="footer-content">
-        <div className="footer-section">
+        {/* Left Column: Branding + XPR Network */}
+        <div className="footer-left">
           <div className="footer-brand">
             <span className="footer-logo-text">{process.env.REACT_APP_NAME || 'Proton Prediction Market'}</span>
           </div>
@@ -21,7 +22,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
               rel="noopener noreferrer"
               className="xpr-link"
             >
-              Powered by XPR Network
+              <img src="/xpr_logo.png" alt="XPR Network" className="xpr-logo" />
             </a>
           </div>
           <p className="footer-copyright">
@@ -29,38 +30,62 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
           </p>
         </div>
         
-        <div className="footer-section footer-links">
-          <a href="#" onClick={(e) => { e.preventDefault(); onShowHelp(); }}>
-            How to Use
-          </a>
-          <a href="https://xprnetwork.org/" target="_blank" rel="noopener noreferrer">
-            About XPR Network
-          </a>
-          <a href="https://proton.org/" target="_blank" rel="noopener noreferrer">
-            Proton Blockchain
-          </a>
-          <a href="https://protonscan.io/" target="_blank" rel="noopener noreferrer">
-            Block Explorer
-          </a>
+        {/* Center Column: In-App Links */}
+        <div className="footer-center">
+          <ul className="footer-links">
+            <li>
+              <a href="#" onClick={(e) => { e.preventDefault(); onShowHelp(); }}>
+                How to Use
+              </a>
+            </li>
+            <li>
+              <a href="https://xprnetwork.org/" target="_blank" rel="noopener noreferrer">
+                About XPR Network
+              </a>
+            </li>
+            <li>
+              <a href="https://proton.org/" target="_blank" rel="noopener noreferrer">
+                Proton Blockchain
+              </a>
+            </li>
+            <li>
+              <a href="https://protonscan.io/" target="_blank" rel="noopener noreferrer">
+                Block Explorer
+              </a>
+            </li>
+          </ul>
         </div>
         
-        <div className="footer-section footer-social">
+        {/* Right Column: HomeBloks + Social Icons */}
+        <div className="footer-right">
           <a
-            href="https://t.me/protonxpr"
+            href="https://homebloks.io/"
             target="_blank"
             rel="noopener noreferrer"
-            className="social-link"
+            className="homebloks-link"
           >
-            Telegram
+            <img src="/assets/home-logo.svg" alt="HomeBloks" className="homebloks-logo" />
           </a>
-          <a
-            href="https://twitter.com/protonxpr"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="social-link"
-          >
-            Twitter
-          </a>
+          <div className="footer-social">
+            <a
+              href="https://t.me/HOMEbloks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-link"
+              aria-label="Telegram"
+            >
+              <img src="/assets/telegram.svg" alt="Telegram" className="social-icon" />
+            </a>
+            <a
+              href="https://twitter.com/homebloks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-link"
+              aria-label="Twitter/X"
+            >
+              <img src="/assets/x.svg" alt="Twitter/X" className="social-icon" />
+            </a>
+          </div>
         </div>
       </div>
     </div>

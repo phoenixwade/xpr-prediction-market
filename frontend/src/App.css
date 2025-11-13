@@ -782,11 +782,13 @@ body {
 }
 
 /* Footer Styles */
+/* Footer Styles - Three Column Layout */
 .footer {
   background: rgba(15, 23, 42, 0.95);
   border-top: 1px solid rgba(124, 58, 237, 0.3);
   padding: 3rem 2rem 2rem;
   margin-top: 4rem;
+  position: relative;
 }
 
 .footer-content {
@@ -799,10 +801,13 @@ body {
   flex-wrap: wrap;
 }
 
-.footer-section {
+/* Left Column: Branding + XPR Network */
+.footer-left {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex: 1;
+  min-width: 250px;
 }
 
 .footer-brand {
@@ -822,29 +827,53 @@ body {
 }
 
 .xpr-link {
-  color: #a78bfa;
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.3s ease;
+  display: inline-block;
+  transition: opacity 0.3s ease;
 }
 
 .xpr-link:hover {
-  color: #7c3aed;
+  opacity: 0.8;
+}
+
+.xpr-logo {
+  height: 40px;
+  width: auto;
 }
 
 .footer-copyright {
   font-size: 0.875rem;
   color: #94a3b8;
   margin-top: 0.5rem;
+  opacity: 0.98;
+}
+
+/* Center Column: In-App Links */
+.footer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 200px;
 }
 
 .footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.footer-links li {
+  margin: 0;
 }
 
 .footer-links a {
   color: #f1f5f9;
-  text-decoration: none;
+  text-decoration: underline;
   font-size: 0.875rem;
   transition: color 0.3s ease;
 }
@@ -853,32 +882,98 @@ body {
   color: #a78bfa;
 }
 
+/* Right Column: HomeBloks + Social Icons */
+.footer-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.homebloks-link {
+  display: inline-block;
+  transition: opacity 0.3s ease;
+}
+
+.homebloks-link:hover {
+  opacity: 0.8;
+}
+
+.homebloks-logo {
+  height: 60px;
+  width: auto;
+}
+
 .footer-social {
-  gap: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .social-link {
-  color: #f1f5f9;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition: color 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
 }
 
 .social-link:hover {
-  color: #a78bfa;
+  opacity: 0.7;
 }
 
-@media (max-width: 768px) {
+.social-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
   .footer-content {
     flex-direction: column;
-    gap: 2rem;
+    align-items: center;
+    gap: 2.5rem;
   }
   
-  .footer-section {
+  .footer-left,
+  .footer-center,
+  .footer-right {
     width: 100%;
     text-align: center;
     align-items: center;
+  }
+  
+  .footer-links {
+    align-items: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .footer {
+    padding: 2rem 1.5rem 1.5rem;
+  }
+  
+  .footer-content {
+    gap: 2rem;
+  }
+  
+  .footer-logo-text {
+    font-size: 1.125rem;
+  }
+  
+  .xpr-logo {
+    height: 35px;
+  }
+  
+  .homebloks-logo {
+    height: 50px;
+  }
+  
+  .social-icon {
+    width: 28px;
+    height: 28px;
   }
 }
 
