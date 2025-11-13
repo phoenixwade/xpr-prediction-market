@@ -92,14 +92,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
 
       const nowSec = Math.floor(Date.now() / 1000);
 
-      const allMarkets: Market[] = result.rows.map((row: any) => ({
-        id: row.id,
-        admin: row.admin || null,
-        question: row.question,
-        category: row.category,
-        resolved: row.resolved || false,
-        expireTime: row.expireTime || row.expire?.seconds || 0,
-      }));
+      const allMarkets: Market[] = result.rows.map((row: any) => {
+        let expireSec = 0;
+        if (typeof row.expireTime === 'number') {
+          expireSec = row.expireTime;
+        } else if (typeof row.expire === 'number') {
+          expireSec = row.expire;
+        } else if (typeof row.expire === 'string') {
+          expireSec = Math.floor(new Date(row.expire + 'Z').getTime() / 1000);
+        } else if (row.expire?.seconds) {
+          expireSec = row.expire.seconds;
+        } else if (row.expire?.sec_since_epoch) {
+          expireSec = row.expire.sec_since_epoch;
+        }
+
+        return {
+          id: row.id,
+          admin: row.admin || null,
+          question: row.question,
+          category: row.category,
+          resolved: row.resolved || false,
+          expireTime: expireSec,
+        };
+      });
 
       const eligibleMarkets = allMarkets.filter(
         market => !market.resolved && market.expireTime > 0 && market.expireTime <= nowSec

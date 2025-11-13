@@ -1,28 +1,26 @@
 {
   "name": "Proton Prediction Market",
   "description": "Decentralized prediction market platform on Proton blockchain",
-  "setup": [
-    {
-      "name": "Install Node.js 22",
-      "command": "nvm install 22 && nvm use 22"
-    },
-    {
-      "name": "Install frontend dependencies",
-      "command": "cd frontend && npm install"
-    },
-    {
-      "name": "Setup environment configuration",
-      "command": "cd frontend && [ -f .env ] || cp example.env .env"
-    }
+  "runtime": {
+    "node": "22"
+  },
+  "workdir": "frontend",
+  "env": {
+    "PORT": "3000"
+  },
+  "pre": [
+    "npm ci",
+    "[ -f .env ] || cp example.env .env"
   ],
   "run_app": {
-    "name": "Start React Development Server",
-    "command": "cd frontend && npm start",
-    "port": 3000,
-    "ready_when": {
-      "type": "http",
-      "url": "http://localhost:3000",
-      "timeout_seconds": 120
-    }
+    "command": "npm start",
+    "ready": [
+      {
+        "type": "http",
+        "url": "http://localhost:3000",
+        "timeout_ms": 120000
+      }
+    ],
+    "open_urls": ["http://localhost:3000"]
   }
 }
