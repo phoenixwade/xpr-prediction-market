@@ -74,7 +74,13 @@ else
 fi
 
 if [ -d "$PUBLIC_HTML" ] && [ "$(ls -A $PUBLIC_HTML)" ]; then
-    BACKUP_DIR="${CPANEL_HOME}/public_html_backup_$(date +%Y%m%d_%H%M%S)"
+    BACKUP_DIR="${CPANEL_HOME}/public_html_backup"
+    
+    if [ -d "$BACKUP_DIR" ]; then
+        echo -e "${YELLOW}Removing old backup...${NC}"
+        rm -rf "$BACKUP_DIR"
+    fi
+    
     echo -e "${YELLOW}Backing up existing public_html to $BACKUP_DIR${NC}"
     cp -r "$PUBLIC_HTML" "$BACKUP_DIR"
     echo -e "${GREEN}Backup created successfully!${NC}"
