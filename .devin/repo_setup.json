@@ -1,0 +1,26 @@
+{
+  "name": "Proton Prediction Market",
+  "description": "Decentralized prediction market platform on Proton blockchain",
+  "runtime": {
+    "node": "22"
+  },
+  "workdir": "frontend",
+  "env": {
+    "PORT": "3000"
+  },
+  "pre": [
+    "npm ci",
+    "[ -f .env ] || cp example.env .env"
+  ],
+  "run_app": {
+    "command": "npm start",
+    "ready": [
+      {
+        "type": "http",
+        "url": "http://localhost:3000",
+        "timeout_ms": 120000
+      }
+    ],
+    "open_urls": ["http://localhost:3000"]
+  }
+}
