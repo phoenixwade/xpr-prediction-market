@@ -882,6 +882,22 @@ body {
   color: #a78bfa;
 }
 
+.footer-links .link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #f1f5f9;
+  text-decoration: underline;
+  font-size: 0.875rem;
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.3s ease;
+}
+
+.footer-links .link-button:hover {
+  color: #a78bfa;
+}
+
 /* Right Column: HomeBloks + Social Icons */
 .footer-right {
   display: flex;
