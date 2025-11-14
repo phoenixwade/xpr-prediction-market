@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 
@@ -23,15 +23,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
   const [markets, setMarkets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (session) {
-      fetchPortfolio();
-      const interval = setInterval(fetchPortfolio, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [session]);
-
-  const fetchPortfolio = async () => {
+  const fetchPortfolio = useCallback(async () => {
     if (!session) return;
 
     try {
@@ -70,7 +62,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
       console.error('Error fetching portfolio:', error);
       setLoading(false);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchPortfolio();
+    const interval = setInterval(fetchPortfolio, 5000);
+    return () => clearInterval(interval);
+  }, [session, fetchPortfolio]);
 
   const handleClaim = async (marketId: number) => {
     if (!session) return;

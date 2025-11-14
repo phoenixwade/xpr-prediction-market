@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 
 interface Market {
@@ -68,13 +68,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   };
 
-  useEffect(() => {
-    if (session && activeTab === 'resolve') {
-      fetchMarkets();
-    }
-  }, [session, activeTab]);
-
-  const fetchMarkets = async () => {
+  const fetchMarkets = useCallback(async () => {
     if (!session) return;
     
     setLoadingMarkets(true);
@@ -126,7 +120,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     } finally {
       setLoadingMarkets(false);
     }
-  };
+  }, [session]);
+
+  useEffect(() => {
+    if (session && activeTab === 'resolve') {
+      fetchMarkets();
+    }
+  }, [session, activeTab, fetchMarkets]);
 
   const handleResolveMarket = async (e: React.FormEvent) => {
     e.preventDefault();

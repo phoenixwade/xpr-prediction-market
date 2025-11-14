@@ -34,9 +34,9 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
         <div className="footer-center">
           <ul className="footer-links">
             <li>
-              <a href="#" onClick={(e) => { e.preventDefault(); onShowHelp(); }}>
+              <button type="button" className="link-button" onClick={onShowHelp}>
                 How to Use
-              </a>
+              </button>
             </li>
             <li>
               <a href="https://xprnetwork.org/" target="_blank" rel="noopener noreferrer">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 
@@ -25,13 +25,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 5000);
-    return () => clearInterval(interval);
-  }, [marketId]);
-
-  const fetchMarketData = async () => {
+  const fetchMarketData = useCallback(async () => {
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
       
@@ -59,7 +53,13 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     } catch (error) {
       console.error('Error fetching market data:', error);
     }
-  };
+  }, [marketId]);
+
+  useEffect(() => {
+    fetchMarketData();
+    const interval = setInterval(fetchMarketData, 5000);
+    return () => clearInterval(interval);
+  }, [fetchMarketData]);
 
   const handlePlaceOrder = async () => {
     if (!session || !price || !quantity) {
