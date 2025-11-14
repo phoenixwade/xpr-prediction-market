@@ -133,6 +133,12 @@ function App() {
         >
           Admin
         </button>
+        <button
+          className={activeTab === 'help' ? 'active' : ''}
+          onClick={() => { setActiveTab('help'); setShowHelp(true); }}
+        >
+          How to Use
+        </button>
       </nav>
 
       <main className="main-content">
