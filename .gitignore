@@ -8,3 +8,4 @@ dist/
 contracts/assembly/target/
 frontend/build/
 /nbproject
+/frontend/nbproject/private/
