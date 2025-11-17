@@ -1,0 +1,18 @@
+# Disable directory listing
+Options -Indexes -ExecCGI
+
+# Prevent execution of PHP and other scripts
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>
+
+# Remove handlers for script files
+RemoveHandler .php .phtml .phar .pl .py .cgi .sh
+
+# Force script files to be treated as plain text
+AddType text/plain .php .phtml .phar .pl .py .cgi .sh
+
+# Allow only image files to be served
+<FilesMatch "\.(jpg|jpeg|png|gif|webp|svg|ico)$">
+    Require all granted
+</FilesMatch>

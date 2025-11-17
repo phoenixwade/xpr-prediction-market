@@ -82,10 +82,11 @@ export class PredictionMarketContract extends Contract {
   }
 
   @action("createmkt")
-  createMarket(admin: Name, question: string, category: string, expireTime: u32): void {
+  createMarket(admin: Name, question: string, category: string, expireTime: u32, image_url: string = ""): void {
     requireAuth(admin);
     check(question.length > 0, "Question cannot be empty");
     check(category.length > 0, "Category cannot be empty");
+    check(image_url.length <= 512, "Image URL too long (max 512 characters)");
 
     const newId = this.getNextMarketId();
     const market = new MarketTable(
@@ -94,7 +95,8 @@ export class PredictionMarketContract extends Contract {
       category,
       new TimePointSec(expireTime),
       false,
-      2
+      2,
+      image_url
     );
     this.marketsTable.set(market, this.receiver);
     

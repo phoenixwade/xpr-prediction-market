@@ -8,7 +8,8 @@ export class MarketTable extends Table {
     public category: string = "",
     public expire: TimePointSec = new TimePointSec(0),
     public resolved: boolean = false,
-    public outcome: u8 = 2 // 2 = unresolved, 1 = Yes, 0 = No
+    public outcome: u8 = 2, // 2 = unresolved, 1 = Yes, 0 = No
+    public image_url: string = ""
   ) {
     super();
   }

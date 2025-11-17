@@ -20,6 +20,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
   const [expireDate, setExpireDate] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
 
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -27,6 +31,52 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
   const [resolveMarketId, setResolveMarketId] = useState('');
   const [resolveOutcome, setResolveOutcome] = useState<'yes' | 'no'>('yes');
   const [resolveLoading, setResolveLoading] = useState(false);
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Only JPG, PNG, and WebP images are allowed');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be less than 2MB');
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleUploadImage = async () => {
+    if (!imageFile) return;
+
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', imageFile);
+
+      const response = await fetch('/api/upload.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setImageUrl(data.url);
+      alert('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image: ' + error);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleCreateMarket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +102,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
             question: question,
             category: category,
             expireTime: expireTimestamp,
+            image_url: imageUrl,
           },
         }],
       });
@@ -60,6 +111,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
       setQuestion('');
       setCategory('');
       setExpireDate('');
+      setImageUrl('');
+      setImageFile(null);
+      setImagePreview('');
     } catch (error) {
       console.error('Error creating market:', error);
       alert('Failed to create market: ' + error);
@@ -223,6 +277,50 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
                 onChange={(e) => setExpireDate(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="form-group">
+              <label>Market Image (Optional)</label>
+              <div className="image-upload-section">
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Paste image URL or upload below"
+                />
+                <div className="upload-controls">
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp"
+                    onChange={handleImageFileChange}
+                    id="image-upload"
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="image-upload" className="upload-button">
+                    Choose File
+                  </label>
+                  {imageFile && (
+                    <button
+                      type="button"
+                      onClick={handleUploadImage}
+                      disabled={uploadingImage}
+                      className="upload-submit-button"
+                    >
+                      {uploadingImage ? 'Uploading...' : 'Upload'}
+                    </button>
+                  )}
+                </div>
+                {imagePreview && (
+                  <div className="image-preview">
+                    <img src={imagePreview} alt="Preview" />
+                  </div>
+                )}
+                {imageUrl && !imagePreview && (
+                  <div className="image-preview">
+                    <img src={imageUrl} alt="Market" />
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
