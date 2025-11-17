@@ -130,6 +130,20 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
             >
               <div className="market-category">{market.category}</div>
               <h3 className="market-question">{market.question}</h3>
+              
+              {!market.resolved && (
+                <div className="market-probabilities">
+                  <div className="probability-option yes-option">
+                    <div className="probability-label">Yes</div>
+                    <div className="probability-value">50%</div>
+                  </div>
+                  <div className="probability-option no-option">
+                    <div className="probability-label">No</div>
+                    <div className="probability-value">50%</div>
+                  </div>
+                </div>
+              )}
+              
               <div className="market-info">
                 <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
                   {market.resolved ? 'Resolved' : 'Active'}

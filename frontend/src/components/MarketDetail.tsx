@@ -104,7 +104,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
       if (lockAmount > 0) {
         actions.push({
-          account: process.env.REACT_APP_TOKEN_CONTRACT || 'eosio.token',
+          account: process.env.REACT_APP_TOKEN_CONTRACT || 'xtokens',
           name: 'transfer',
           authorization: [{
             actor: session.auth.actor,
