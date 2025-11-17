@@ -17,6 +17,16 @@ function App() {
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'Proton Prediction Market';
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const marketParam = urlParams.get('market');
+    if (marketParam) {
+      const marketId = parseInt(marketParam, 10);
+      if (!isNaN(marketId)) {
+        setSelectedMarket(marketId);
+        setActiveTab('markets');
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -91,7 +101,10 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>{process.env.REACT_APP_NAME || 'Proton Prediction Market'}</h1>
+        <h1>
+          <span className="xpr-highlight">XPR</span>
+          {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
+        </h1>
         <div className="header-actions">
           {!session ? (
             <Tooltip text="Connect your Proton wallet to start trading. You'll need XPR tokens to place orders." position="bottom">

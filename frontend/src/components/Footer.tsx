@@ -13,7 +13,10 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
         {/* Left Column: Branding + XPR Network */}
         <div className="footer-left">
           <div className="footer-brand">
-            <span className="footer-logo-text">{process.env.REACT_APP_NAME || 'Proton Prediction Market'}</span>
+            <span className="footer-logo-text">
+              <span className="xpr-highlight">XPR</span>
+              {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
+            </span>
           </div>
           <div className="footer-xpr">
             <a
