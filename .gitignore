@@ -9,3 +9,5 @@ contracts/assembly/target/
 frontend/build/
 /nbproject
 /frontend/nbproject/private/
+frontend/nbproject/project.xml
+frontend/nbproject/project.properties
