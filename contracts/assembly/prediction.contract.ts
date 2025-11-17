@@ -14,8 +14,8 @@ import {
 } from "proton-tsc";
 import { MarketTable, OrderTable, PositionTable, BalanceTable, ConfigTable } from "./tables";
 
-const XPR_SYMBOL = new Symbol("XPR", 4);
-const ONE_XPR: i64 = 10000;
+const XUSDC_SYMBOL = new Symbol("XUSDC", 6);
+const ONE_XUSDC: i64 = 1000000;
 
 @packer
 class Transfer {
@@ -45,8 +45,8 @@ export class PredictionMarketContract extends Contract {
     if (to != this.receiver) return;
     
     check(
-      quantity.symbol.code == XPR_SYMBOL.code && quantity.symbol.precision == XPR_SYMBOL.precision,
-      "Only XPR token deposits allowed"
+      quantity.symbol.code == XUSDC_SYMBOL.code && quantity.symbol.precision == XUSDC_SYMBOL.precision,
+      "Only XUSDC token deposits allowed"
     );
     check(quantity.amount > 0, "Deposit amount must be positive");
 
@@ -74,7 +74,7 @@ export class PredictionMarketContract extends Contract {
     this.balancesTable.update(bal!, to);
 
     const transferAction = new InlineAction<Transfer>("transfer");
-    const action = transferAction.act(Name.fromString("eosio.token"), new PermissionLevel(this.receiver));
+    const action = transferAction.act(Name.fromString("xtokens"), new PermissionLevel(this.receiver));
     const transferParams = new Transfer(this.receiver, to, quantity, "Withdrawal from prediction market");
     action.send(transferParams);
     
@@ -141,7 +141,7 @@ export class PredictionMarketContract extends Contract {
           pos.yes_shares -= quantity;
           positionsTable.update(pos, account);
         } else {
-          cost = ONE_XPR * quantity;
+          cost = ONE_XUSDC * quantity;
           let bal = this.balancesTable.get(account.N);
           check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell collateral");
           
@@ -160,7 +160,7 @@ export class PredictionMarketContract extends Contract {
           pos.no_shares -= quantity;
           positionsTable.update(pos, account);
         } else {
-          cost = ONE_XPR * quantity;
+          cost = ONE_XUSDC * quantity;
           let bal = this.balancesTable.get(account.N);
           check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell (no) collateral");
           
@@ -204,7 +204,7 @@ export class PredictionMarketContract extends Contract {
       const refundAmount = order!.price * order!.quantity;
       let bal = this.balancesTable.get(account.N);
       if (bal == null) {
-        bal = new BalanceTable(account, new Asset(refundAmount, XPR_SYMBOL));
+        bal = new BalanceTable(account, new Asset(refundAmount, XUSDC_SYMBOL));
         this.balancesTable.set(bal, account);
       } else {
         bal.funds = new Asset(bal.funds.amount + refundAmount, bal.funds.symbol);
@@ -217,10 +217,10 @@ export class PredictionMarketContract extends Contract {
       if (pos != null) {
         if (pos.no_shares >= order!.quantity) {
           pos.no_shares -= order!.quantity;
-          const refund = ONE_XPR * order!.quantity;
+          const refund = ONE_XUSDC * order!.quantity;
           let bal = this.balancesTable.get(account.N);
           if (bal == null) {
-            bal = new BalanceTable(account, new Asset(refund, XPR_SYMBOL));
+            bal = new BalanceTable(account, new Asset(refund, XUSDC_SYMBOL));
             this.balancesTable.set(bal, account);
           } else {
             bal.funds = new Asset(bal.funds.amount + refund, bal.funds.symbol);
@@ -265,13 +265,13 @@ export class PredictionMarketContract extends Contract {
     let payout: i64 = 0;
     if (market!.outcome == 1) {
       if (pos!.yes_shares > 0) {
-        payout = ONE_XPR * pos!.yes_shares;
+        payout = ONE_XUSDC * pos!.yes_shares;
         pos!.yes_shares = 0;
       }
       pos!.no_shares = 0;
     } else if (market!.outcome == 0) {
       if (pos!.no_shares > 0) {
-        payout = ONE_XPR * pos!.no_shares;
+        payout = ONE_XUSDC * pos!.no_shares;
         pos!.no_shares = 0;
       }
       pos!.yes_shares = 0;
@@ -282,7 +282,7 @@ export class PredictionMarketContract extends Contract {
     if (payout > 0) {
       let bal = this.balancesTable.get(user.N);
       if (bal == null) {
-        bal = new BalanceTable(user, new Asset(payout, XPR_SYMBOL));
+        bal = new BalanceTable(user, new Asset(payout, XUSDC_SYMBOL));
         this.balancesTable.set(bal, user);
       } else {
         bal.funds = new Asset(bal.funds.amount + payout, bal.funds.symbol);
@@ -300,11 +300,11 @@ export class PredictionMarketContract extends Contract {
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal != null && feeBal.funds.amount > 0) {
       const amount = feeBal.funds;
-      feeBal.funds = new Asset(0, XPR_SYMBOL);
+      feeBal.funds = new Asset(0, XUSDC_SYMBOL);
       this.balancesTable.update(feeBal, this.receiver);
 
       const transferAction = new InlineAction<Transfer>("transfer");
-      const action = transferAction.act(Name.fromString("eosio.token"), new PermissionLevel(this.receiver));
+      const action = transferAction.act(Name.fromString("xtokens"), new PermissionLevel(this.receiver));
       const transferParams = new Transfer(this.receiver, to, amount, "Fee collection");
       action.send(transferParams);
     }
@@ -392,7 +392,7 @@ export class PredictionMarketContract extends Contract {
 
     let sellerBal = this.balancesTable.get(seller.N);
     if (sellerBal == null) {
-      sellerBal = new BalanceTable(seller, new Asset(payout, XPR_SYMBOL));
+      sellerBal = new BalanceTable(seller, new Asset(payout, XUSDC_SYMBOL));
       this.balancesTable.set(sellerBal, seller);
     } else {
       sellerBal.funds = new Asset(sellerBal.funds.amount + payout, sellerBal.funds.symbol);
@@ -401,7 +401,7 @@ export class PredictionMarketContract extends Contract {
 
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal == null) {
-      feeBal = new BalanceTable(this.receiver, new Asset(fee, XPR_SYMBOL));
+      feeBal = new BalanceTable(this.receiver, new Asset(fee, XUSDC_SYMBOL));
       this.balancesTable.set(feeBal, this.receiver);
     } else {
       feeBal.funds = new Asset(feeBal.funds.amount + fee, feeBal.funds.symbol);

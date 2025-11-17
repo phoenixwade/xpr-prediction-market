@@ -8,6 +8,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
@@ -36,13 +37,14 @@ body {
 }
 
 .app-header h1 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .xpr-highlight {
-  color: #4377F8;
-  font-weight: 700;
+  color: #8E96FF;
+  font-weight: 500;
 }
 
 .header-actions {
@@ -143,9 +145,10 @@ body {
 }
 
 .markets-header h2 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 2rem;
   color: #f1f5f9;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .filter-buttons {
@@ -226,8 +229,9 @@ body {
 }
 
 .market-question {
+  font-family: 'Inter', sans-serif;
   font-size: 1.125rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #f1f5f9;
   margin-bottom: 1rem;
   line-height: 1.5;
@@ -277,6 +281,71 @@ body {
   border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
+.market-probabilities {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.probability-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1.5px solid;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: rgba(26, 31, 58, 0.4);
+}
+
+.probability-option.yes-option {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.probability-option.yes-option:hover {
+  border-color: rgba(34, 197, 94, 0.6);
+  background: rgba(34, 197, 94, 0.1);
+  transform: translateY(-2px);
+}
+
+.probability-option.no-option {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.probability-option.no-option:hover {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.1);
+  transform: translateY(-2px);
+}
+
+.probability-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.yes-option .probability-label {
+  color: #4ade80;
+}
+
+.no-option .probability-label {
+  color: #f87171;
+}
+
+.probability-value {
+  font-family: 'Clash Display', 'Inter', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  color: #f1f5f9;
+}
+
 .market-share-buttons {
   display: flex;
   gap: 0.5rem;
@@ -284,6 +353,7 @@ body {
   padding-top: 1rem;
   border-top: 1px solid rgba(124, 58, 237, 0.15);
   justify-content: flex-end;
+  position: relative;
 }
 
 .share-button {

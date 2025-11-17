@@ -4,7 +4,7 @@ import { Table, EMPTY_NAME, Name, Asset, Symbol } from "proton-tsc";
 export class BalanceTable extends Table {
   constructor(
     public account: Name = EMPTY_NAME,
-    public funds: Asset = new Asset(0, new Symbol("XPR", 4))
+    public funds: Asset = new Asset(0, new Symbol("XUSDC", 6))
   ) {
     super();
   }

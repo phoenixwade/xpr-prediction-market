@@ -25,7 +25,7 @@ const HowToUse: React.FC = () => {
             <ul>
               <li>Your wallet connection persists across page refreshes</li>
               <li>You can disconnect at any time by clicking "Disconnect"</li>
-              <li>Your wallet holds your XPR tokens used for trading</li>
+              <li>Your wallet holds your XUSDC tokens used for trading</li>
             </ul>
           </div>
 
