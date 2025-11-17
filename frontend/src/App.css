@@ -8,7 +8,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  font-weight: 500;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
@@ -44,7 +44,7 @@ body {
 
 .xpr-highlight {
   color: #8E96FF;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .header-actions {
@@ -96,12 +96,14 @@ body {
   background: none;
   border: none;
   padding: 1rem 1.5rem;
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #94a3b8;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: all 0.3s ease;
+  letter-spacing: 0.02em;
 }
 
 .nav-tabs button:hover:not(:disabled) {
@@ -207,6 +209,8 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .market-card:hover {
@@ -349,11 +353,10 @@ body {
 .market-share-buttons {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: auto;
   padding-top: 1rem;
   border-top: 1px solid rgba(124, 58, 237, 0.15);
-  justify-content: flex-end;
-  position: relative;
+  align-self: flex-end;
 }
 
 .share-button {
@@ -651,10 +654,11 @@ body {
 }
 
 .portfolio h2 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 2rem;
   color: #f1f5f9;
   margin-bottom: 2rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .balance-card {
@@ -674,8 +678,9 @@ body {
 }
 
 .balance-amount {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1rem;
 }
 
@@ -696,10 +701,11 @@ body {
 }
 
 .positions-section h3 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.5rem;
   color: #f1f5f9;
   margin-bottom: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .positions-list {
