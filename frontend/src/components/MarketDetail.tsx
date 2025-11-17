@@ -70,7 +70,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     setLoading(true);
     try {
       const priceFloat = parseFloat(price);
-      const priceAmount = priceFloat * 10000;
+      const priceAmount = Math.round(priceFloat * 1000000);
       const quantityInt = parseInt(quantity);
 
       const isBid = (orderType === 'buy') !== (outcome === 'no');
@@ -194,7 +194,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   bids.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 10000).toFixed(4)} USDC</span>
+                      <span className="price">{(order.price / 1000000).toFixed(4)} USDC</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))
@@ -214,7 +214,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   asks.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 10000).toFixed(4)} USDC</span>
+                      <span className="price">{(order.price / 1000000).toFixed(4)} USDC</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))

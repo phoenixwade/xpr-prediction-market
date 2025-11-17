@@ -56,7 +56,7 @@ export class PredictionMarketContract extends Contract {
     } else {
       bal.funds = new Asset(bal.funds.amount + quantity.amount, quantity.symbol);
     }
-    this.balancesTable.set(bal, from);
+    this.balancesTable.set(bal, this.receiver);
     
     print(`Deposited ${quantity.toString()} for ${from.toString()}`);
   }
