@@ -113,7 +113,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           data: {
             from: session.auth.actor,
             to: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-            quantity: `${lockAmount.toFixed(4)} XPR`,
+            quantity: `${lockAmount.toFixed(6)} XUSDC`,
             memo: `Deposit for order ${marketId}`,
           },
         });
@@ -131,7 +131,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           market_id: marketId,
           outcome: outcome,
           bid: orderType === 'buy',
-          price: `${priceAmount.toFixed(0)} XPR`,
+          price: `${priceAmount.toFixed(0)} XUSDC`,
           quantity: quantityInt,
         },
       });
@@ -194,7 +194,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   bids.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 10000).toFixed(4)} XPR</span>
+                      <span className="price">{(order.price / 10000).toFixed(4)} USDC</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))
@@ -214,7 +214,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   asks.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 10000).toFixed(4)} XPR</span>
+                      <span className="price">{(order.price / 10000).toFixed(4)} USDC</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))
@@ -227,7 +227,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         <div className="trade-form">
           <h3>
             Place Order
-            <Tooltip text="Fill out the form to place an order. XPR will be automatically transferred from your wallet when you submit." position="left">
+            <Tooltip text="Fill out the form to place an order. XUSDC will be automatically transferred from your wallet when you submit." position="left">
               <span className="tooltip-icon">ℹ</span>
             </Tooltip>
           </h3>
@@ -285,8 +285,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
               <div className="form-group">
                 <label>
-                  Price (XPR per share)
-                  <Tooltip text="Price per share in XPR (0.0001 to 0.9999). Winning shares pay 1.0000 XPR each." position="right">
+                  Price (USDC per share)
+                  <Tooltip text="Price per share in USDC (0.0001 to 0.9999). Winning shares pay 1 USDC each." position="right">
                     <span className="tooltip-icon">ℹ</span>
                   </Tooltip>
                 </label>

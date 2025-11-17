@@ -101,7 +101,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
   const handleWithdraw = async () => {
     if (!session || !balance) return;
 
-    const amount = prompt('Enter amount to withdraw (XPR):');
+    const amount = prompt('Enter amount to withdraw (XUSDC):');
     if (!amount) return;
 
     try {
@@ -121,7 +121,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           }],
           data: {
             to: session.auth.actor,
-            quantity: `${withdrawAmount.toFixed(4)} XPR`,
+            quantity: `${withdrawAmount.toFixed(6)} XUSDC`,
           },
         }],
       });
@@ -154,14 +154,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
       <div className="balance-card">
         <h3>
           Available Balance
-          <Tooltip text="Your internal balance from deposits, trade profits, cancelled orders, and claimed winnings. Withdraw to send XPR back to your wallet." position="right">
+          <Tooltip text="Your internal balance from deposits, trade profits, cancelled orders, and claimed winnings. Withdraw to send XUSDC back to your wallet." position="right">
             <span className="tooltip-icon">ℹ</span>
           </Tooltip>
         </h3>
         <div className="balance-amount">
-          {balance ? balance.funds : '0.0000 XPR'}
+          {balance ? balance.funds : '0.000000 XUSDC'}
         </div>
-        <Tooltip text="Withdraw XPR from your internal balance back to your wallet. Enter the amount when prompted." position="top">
+        <Tooltip text="Withdraw XUSDC from your internal balance back to your wallet. Enter the amount when prompted." position="top">
           <button onClick={handleWithdraw} className="withdraw-button">
             Withdraw
           </button>
@@ -203,7 +203,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                   </div>
                   {market.resolved && (position.yes_shares > 0 || position.no_shares > 0) && (
                     <div className="position-actions">
-                      <Tooltip text="Claim your winnings from this resolved market. Winning shares pay 1.0000 XPR each." position="top">
+                      <Tooltip text="Claim your winnings from this resolved market. Winning shares pay 1 XUSDC each." position="top">
                         <button
                           onClick={() => handleClaim(position.market_id)}
                           className="claim-button"

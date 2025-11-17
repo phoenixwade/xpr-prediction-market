@@ -96,12 +96,14 @@ body {
   background: none;
   border: none;
   padding: 1rem 1.5rem;
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #94a3b8;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: all 0.3s ease;
+  letter-spacing: 0.02em;
 }
 
 .nav-tabs button:hover:not(:disabled) {
@@ -652,10 +654,11 @@ body {
 }
 
 .portfolio h2 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 2rem;
   color: #f1f5f9;
   margin-bottom: 2rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .balance-card {
@@ -675,8 +678,9 @@ body {
 }
 
 .balance-amount {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 2.5rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1rem;
 }
 
@@ -697,10 +701,11 @@ body {
 }
 
 .positions-section h3 {
+  font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.5rem;
   color: #f1f5f9;
   margin-bottom: 1.5rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .positions-list {
