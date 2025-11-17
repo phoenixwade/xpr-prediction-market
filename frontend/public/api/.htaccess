@@ -1,0 +1,12 @@
+# Allow PHP execution in API directory
+Options -Indexes
+
+# Enable PHP processing
+<FilesMatch "\.php$">
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+# Allow all requests to upload.php
+<Files "upload.php">
+    Require all granted
+</Files>

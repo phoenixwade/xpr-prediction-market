@@ -169,7 +169,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             {market.resolved ? 'Resolved' : 'Active'}
           </span>
         </div>
-        <p className="expiry">Expires: {new Date(market.expire).toLocaleString()}</p>
+        <p className="expiry">{market.resolved ? 'Resolved' : (new Date(market.expire * 1000).getTime() < Date.now() ? 'Expired' : 'Expires')}: {new Date(market.expire * 1000).toLocaleString()}</p>
       </div>
 
       <div className="market-content">

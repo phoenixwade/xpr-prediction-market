@@ -9,6 +9,7 @@ interface Market {
   expire: number;
   resolved: boolean;
   outcome: number;
+  image_url?: string;
 }
 
 interface MarketsListProps {
@@ -128,36 +129,43 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
               className="market-card"
               onClick={() => onSelectMarket(market.id)}
             >
-              <div className="market-category">{market.category}</div>
-              <h3 className="market-question">{market.question}</h3>
-              
-              {!market.resolved && (
-                <div className="market-probabilities">
-                  <div className="probability-option yes-option">
-                    <div className="probability-label">Yes</div>
-                    <div className="probability-value">50%</div>
+              <div className="market-card-content">
+                {market.image_url && (
+                  <div className="market-thumbnail">
+                    <img src={market.image_url} alt={market.question} />
                   </div>
-                  <div className="probability-option no-option">
-                    <div className="probability-label">No</div>
-                    <div className="probability-value">50%</div>
-                  </div>
-                </div>
-              )}
+                )}
+                <div className="market-text-content">
+                  <div className="market-category">{market.category}</div>
+                  <h3 className="market-question">{market.question}</h3>
               
-              <div className="market-info">
+                  {!market.resolved && (
+                    <div className="market-probabilities">
+                      <div className="probability-option yes-option">
+                        <div className="probability-label">Yes</div>
+                        <div className="probability-value">50%</div>
+                      </div>
+                      <div className="probability-option no-option">
+                        <div className="probability-label">No</div>
+                        <div className="probability-value">50%</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="market-info">
                 <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
                   {market.resolved ? 'Resolved' : 'Active'}
                 </span>
                 <span className="market-expiry">
-                  Expires: {new Date(market.expire).toLocaleDateString()}
+                  {market.resolved ? 'Resolved' : (new Date(market.expire * 1000).getTime() < Date.now() ? 'Expired' : 'Expires')}: {new Date(market.expire * 1000).toLocaleDateString()}
                 </span>
-              </div>
-              {market.resolved && (
-                <div className="market-outcome">
-                  Outcome: {market.outcome === 1 ? 'Yes' : market.outcome === 0 ? 'No' : 'Pending'}
-                </div>
-              )}
-              <div className="market-share-buttons">
+                  </div>
+                  {market.resolved && (
+                    <div className="market-outcome">
+                      Outcome: {market.outcome === 1 ? 'Yes' : market.outcome === 0 ? 'No' : 'Pending'}
+                    </div>
+                  )}
+                  <div className="market-share-buttons">
                 <button
                   className="share-button share-twitter"
                   onClick={(e) => handleShare(market.id, 'twitter', e)}
@@ -194,6 +202,8 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                     </svg>
                   )}
                 </button>
+                  </div>
+                </div>
               </div>
             </div>
           ))

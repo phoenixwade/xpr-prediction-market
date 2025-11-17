@@ -88,9 +88,11 @@ if [ -d "$PUBLIC_HTML" ] && [ "$(ls -A $PUBLIC_HTML)" ]; then
 fi
 
 mkdir -p "$PUBLIC_HTML"
+mkdir -p "$PUBLIC_HTML/images"
+mkdir -p "$PUBLIC_HTML/api"
 
 echo -e "${YELLOW}Deploying to $PUBLIC_HTML...${NC}"
-rsync -av --delete build/ "$PUBLIC_HTML/"
+rsync -av --delete --exclude 'images/' --exclude 'api/' build/ "$PUBLIC_HTML/"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}Deployment completed successfully!${NC}"
