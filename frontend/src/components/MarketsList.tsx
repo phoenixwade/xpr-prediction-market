@@ -190,12 +190,18 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
               
                   {!market.resolved && market.outcomes && market.outcomes.length > 0 && (
                     <div className={`market-probabilities ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
-                      {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => (
-                        <div key={outcome.outcome_id} className={`probability-option ${outcome.outcome_id === 0 ? 'yes-option' : outcome.outcome_id === 1 ? 'no-option' : 'other-option'}`}>
-                          <div className="probability-label">{outcome.name}</div>
-                          <div className="probability-value">{outcome.probability?.toFixed(0)}%</div>
-                        </div>
-                      ))}
+                      {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => {
+                        const isBinaryMarket = market.outcomes_count === 2;
+                        const optionClass = isBinaryMarket 
+                          ? (outcome.outcome_id === 0 ? 'yes-option' : 'no-option')
+                          : 'other-option';
+                        return (
+                          <div key={outcome.outcome_id} className={`probability-option ${optionClass}`}>
+                            <div className="probability-label">{outcome.name}</div>
+                            <div className="probability-value">{outcome.probability?.toFixed(0)}%</div>
+                          </div>
+                        );
+                      })}
                       {market.outcomes.length > 3 && (
                         <div className="probability-option other-option">
                           <div className="probability-label">+{market.outcomes.length - 3} more</div>
