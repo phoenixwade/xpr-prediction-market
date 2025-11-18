@@ -31,7 +31,7 @@ interface MarketsListProps {
 const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) => {
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('active');
   const [copiedMarketId, setCopiedMarketId] = useState<number | null>(null);
 
   useEffect(() => {

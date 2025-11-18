@@ -197,6 +197,43 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const bids = filteredOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
   const asks = filteredOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
 
+  const myOrders = session ? orders.filter(o => o.account === session.auth.actor.toString()) : [];
+  const myOrdersByOutcome = myOrders.reduce((acc, order) => {
+    if (!acc[order.outcome_id]) {
+      acc[order.outcome_id] = [];
+    }
+    acc[order.outcome_id].push(order);
+    return acc;
+  }, {} as Record<number, Order[]>);
+
+  const handleCancelOrder = async (orderId: number) => {
+    if (!session) return;
+    
+    try {
+      await session.transact({
+        actions: [{
+          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          name: 'cancelorder',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            account: session.auth.actor,
+            market_id: marketId,
+            order_id: orderId,
+          },
+        }],
+      });
+      
+      alert('Order cancelled successfully!');
+      fetchMarketData();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Failed to cancel order: ' + error);
+    }
+  };
+
   return (
     <div className="market-detail">
       <button onClick={onBack} className="back-button">← Back to Markets</button>
@@ -213,10 +250,46 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       </div>
 
       <div className="market-content">
+        {session && myOrders.length > 0 && (
+          <div className="my-orders">
+            <h3>
+              My Orders (All Outcomes)
+              <Tooltip text="All your active orders in this market across all outcomes. Click cancel to remove an order." position="right">
+                <span className="tooltip-icon">ℹ</span>
+              </Tooltip>
+            </h3>
+            <div className="my-orders-list">
+              {Object.entries(myOrdersByOutcome).map(([outcomeId, outcomeOrders]) => {
+                const outcome = outcomes.find(o => o.outcome_id === parseInt(outcomeId));
+                return (
+                  <div key={outcomeId} className="outcome-orders">
+                    <h4>{outcome?.name || `Outcome ${outcomeId}`}</h4>
+                    {outcomeOrders.map(order => (
+                      <div key={order.order_id} className="my-order-row">
+                        <span className={`order-side ${order.isBid ? 'bid' : 'ask'}`}>
+                          {order.isBid ? 'BUY' : 'SELL'}
+                        </span>
+                        <span className="order-price">{(order.price / 1000000).toFixed(4)} USDC</span>
+                        <span className="order-quantity">×{order.quantity}</span>
+                        <button 
+                          onClick={() => handleCancelOrder(order.order_id)}
+                          className="cancel-button"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="order-book">
           <h3>
-            Order Book
-            <Tooltip text="The order book shows all active buy (bids) and sell (asks) orders. Orders are matched automatically when prices meet." position="right">
+            Order Book (Selected Outcome)
+            <Tooltip text="The order book shows all active buy (bids) and sell (asks) orders for the currently selected outcome. Orders are matched automatically when prices meet." position="right">
               <span className="tooltip-icon">ℹ</span>
             </Tooltip>
           </h3>
