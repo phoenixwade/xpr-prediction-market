@@ -204,19 +204,21 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   )}
                   
                   <div className="market-info">
-                <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
-                  {market.resolved ? 'Resolved' : 'Active'}
-                </span>
-                <span className="market-expiry">
-                  {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
-                </span>
+                    <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
+                      {market.resolved ? 'Resolved' : 'Active'}
+                    </span>
+                    <span className="market-expiry">
+                      {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
+                    </span>
                   </div>
                   {market.resolved && market.outcomes && (
                     <div className="market-outcome">
                       Outcome: {market.outcomes.find(o => o.outcome_id === market.outcome)?.name || 'Unknown'}
                     </div>
                   )}
-                  <div className="market-share-buttons">
+                </div>
+              </div>
+              <div className="market-share-buttons">
                 <button
                   className="share-button share-twitter"
                   onClick={(e) => handleShare(market.id, 'twitter', e)}
@@ -253,8 +255,6 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                     </svg>
                   )}
                 </button>
-                  </div>
-                </div>
               </div>
             </div>
           ))
