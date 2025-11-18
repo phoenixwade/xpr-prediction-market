@@ -8,6 +8,13 @@ interface Market {
   category: string;
   resolved: boolean;
   expireTime: number;
+  outcomes_count: number;
+}
+
+interface Outcome {
+  outcome_id: number;
+  name: string;
+  display_order: number;
 }
 
 interface AdminPanelProps {
@@ -24,12 +31,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [marketType, setMarketType] = useState<'binary' | 'multi'>('binary');
+  const [outcomes, setOutcomes] = useState<string[]>(['Yes', 'No']);
   const [createLoading, setCreateLoading] = useState(false);
 
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(false);
   const [resolveMarketId, setResolveMarketId] = useState('');
-  const [resolveOutcome, setResolveOutcome] = useState<'yes' | 'no'>('yes');
+  const [resolveOutcomeId, setResolveOutcomeId] = useState<number>(0);
+  const [marketOutcomes, setMarketOutcomes] = useState<Outcome[]>([]);
+  const [loadingOutcomes, setLoadingOutcomes] = useState(false);
   const [resolveLoading, setResolveLoading] = useState(false);
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,6 +89,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   };
 
+  const handleAddOutcome = () => {
+    if (outcomes.length >= 30) {
+      alert('Maximum 30 outcomes allowed');
+      return;
+    }
+    setOutcomes([...outcomes, '']);
+  };
+
+  const handleRemoveOutcome = (index: number) => {
+    if (outcomes.length <= 2) {
+      alert('Minimum 2 outcomes required');
+      return;
+    }
+    setOutcomes(outcomes.filter((_, i) => i !== index));
+  };
+
+  const handleOutcomeChange = (index: number, value: string) => {
+    const newOutcomes = [...outcomes];
+    newOutcomes[index] = value;
+    setOutcomes(newOutcomes);
+  };
+
+  const handleMarketTypeChange = (type: 'binary' | 'multi') => {
+    setMarketType(type);
+    if (type === 'binary') {
+      setOutcomes(['Yes', 'No']);
+    } else {
+      setOutcomes(['Option 1', 'Option 2', 'Option 3']);
+    }
+  };
+
   const handleCreateMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !question || !category || !expireDate) {
@@ -85,9 +127,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
       return;
     }
 
+    const validOutcomes = outcomes.filter(o => o.trim() !== '');
+    if (validOutcomes.length < 2) {
+      alert('At least 2 outcomes are required');
+      return;
+    }
+
     setCreateLoading(true);
     try {
       const expireTimestamp = Math.floor(new Date(expireDate).getTime() / 1000);
+      const outcomesString = validOutcomes.join(',');
 
       await session.transact({
         actions: [{
@@ -103,6 +152,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
             category: category,
             expireTime: expireTimestamp,
             image_url: imageUrl,
+            outcomes: outcomesString,
           },
         }],
       });
@@ -114,6 +164,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
       setImageUrl('');
       setImageFile(null);
       setImagePreview('');
+      setMarketType('binary');
+      setOutcomes(['Yes', 'No']);
     } catch (error) {
       console.error('Error creating market:', error);
       alert('Failed to create market: ' + error);
@@ -161,6 +213,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
           category: row.category,
           resolved: row.resolved || false,
           expireTime: expireSec,
+          outcomes_count: row.outcomes_count || 2,
         };
       });
 
@@ -182,6 +235,51 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   }, [session, activeTab, fetchMarkets]);
 
+  const fetchMarketOutcomes = async (marketId: string) => {
+    if (!marketId) return;
+    
+    setLoadingOutcomes(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: contractName,
+        scope: marketId,
+        table: 'outcomes',
+        limit: 100,
+      });
+
+      const outcomes: Outcome[] = result.rows.map((row: any) => ({
+        outcome_id: row.outcome_id,
+        name: row.name,
+        display_order: row.display_order,
+      }));
+
+      outcomes.sort((a, b) => a.display_order - b.display_order);
+      setMarketOutcomes(outcomes);
+      
+      if (outcomes.length > 0) {
+        setResolveOutcomeId(outcomes[0].outcome_id);
+      }
+    } catch (error) {
+      console.error('Error fetching outcomes:', error);
+      setMarketOutcomes([]);
+    } finally {
+      setLoadingOutcomes(false);
+    }
+  };
+
+  const handleMarketSelect = (marketId: string) => {
+    setResolveMarketId(marketId);
+    if (marketId) {
+      fetchMarketOutcomes(marketId);
+    } else {
+      setMarketOutcomes([]);
+    }
+  };
+
   const handleResolveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !resolveMarketId) {
@@ -202,13 +300,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
           data: {
             admin: session.auth.actor,
             market_id: parseInt(resolveMarketId),
-            outcome: resolveOutcome === 'yes',
+            winning_outcome_id: resolveOutcomeId,
           },
         }],
       });
 
       alert('Market resolved successfully!');
       setResolveMarketId('');
+      setMarketOutcomes([]);
       fetchMarkets();
     } catch (error) {
       console.error('Error resolving market:', error);
@@ -280,6 +379,61 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
             </div>
 
             <div className="form-group">
+              <label>Market Type</label>
+              <div className="button-group">
+                <button
+                  type="button"
+                  className={marketType === 'binary' ? 'active' : ''}
+                  onClick={() => handleMarketTypeChange('binary')}
+                >
+                  Binary (Yes/No)
+                </button>
+                <button
+                  type="button"
+                  className={marketType === 'multi' ? 'active' : ''}
+                  onClick={() => handleMarketTypeChange('multi')}
+                >
+                  Multi-Outcome
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Outcomes</label>
+              <div className="outcomes-list">
+                {outcomes.map((outcome, index) => (
+                  <div key={index} className="outcome-item">
+                    <input
+                      type="text"
+                      value={outcome}
+                      onChange={(e) => handleOutcomeChange(index, e.target.value)}
+                      placeholder={`Outcome ${index + 1}`}
+                      required
+                    />
+                    {marketType === 'multi' && outcomes.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveOutcome(index)}
+                        className="remove-outcome-button"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {marketType === 'multi' && outcomes.length < 30 && (
+                  <button
+                    type="button"
+                    onClick={handleAddOutcome}
+                    className="add-outcome-button"
+                  >
+                    + Add Outcome
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="form-group">
               <label>Market Image (Optional)</label>
               <div className="image-upload-section">
                 <input
@@ -347,7 +501,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
                 <label>Select Market</label>
                 <select
                   value={resolveMarketId}
-                  onChange={(e) => setResolveMarketId(e.target.value)}
+                  onChange={(e) => handleMarketSelect(e.target.value)}
                   required
                 >
                   <option value="">Choose a market to resolve</option>
@@ -359,25 +513,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Outcome</label>
-                <div className="button-group">
-                  <button
-                    type="button"
-                    className={resolveOutcome === 'yes' ? 'active' : ''}
-                    onClick={() => setResolveOutcome('yes')}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    type="button"
-                    className={resolveOutcome === 'no' ? 'active' : ''}
-                    onClick={() => setResolveOutcome('no')}
-                  >
-                    No
-                  </button>
+              {resolveMarketId && (
+                <div className="form-group">
+                  <label>Winning Outcome</label>
+                  {loadingOutcomes ? (
+                    <p className="loading-message">Loading outcomes...</p>
+                  ) : marketOutcomes.length > 0 ? (
+                    <div className="outcomes-select">
+                      {marketOutcomes.map((outcome) => (
+                        <button
+                          key={outcome.outcome_id}
+                          type="button"
+                          className={resolveOutcomeId === outcome.outcome_id ? 'active outcome-button' : 'outcome-button'}
+                          onClick={() => setResolveOutcomeId(outcome.outcome_id)}
+                        >
+                          {outcome.name}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">No outcomes found for this market</p>
+                  )}
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
