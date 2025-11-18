@@ -344,11 +344,19 @@ body {
   color: #f87171;
 }
 
+.other-option .probability-label {
+  color: #ffffff;
+}
+
 .probability-value {
   font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.75rem;
   font-weight: 500;
   color: #f1f5f9;
+}
+
+.other-option .probability-value {
+  color: #ffffff;
 }
 
 .market-share-buttons {
