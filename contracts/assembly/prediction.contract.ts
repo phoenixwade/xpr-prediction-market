@@ -417,7 +417,14 @@ export class PredictionMarketContract extends Contract {
   private getConfig(): ConfigTable {
     let config = this.configTable.get(0);
     if (config == null) {
-      config = new ConfigTable(0, 1, 1);
+      config = new ConfigTable(
+        0, 1, 1,
+        this.receiver, this.receiver, EMPTY_NAME,
+        0, 0,
+        100000, 1000000000000, 10,
+        false, false,
+        1, 0, 0
+      );
       this.configTable.set(config, this.receiver);
     }
     return config;
