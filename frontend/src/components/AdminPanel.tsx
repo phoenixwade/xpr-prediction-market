@@ -677,9 +677,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
           <h3>Pending Market Approvals</h3>
           
           {loadingPending ? (
-            <p>Loading pending markets...</p>
+            <p className="loading-message">Loading pending markets...</p>
           ) : pendingMarkets.length === 0 ? (
-            <p>No pending markets to approve</p>
+            <p className="empty-state">No pending markets to approve</p>
           ) : (
             <div className="pending-markets-list">
               {pendingMarkets.map((market) => (
