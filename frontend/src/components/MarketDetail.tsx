@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
+import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
   order_id: number;
@@ -39,7 +40,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       });
       
       if (marketResult.rows.length > 0) {
-        setMarket(marketResult.rows[0]);
+        const marketData = marketResult.rows[0];
+        setMarket({
+          ...marketData,
+          expireSec: normalizeTimestamp(marketData.expire)
+        });
       }
 
       const ordersResult = await rpc.get_table_rows({
@@ -169,7 +174,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             {market.resolved ? 'Resolved' : 'Active'}
           </span>
         </div>
-        <p className="expiry">{market.resolved ? 'Resolved' : (new Date(market.expire * 1000).getTime() < Date.now() ? 'Expired' : 'Expires')}: {new Date(market.expire * 1000).toLocaleString()}</p>
+        <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
       </div>
 
       <div className="market-content">
