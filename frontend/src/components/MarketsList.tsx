@@ -12,6 +12,15 @@ interface Market {
   resolved: boolean;
   outcome: number;
   image_url?: string;
+  outcomes_count: number;
+  outcomes?: Outcome[];
+}
+
+interface Outcome {
+  outcome_id: number;
+  name: string;
+  display_order: number;
+  probability?: number;
 }
 
 interface MarketsListProps {
@@ -34,16 +43,47 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
   const fetchMarkets = async () => {
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
       const result = await rpc.get_table_rows({
-        code: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-        scope: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+        code: contractName,
+        scope: contractName,
         table: 'markets',
         limit: 100,
       });
       
-      const normalizedMarkets = result.rows.map((row: any) => ({
-        ...row,
-        expireSec: normalizeTimestamp(row.expire)
+      const normalizedMarkets = await Promise.all(result.rows.map(async (row: any) => {
+        const market = {
+          ...row,
+          expireSec: normalizeTimestamp(row.expire),
+          outcomes_count: row.outcomes_count || 2,
+        };
+
+        if (market.outcomes_count > 0) {
+          try {
+            const outcomesResult = await rpc.get_table_rows({
+              code: contractName,
+              scope: row.id.toString(),
+              table: 'outcomes',
+              limit: 100,
+            });
+
+            const outcomes: Outcome[] = outcomesResult.rows.map((outcomeRow: any) => ({
+              outcome_id: outcomeRow.outcome_id,
+              name: outcomeRow.name,
+              display_order: outcomeRow.display_order,
+              probability: 100 / market.outcomes_count,
+            }));
+
+            outcomes.sort((a, b) => a.display_order - b.display_order);
+            market.outcomes = outcomes;
+          } catch (error) {
+            console.error(`Error fetching outcomes for market ${row.id}:`, error);
+            market.outcomes = [];
+          }
+        }
+
+        return market;
       }));
       
       setMarkets(normalizedMarkets);
@@ -147,16 +187,19 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   <div className="market-category">{market.category}</div>
                   <h3 className="market-question">{market.question}</h3>
               
-                  {!market.resolved && (
-                    <div className="market-probabilities">
-                      <div className="probability-option yes-option">
-                        <div className="probability-label">Yes</div>
-                        <div className="probability-value">50%</div>
-                      </div>
-                      <div className="probability-option no-option">
-                        <div className="probability-label">No</div>
-                        <div className="probability-value">50%</div>
-                      </div>
+                  {!market.resolved && market.outcomes && market.outcomes.length > 0 && (
+                    <div className={`market-probabilities ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
+                      {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => (
+                        <div key={outcome.outcome_id} className={`probability-option ${outcome.outcome_id === 0 ? 'yes-option' : outcome.outcome_id === 1 ? 'no-option' : 'other-option'}`}>
+                          <div className="probability-label">{outcome.name}</div>
+                          <div className="probability-value">{outcome.probability?.toFixed(0)}%</div>
+                        </div>
+                      ))}
+                      {market.outcomes.length > 3 && (
+                        <div className="probability-option other-option">
+                          <div className="probability-label">+{market.outcomes.length - 3} more</div>
+                        </div>
+                      )}
                     </div>
                   )}
                   
@@ -168,9 +211,9 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
                 </span>
                   </div>
-                  {market.resolved && (
+                  {market.resolved && market.outcomes && (
                     <div className="market-outcome">
-                      Outcome: {market.outcome === 1 ? 'Yes' : market.outcome === 0 ? 'No' : 'Pending'}
+                      Outcome: {market.outcomes.find(o => o.outcome_id === market.outcome)?.name || 'Unknown'}
                     </div>
                   )}
                   <div className="market-share-buttons">
