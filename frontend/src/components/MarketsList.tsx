@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
+import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Market {
   id: number;
   question: string;
   category: string;
   expire: number;
+  expireSec: number;
   resolved: boolean;
   outcome: number;
   image_url?: string;
@@ -38,7 +40,13 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
         table: 'markets',
         limit: 100,
       });
-      setMarkets(result.rows);
+      
+      const normalizedMarkets = result.rows.map((row: any) => ({
+        ...row,
+        expireSec: normalizeTimestamp(row.expire)
+      }));
+      
+      setMarkets(normalizedMarkets);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching markets:', error);
@@ -157,7 +165,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   {market.resolved ? 'Resolved' : 'Active'}
                 </span>
                 <span className="market-expiry">
-                  {market.resolved ? 'Resolved' : (new Date(market.expire * 1000).getTime() < Date.now() ? 'Expired' : 'Expires')}: {new Date(market.expire * 1000).toLocaleDateString()}
+                  {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
                 </span>
                   </div>
                   {market.resolved && (
