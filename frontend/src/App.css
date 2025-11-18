@@ -1537,3 +1537,73 @@ body {
   flex-direction: column;
   min-width: 0;
 }
+
+.pending-markets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pending-market-card {
+  background: rgba(26, 31, 58, 0.6);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.pending-market-info h4 {
+  color: #f1f5f9;
+  font-size: 1.125rem;
+  margin-bottom: 0.75rem;
+}
+
+.pending-market-info p {
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin: 0.25rem 0;
+}
+
+.pending-market-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.approve-button,
+.reject-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.approve-button {
+  background: #22c55e;
+  color: white;
+}
+
+.approve-button:hover:not(:disabled) {
+  background: #16a34a;
+}
+
+.reject-button {
+  background: #ef4444;
+  color: white;
+}
+
+.reject-button:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.approve-button:disabled,
+.reject-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
