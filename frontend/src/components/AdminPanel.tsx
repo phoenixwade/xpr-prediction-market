@@ -22,7 +22,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
-  const [activeTab, setActiveTab] = useState<'create' | 'resolve'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'resolve' | 'approve'>('create');
   
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
@@ -42,6 +42,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
   const [marketOutcomes, setMarketOutcomes] = useState<Outcome[]>([]);
   const [loadingOutcomes, setLoadingOutcomes] = useState(false);
   const [resolveLoading, setResolveLoading] = useState(false);
+
+  const [pendingMarkets, setPendingMarkets] = useState<Market[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [approveLoading, setApproveLoading] = useState(false);
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -229,11 +233,64 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   }, [session]);
 
+  const fetchPendingMarkets = useCallback(async () => {
+    if (!session) return;
+    
+    setLoadingPending(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: contractName,
+        scope: contractName,
+        table: 'markets',
+        limit: 1000,
+      });
+
+      const pending = result.rows
+        .filter((row: any) => row.status === 0)
+        .map((row: any) => {
+          let expireSec = 0;
+          if (typeof row.expireTime === 'number') {
+            expireSec = row.expireTime;
+          } else if (typeof row.expire === 'number') {
+            expireSec = row.expire;
+          } else if (typeof row.expire === 'string') {
+            expireSec = Math.floor(new Date(row.expire + 'Z').getTime() / 1000);
+          } else if (row.expire?.seconds) {
+            expireSec = row.expire.seconds;
+          } else if (row.expire?.sec_since_epoch) {
+            expireSec = row.expire.sec_since_epoch;
+          }
+
+          return {
+            id: row.id,
+            admin: row.suggested_by || row.admin || null,
+            question: row.question,
+            category: row.category,
+            resolved: row.resolved || false,
+            expireTime: expireSec,
+            outcomes_count: row.outcomes_count || 2,
+          };
+        });
+      
+      setPendingMarkets(pending);
+    } catch (error) {
+      console.error('Error fetching pending markets:', error);
+    } finally {
+      setLoadingPending(false);
+    }
+  }, [session]);
+
   useEffect(() => {
     if (session && activeTab === 'resolve') {
       fetchMarkets();
+    } else if (session && activeTab === 'approve') {
+      fetchPendingMarkets();
     }
-  }, [session, activeTab, fetchMarkets]);
+  }, [session, activeTab, fetchMarkets, fetchPendingMarkets]);
 
   const fetchMarketOutcomes = async (marketId: string) => {
     if (!marketId) return;
@@ -317,6 +374,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   };
 
+  const handleApproveMarket = async (marketId: number) => {
+    if (!session) return;
+
+    setApproveLoading(true);
+    try {
+      await session.transact({
+        actions: [{
+          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          name: 'approvemkt',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            approver: session.auth.actor,
+            market_id: marketId
+          }
+        }]
+      });
+
+      alert('Market approved successfully!');
+      fetchPendingMarkets();
+    } catch (error) {
+      console.error('Error approving market:', error);
+      alert('Failed to approve market: ' + error);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  const handleRejectMarket = async (marketId: number) => {
+    if (!session) return;
+
+    setApproveLoading(true);
+    try {
+      await session.transact({
+        actions: [{
+          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          name: 'rejectmkt',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            approver: session.auth.actor,
+            market_id: marketId
+          }
+        }]
+      });
+
+      alert('Market rejected successfully!');
+      fetchPendingMarkets();
+    } catch (error) {
+      console.error('Error rejecting market:', error);
+      alert('Failed to reject market: ' + error);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
   return (
     <div className="admin-panel">
       <h2>Admin Panel</h2>
@@ -333,6 +450,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
           onClick={() => setActiveTab('resolve')}
         >
           Resolve Market
+        </button>
+        <button
+          className={activeTab === 'approve' ? 'active' : ''}
+          onClick={() => setActiveTab('approve')}
+        >
+          Approve Markets
         </button>
       </div>
 
@@ -545,6 +668,48 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
                 {resolveLoading ? 'Resolving...' : 'Resolve Market'}
               </button>
             </form>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'approve' && (
+        <div className="admin-section">
+          <h3>Pending Market Approvals</h3>
+          
+          {loadingPending ? (
+            <p>Loading pending markets...</p>
+          ) : pendingMarkets.length === 0 ? (
+            <p>No pending markets to approve</p>
+          ) : (
+            <div className="pending-markets-list">
+              {pendingMarkets.map((market) => (
+                <div key={market.id} className="pending-market-card">
+                  <div className="pending-market-info">
+                    <h4>{market.question}</h4>
+                    <p><strong>Category:</strong> {market.category}</p>
+                    <p><strong>Suggested by:</strong> {market.admin}</p>
+                    <p><strong>Expires:</strong> {new Date(market.expireTime * 1000).toLocaleDateString()}</p>
+                    <p><strong>Outcomes:</strong> {market.outcomes_count}</p>
+                  </div>
+                  <div className="pending-market-actions">
+                    <button 
+                      onClick={() => handleApproveMarket(market.id)}
+                      disabled={approveLoading}
+                      className="approve-button"
+                    >
+                      {approveLoading ? 'Processing...' : 'Approve'}
+                    </button>
+                    <button 
+                      onClick={() => handleRejectMarket(market.id)}
+                      disabled={approveLoading}
+                      className="reject-button"
+                    >
+                      {approveLoading ? 'Processing...' : 'Reject'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
