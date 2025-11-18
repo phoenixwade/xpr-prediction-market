@@ -12,7 +12,7 @@ import {
   InlineAction,
   PermissionLevel
 } from "proton-tsc";
-import { MarketTable, OrderTable, PositionTable, BalanceTable, ConfigTable } from "./tables";
+import { MarketTable, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, ConfigTable } from "./tables";
 
 const XUSDC_SYMBOL = new Symbol("XUSDC", 6);
 const ONE_XUSDC: i64 = 1000000;
@@ -82,32 +82,52 @@ export class PredictionMarketContract extends Contract {
   }
 
   @action("createmkt")
-  createMarket(admin: Name, question: string, category: string, expireTime: u32, image_url: string = ""): void {
+  createMarket(admin: Name, question: string, category: string, expireTime: u32, image_url: string = "", outcomes: string = ""): void {
     requireAuth(admin);
     check(question.length > 0, "Question cannot be empty");
     check(category.length > 0, "Category cannot be empty");
     check(image_url.length <= 512, "Image URL too long (max 512 characters)");
 
     const newId = this.getNextMarketId();
+    
+    let outcomesCount: u8 = 2;
+    let outcomeNames: string[] = [];
+    
+    if (outcomes.length > 0) {
+      outcomeNames = outcomes.split(",");
+      check(outcomeNames.length >= 2 && outcomeNames.length <= 255, "Must have 2-255 outcomes");
+      outcomesCount = outcomeNames.length as u8;
+    } else {
+      outcomeNames = ["Yes", "No"];
+    }
+    
     const market = new MarketTable(
       newId,
       question,
       category,
       new TimePointSec(expireTime),
       false,
-      2,
-      image_url
+      255, // unresolved
+      image_url,
+      outcomesCount,
+      new TimePointSec(0)
     );
     this.marketsTable.set(market, this.receiver);
     
-    print(`Created market ${newId}: ${question}`);
+    const outcomesTable = new TableStore<OutcomeTable>(this.receiver, Name.fromU64(newId));
+    for (let i = 0; i < outcomeNames.length; i++) {
+      const outcome = new OutcomeTable(i as u8, outcomeNames[i].trim(), i as u8);
+      outcomesTable.set(outcome, this.receiver);
+    }
+    
+    print(`Created market ${newId} with ${outcomesCount} outcomes: ${question}`);
   }
 
   @action("placeorder")
   placeOrder(
     account: Name,
     market_id: u64,
-    outcome: string,
+    outcome_id: u8,
     bid: boolean,
     price: Asset,
     quantity: u32
@@ -118,16 +138,12 @@ export class PredictionMarketContract extends Contract {
     const market = this.marketsTable.get(market_id);
     check(market != null, "Market not found");
     check(!market!.resolved, "Market is already resolved, cannot trade");
-
-    let isBid = bid;
-    if (outcome == "no") {
-      isBid = !bid;
-    }
+    check(outcome_id < market!.outcomes_count, "Invalid outcome_id");
 
     const priceInt = price.amount;
     let cost: i64 = 0;
 
-    if (isBid) {
+    if (bid) {
       cost = priceInt * quantity;
       let bal = this.balancesTable.get(account.N);
       check(bal != null && bal.funds.amount >= cost, "Insufficient balance to place buy order");
@@ -135,59 +151,43 @@ export class PredictionMarketContract extends Contract {
       bal!.funds = new Asset(bal!.funds.amount - cost, bal!.funds.symbol);
       this.balancesTable.update(bal!, account);
     } else {
-      const positionsTable = new TableStore<PositionTable>(this.receiver, account);
-      let pos = positionsTable.get(market_id);
+      const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
+      const compositeKey = (account.N << 8) | outcome_id;
+      let pos = positionsV2Table.get(compositeKey);
       
-      if (outcome == "yes") {
-        if (pos != null && pos.yes_shares >= quantity) {
-          pos.yes_shares -= quantity;
-          positionsTable.update(pos, account);
-        } else {
-          cost = ONE_XUSDC * quantity;
-          let bal = this.balancesTable.get(account.N);
-          check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell collateral");
-          
-          bal!.funds = new Asset(bal!.funds.amount - cost, bal!.funds.symbol);
-          this.balancesTable.update(bal!, account);
-          
-          if (pos == null) {
-            pos = new PositionTable(market_id, 0, quantity);
-          } else {
-            pos.no_shares += quantity;
-          }
-          positionsTable.set(pos, account);
-        }
+      if (pos != null && pos.shares >= i64(quantity)) {
+        pos.shares -= i64(quantity);
+        positionsV2Table.update(pos, this.receiver);
       } else {
-        if (pos != null && pos.no_shares >= quantity) {
-          pos.no_shares -= quantity;
-          positionsTable.update(pos, account);
+        const heldShares = pos != null ? pos.shares : 0;
+        const shortedShares = quantity - heldShares;
+        cost = ONE_XUSDC * shortedShares;
+        
+        let bal = this.balancesTable.get(account.N);
+        check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell collateral");
+        
+        bal!.funds = new Asset(bal!.funds.amount - cost, bal!.funds.symbol);
+        this.balancesTable.update(bal!, account);
+        
+        if (pos == null) {
+          pos = new PositionV2Table(compositeKey, account, outcome_id, 0 - i64(shortedShares), new TimePointSec(0));
+          positionsV2Table.set(pos, this.receiver);
         } else {
-          cost = ONE_XUSDC * quantity;
-          let bal = this.balancesTable.get(account.N);
-          check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell (no) collateral");
-          
-          bal!.funds = new Asset(bal!.funds.amount - cost, bal!.funds.symbol);
-          this.balancesTable.update(bal!, account);
-          
-          if (pos == null) {
-            pos = new PositionTable(market_id, quantity, 0);
-          } else {
-            pos.yes_shares += quantity;
-          }
-          positionsTable.set(pos, account);
+          pos.shares -= i64(quantity);
+          positionsV2Table.update(pos, this.receiver);
         }
       }
     }
 
     const orderId = this.getNextOrderId();
-    const order = new OrderTable(orderId, account, isBid, priceInt, quantity);
+    const order = new OrderTable(orderId, account, outcome_id, bid, priceInt, quantity);
     
     const ordersTable = new TableStore<OrderTable>(this.receiver, Name.fromU64(market_id));
     ordersTable.set(order, this.receiver);
 
-    this.matchOrders(market_id, order, isBid);
+    this.matchOrders(market_id, order, outcome_id);
     
-    print(`Placed order ${orderId} for market ${market_id}`);
+    print(`Placed order ${orderId} for market ${market_id}, outcome ${outcome_id}`);
   }
 
   @action("cancelorder")
@@ -200,6 +200,7 @@ export class PredictionMarketContract extends Contract {
     check(order != null, "Order not found");
     check(order!.account == account, "Not your order");
 
+    const outcome_id = order!.outcome_id;
     ordersTable.remove(order!);
 
     if (order!.isBid) {
@@ -213,13 +214,17 @@ export class PredictionMarketContract extends Contract {
         this.balancesTable.update(bal, account);
       }
     } else {
-      const positionsTable = new TableStore<PositionTable>(this.receiver, account);
-      let pos = positionsTable.get(market_id);
+      const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
+      const compositeKey = (account.N << 8) | outcome_id;
+      let pos = positionsV2Table.get(compositeKey);
       
-      if (pos != null) {
-        if (pos.no_shares >= order!.quantity) {
-          pos.no_shares -= order!.quantity;
-          const refund = ONE_XUSDC * order!.quantity;
+      if (pos != null && pos.shares < 0) {
+        const shortedShares = 0 - pos.shares;
+        if (shortedShares >= i64(order!.quantity)) {
+          const refund = ONE_XUSDC * i64(order!.quantity);
+          pos.shares += i64(order!.quantity);
+          positionsV2Table.update(pos, this.receiver);
+          
           let bal = this.balancesTable.get(account.N);
           if (bal == null) {
             bal = new BalanceTable(account, new Asset(refund, XUSDC_SYMBOL));
@@ -229,9 +234,9 @@ export class PredictionMarketContract extends Contract {
             this.balancesTable.update(bal, account);
           }
         } else {
-          pos.yes_shares += order!.quantity;
+          pos.shares += i64(order!.quantity);
+          positionsV2Table.update(pos, this.receiver);
         }
-        positionsTable.update(pos, account);
       }
     }
     
@@ -239,18 +244,20 @@ export class PredictionMarketContract extends Contract {
   }
 
   @action("resolve")
-  resolveMarket(admin: Name, market_id: u64, outcome: boolean): void {
+  resolveMarket(admin: Name, market_id: u64, winning_outcome_id: u8): void {
     requireAuth(admin);
     
     let market = this.marketsTable.get(market_id);
     check(market != null, "Market not found");
     check(!market!.resolved, "Market already resolved");
+    check(winning_outcome_id < market!.outcomes_count, "Invalid winning outcome_id");
 
     market!.resolved = true;
-    market!.outcome = outcome ? 1 : 0;
+    market!.outcome = winning_outcome_id;
+    market!.resolved_at = new TimePointSec(0);
     this.marketsTable.update(market!, this.receiver);
     
-    print(`Resolved market ${market_id} with outcome: ${outcome ? "Yes" : "No"}`);
+    print(`Resolved market ${market_id} with winning outcome: ${winning_outcome_id}`);
   }
 
   @action("claim")
@@ -259,37 +266,26 @@ export class PredictionMarketContract extends Contract {
     
     const market = this.marketsTable.get(market_id);
     check(market != null && market!.resolved, "Market not resolved yet");
+    check(market!.outcome < 255, "Market outcome not set");
 
-    const positionsTable = new TableStore<PositionTable>(this.receiver, user);
-    let pos = positionsTable.get(market_id);
-    check(pos != null, "No position for user in this market");
+    const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
+    const winning_outcome_id = market!.outcome;
+    const compositeKey = (user.N << 8) | winning_outcome_id;
+    let pos = positionsV2Table.get(compositeKey);
+    
+    check(pos != null && pos.shares > 0, "No winning position for user in this market");
 
-    let payout: i64 = 0;
-    if (market!.outcome == 1) {
-      if (pos!.yes_shares > 0) {
-        payout = ONE_XUSDC * pos!.yes_shares;
-        pos!.yes_shares = 0;
-      }
-      pos!.no_shares = 0;
-    } else if (market!.outcome == 0) {
-      if (pos!.no_shares > 0) {
-        payout = ONE_XUSDC * pos!.no_shares;
-        pos!.no_shares = 0;
-      }
-      pos!.yes_shares = 0;
-    }
+    const payout = ONE_XUSDC * pos!.shares;
+    pos!.shares = 0;
+    positionsV2Table.update(pos!, this.receiver);
 
-    positionsTable.update(pos!, user);
-
-    if (payout > 0) {
-      let bal = this.balancesTable.get(user.N);
-      if (bal == null) {
-        bal = new BalanceTable(user, new Asset(payout, XUSDC_SYMBOL));
-        this.balancesTable.set(bal, user);
-      } else {
-        bal.funds = new Asset(bal.funds.amount + payout, bal.funds.symbol);
-        this.balancesTable.update(bal, user);
-      }
+    let bal = this.balancesTable.get(user.N);
+    if (bal == null) {
+      bal = new BalanceTable(user, new Asset(payout, XUSDC_SYMBOL));
+      this.balancesTable.set(bal, user);
+    } else {
+      bal.funds = new Asset(bal.funds.amount + payout, bal.funds.symbol);
+      this.balancesTable.update(bal, user);
     }
     
     print(`Claimed ${payout} for user ${user.toString()} in market ${market_id}`);
@@ -314,53 +310,58 @@ export class PredictionMarketContract extends Contract {
     print(`Collected fees to ${to.toString()}`);
   }
 
-  private matchOrders(market_id: u64, newOrder: OrderTable, isBid: boolean): void {
+  private matchOrders(market_id: u64, newOrder: OrderTable, outcome_id: u8): void {
     const ordersTable = new TableStore<OrderTable>(this.receiver, Name.fromU64(market_id));
     
     let currentOrder = ordersTable.first();
     
     while (currentOrder != null && newOrder.quantity > 0) {
-      if (isBid) {
-        if (!currentOrder.isBid && currentOrder.price <= newOrder.price) {
-          const tradePrice = currentOrder.price;
-          const tradeQty = currentOrder.quantity < newOrder.quantity ? currentOrder.quantity : newOrder.quantity;
+      if (currentOrder!.outcome_id != outcome_id) {
+        currentOrder = ordersTable.next(currentOrder!);
+        continue;
+      }
+      
+      if (newOrder.isBid) {
+        if (!currentOrder!.isBid && currentOrder!.price <= newOrder.price) {
+          const tradePrice = currentOrder!.price;
+          const tradeQty = currentOrder!.quantity < newOrder.quantity ? currentOrder!.quantity : newOrder.quantity;
           
-          this.executeTrade(market_id, newOrder.account, currentOrder.account, tradePrice, tradeQty, true);
+          this.executeTrade(market_id, outcome_id, newOrder.account, currentOrder!.account, tradePrice, tradeQty);
           
-          currentOrder.quantity -= tradeQty;
+          currentOrder!.quantity -= tradeQty;
           newOrder.quantity -= tradeQty;
           
-          if (currentOrder.quantity == 0) {
-            const toRemove = currentOrder;
-            currentOrder = ordersTable.next(currentOrder);
+          if (currentOrder!.quantity == 0) {
+            const toRemove = currentOrder!;
+            currentOrder = ordersTable.next(currentOrder!);
             ordersTable.remove(toRemove);
           } else {
-            ordersTable.update(currentOrder, this.receiver);
-            currentOrder = ordersTable.next(currentOrder);
+            ordersTable.update(currentOrder!, this.receiver);
+            currentOrder = ordersTable.next(currentOrder!);
           }
         } else {
-          currentOrder = ordersTable.next(currentOrder);
+          currentOrder = ordersTable.next(currentOrder!);
         }
       } else {
-        if (currentOrder.isBid && currentOrder.price >= newOrder.price) {
-          const tradePrice = currentOrder.price;
-          const tradeQty = currentOrder.quantity < newOrder.quantity ? currentOrder.quantity : newOrder.quantity;
+        if (currentOrder!.isBid && currentOrder!.price >= newOrder.price) {
+          const tradePrice = currentOrder!.price;
+          const tradeQty = currentOrder!.quantity < newOrder.quantity ? currentOrder!.quantity : newOrder.quantity;
           
-          this.executeTrade(market_id, currentOrder.account, newOrder.account, tradePrice, tradeQty, false);
+          this.executeTrade(market_id, outcome_id, currentOrder!.account, newOrder.account, tradePrice, tradeQty);
           
-          currentOrder.quantity -= tradeQty;
+          currentOrder!.quantity -= tradeQty;
           newOrder.quantity -= tradeQty;
           
-          if (currentOrder.quantity == 0) {
-            const toRemove = currentOrder;
-            currentOrder = ordersTable.next(currentOrder);
+          if (currentOrder!.quantity == 0) {
+            const toRemove = currentOrder!;
+            currentOrder = ordersTable.next(currentOrder!);
             ordersTable.remove(toRemove);
           } else {
-            ordersTable.update(currentOrder, this.receiver);
-            currentOrder = ordersTable.next(currentOrder);
+            ordersTable.update(currentOrder!, this.receiver);
+            currentOrder = ordersTable.next(currentOrder!);
           }
         } else {
-          currentOrder = ordersTable.next(currentOrder);
+          currentOrder = ordersTable.next(currentOrder!);
         }
       }
     }
@@ -372,24 +373,26 @@ export class PredictionMarketContract extends Contract {
 
   private executeTrade(
     market_id: u64,
+    outcome_id: u8,
     buyer: Name,
     seller: Name,
     priceInt: u64,
-    qty: u32,
-    buyerIsTaker: boolean
+    qty: u32
   ): void {
     const total = priceInt * qty;
-    const fee = total / 10000; // 0.01% fee
+    const fee = total / 10000;
     const payout = total - fee;
 
-    const buyerPosTable = new TableStore<PositionTable>(this.receiver, buyer);
-    let buyerPos = buyerPosTable.get(market_id);
+    const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
+    
+    const buyerKey = (buyer.N << 8) | outcome_id;
+    let buyerPos = positionsV2Table.get(buyerKey);
     if (buyerPos == null) {
-      buyerPos = new PositionTable(market_id, qty, 0);
-      buyerPosTable.set(buyerPos, buyer);
+      buyerPos = new PositionV2Table(buyerKey, buyer, outcome_id, i64(qty), new TimePointSec(0));
+      positionsV2Table.set(buyerPos, this.receiver);
     } else {
-      buyerPos.yes_shares += qty;
-      buyerPosTable.update(buyerPos, buyer);
+      buyerPos.shares += i64(qty);
+      positionsV2Table.update(buyerPos, this.receiver);
     }
 
     let sellerBal = this.balancesTable.get(seller.N);

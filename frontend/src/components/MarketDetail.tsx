@@ -6,9 +6,16 @@ import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUti
 interface Order {
   order_id: number;
   account: string;
+  outcome_id: number;
   isBid: boolean;
   price: number;
   quantity: number;
+}
+
+interface Outcome {
+  outcome_id: number;
+  name: string;
+  display_order: number;
 }
 
 interface MarketDetailProps {
@@ -19,9 +26,10 @@ interface MarketDetailProps {
 
 const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }) => {
   const [market, setMarket] = useState<any>(null);
+  const [outcomes, setOutcomes] = useState<Outcome[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
-  const [outcome, setOutcome] = useState<'yes' | 'no'>('yes');
+  const [selectedOutcomeId, setSelectedOutcomeId] = useState<number>(0);
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,10 +37,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const fetchMarketData = useCallback(async () => {
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
       const marketResult = await rpc.get_table_rows({
-        code: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-        scope: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+        code: contractName,
+        scope: contractName,
         table: 'markets',
         lower_bound: marketId,
         upper_bound: marketId,
@@ -43,12 +52,33 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const marketData = marketResult.rows[0];
         setMarket({
           ...marketData,
-          expireSec: normalizeTimestamp(marketData.expire)
+          expireSec: normalizeTimestamp(marketData.expire),
+          outcomes_count: marketData.outcomes_count || 2,
         });
+
+        const outcomesResult = await rpc.get_table_rows({
+          code: contractName,
+          scope: marketId.toString(),
+          table: 'outcomes',
+          limit: 100,
+        });
+
+        const fetchedOutcomes: Outcome[] = outcomesResult.rows.map((row: any) => ({
+          outcome_id: row.outcome_id,
+          name: row.name,
+          display_order: row.display_order,
+        }));
+
+        fetchedOutcomes.sort((a, b) => a.display_order - b.display_order);
+        setOutcomes(fetchedOutcomes);
+        
+        if (fetchedOutcomes.length > 0 && selectedOutcomeId === 0) {
+          setSelectedOutcomeId(fetchedOutcomes[0].outcome_id);
+        }
       }
 
       const ordersResult = await rpc.get_table_rows({
-        code: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+        code: contractName,
         scope: marketId.toString(),
         table: 'orders',
         limit: 100,
@@ -58,7 +88,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     } catch (error) {
       console.error('Error fetching market data:', error);
     }
-  }, [marketId]);
+  }, [marketId, selectedOutcomeId]);
 
   useEffect(() => {
     fetchMarketData();
@@ -78,7 +108,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const priceAmount = Math.round(priceFloat * 1000000);
       const quantityInt = parseInt(quantity);
 
-      const isBid = (orderType === 'buy') !== (outcome === 'no');
+      const isBid = orderType === 'buy';
 
       let lockAmount = 0;
 
@@ -86,19 +116,23 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         lockAmount = priceFloat * quantityInt;
       } else {
         const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+        const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+        
+        const compositeKey = (BigInt(session.auth.actor.value || 0) << BigInt(8)) | BigInt(selectedOutcomeId);
+        
         const positionResult = await rpc.get_table_rows({
-          code: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-          scope: session.auth.actor,
-          table: 'positions',
-          lower_bound: marketId,
-          upper_bound: marketId,
+          code: contractName,
+          scope: marketId.toString(),
+          table: 'positionsv2',
+          lower_bound: compositeKey.toString(),
+          upper_bound: compositeKey.toString(),
           limit: 1,
         });
 
         let heldShares = 0;
         if (positionResult.rows.length > 0) {
           const position = positionResult.rows[0];
-          heldShares = outcome === 'yes' ? position.yes_shares : position.no_shares;
+          heldShares = position.shares;
         }
 
         const shortedShares = Math.max(0, quantityInt - heldShares);
@@ -134,7 +168,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         data: {
           account: session.auth.actor,
           market_id: marketId,
-          outcome: outcome,
+          outcome_id: selectedOutcomeId,
           bid: orderType === 'buy',
           price: `${priceAmount.toFixed(0)} XUSDC`,
           quantity: quantityInt,
@@ -159,8 +193,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     return <div className="loading">Loading market...</div>;
   }
 
-  const bids = orders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
-  const asks = orders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
+  const filteredOrders = orders.filter(o => o.outcome_id === selectedOutcomeId);
+  const bids = filteredOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
+  const asks = filteredOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
 
   return (
     <div className="market-detail">
@@ -268,23 +303,20 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               <div className="form-group">
                 <label>
                   Outcome
-                  <Tooltip text="Choose Yes if you think the event will happen, No if you think it won't." position="right">
+                  <Tooltip text="Select which outcome you want to trade." position="right">
                     <span className="tooltip-icon">ℹ</span>
                   </Tooltip>
                 </label>
-                <div className="button-group">
-                  <button
-                    className={outcome === 'yes' ? 'active' : ''}
-                    onClick={() => setOutcome('yes')}
-                  >
-                    Yes
-                  </button>
-                  <button
-                    className={outcome === 'no' ? 'active' : ''}
-                    onClick={() => setOutcome('no')}
-                  >
-                    No
-                  </button>
+                <div className={`button-group ${outcomes.length > 2 ? 'multi-outcome' : ''}`}>
+                  {outcomes.map((outcome) => (
+                    <button
+                      key={outcome.outcome_id}
+                      className={selectedOutcomeId === outcome.outcome_id ? 'active' : ''}
+                      onClick={() => setSelectedOutcomeId(outcome.outcome_id)}
+                    >
+                      {outcome.name}
+                    </button>
+                  ))}
                 </div>
               </div>
 
