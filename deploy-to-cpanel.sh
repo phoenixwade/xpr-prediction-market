@@ -55,10 +55,21 @@ else
     echo ""
 fi
 
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Warning: .env file not found!${NC}"
+if [ -f "../.env" ]; then
+    echo -e "${YELLOW}Generating frontend/.env from root .env...${NC}"
+    source ../.env
+    cat > .env << EOF
+
+REACT_APP_PROTON_ENDPOINT=${PROTON_RPC}
+REACT_APP_CHAIN_ID=${PROTON_CHAIN_ID}
+REACT_APP_CONTRACT_NAME=${CONTRACT_ACCOUNT}
+REACT_APP_NAME=${APP_NAME:-XPRedicting}
+EOF
+    echo -e "${GREEN}Frontend .env generated successfully!${NC}"
+    echo ""
+else
+    echo -e "${YELLOW}Warning: Root .env file not found!${NC}"
     echo -e "${YELLOW}Using default environment variables.${NC}"
-    echo -e "${YELLOW}Create a .env file with your configuration for production.${NC}"
     echo ""
 fi
 
