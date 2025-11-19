@@ -246,7 +246,16 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         }),
       });
       
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        console.error('Non-JSON response:', text);
+        alert(`Failed to post comment: Server returned non-JSON response (${response.status}). Check console for details.`);
+        return;
+      }
       
       if (data.success) {
         setNewComment('');
@@ -256,7 +265,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       }
     } catch (error) {
       console.error('Error posting comment:', error);
-      alert('Failed to post comment');
+      alert('Failed to post comment: ' + error);
     } finally {
       setCommentLoading(false);
     }
