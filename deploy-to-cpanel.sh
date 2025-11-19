@@ -101,15 +101,38 @@ fi
 mkdir -p "$PUBLIC_HTML"
 mkdir -p "$PUBLIC_HTML/images"
 mkdir -p "$PUBLIC_HTML/api"
+mkdir -p "$PUBLIC_HTML/data"
 
-echo -e "${YELLOW}Deploying to $PUBLIC_HTML...${NC}"
-rsync -av --delete --exclude 'images/' --exclude 'api/' build/ "$PUBLIC_HTML/"
+echo -e "${YELLOW}Deploying React build to $PUBLIC_HTML...${NC}"
+rsync -av --delete --exclude 'images/' build/ "$PUBLIC_HTML/"
 
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}Deployment completed successfully!${NC}"
+    echo -e "${GREEN}React build deployed successfully!${NC}"
     echo ""
 else
-    echo -e "${RED}Deployment failed!${NC}"
+    echo -e "${RED}React build deployment failed!${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Deploying API files...${NC}"
+rsync -av --delete "$FRONTEND_DIR/public/api/" "$PUBLIC_HTML/api/"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}API files deployed successfully!${NC}"
+    echo ""
+else
+    echo -e "${RED}API deployment failed!${NC}"
+    exit 1
+fi
+
+echo -e "${YELLOW}Deploying data directory (database protection)...${NC}"
+rsync -av "$FRONTEND_DIR/public/data/" "$PUBLIC_HTML/data/"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}Data directory deployed successfully!${NC}"
+    echo ""
+else
+    echo -e "${RED}Data directory deployment failed!${NC}"
     exit 1
 fi
 
