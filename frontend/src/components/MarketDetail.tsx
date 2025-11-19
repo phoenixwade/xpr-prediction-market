@@ -18,6 +18,14 @@ interface Outcome {
   display_order: number;
 }
 
+interface Comment {
+  id: number;
+  market_id: number;
+  user_account: string;
+  comment_text: string;
+  created_at: number;
+}
+
 interface MarketDetailProps {
   session: any;
   marketId: number;
@@ -33,6 +41,10 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
   const [loading, setLoading] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'trade' | 'comments'>('trade');
 
   const fetchMarketData = useCallback(async () => {
     try {
@@ -90,11 +102,24 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   }, [marketId, selectedOutcomeId]);
 
+  const fetchComments = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/comments.php?market_id=${marketId}`);
+      const data = await response.json();
+      if (data.success) {
+        setComments(data.comments);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  }, [marketId]);
+
   useEffect(() => {
     fetchMarketData();
+    fetchComments();
     const interval = setInterval(fetchMarketData, 5000);
     return () => clearInterval(interval);
-  }, [fetchMarketData]);
+  }, [fetchMarketData, fetchComments]);
 
   const handlePlaceOrder = async () => {
     if (!session || !price || !quantity) {
@@ -189,6 +214,54 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   };
 
+  const handlePostComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!session) {
+      alert('Please connect your wallet to post a comment');
+      return;
+    }
+    
+    if (!newComment.trim()) {
+      alert('Please enter a comment');
+      return;
+    }
+    
+    if (newComment.length > 1000) {
+      alert('Comment is too long (max 1000 characters)');
+      return;
+    }
+    
+    setCommentLoading(true);
+    try {
+      const response = await fetch('/api/comments.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          market_id: marketId,
+          user_account: session.auth.actor.toString(),
+          comment_text: newComment.trim(),
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setNewComment('');
+        fetchComments();
+      } else {
+        alert('Failed to post comment: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      alert('Failed to post comment');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
   if (!market) {
     return <div className="loading">Loading market...</div>;
   }
@@ -249,7 +322,24 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
       </div>
 
+      <div className="market-detail-tabs">
+        <button
+          className={activeTab === 'trade' ? 'active' : ''}
+          onClick={() => setActiveTab('trade')}
+        >
+          Trade
+        </button>
+        <button
+          className={activeTab === 'comments' ? 'active' : ''}
+          onClick={() => setActiveTab('comments')}
+        >
+          Comments ({comments.length})
+        </button>
+      </div>
+
       <div className="market-content">
+        {activeTab === 'trade' ? (
+          <>
         {session && myOrders.length > 0 && (
           <div className="my-orders">
             <h3>
@@ -434,6 +524,53 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             </div>
           )}
         </div>
+          </>
+        ) : (
+          <div className="comments-section">
+            <h3>Discussion</h3>
+            
+            {session ? (
+              <form onSubmit={handlePostComment} className="comment-form">
+                <textarea
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your thoughts on this market..."
+                  maxLength={1000}
+                  rows={3}
+                  disabled={commentLoading}
+                />
+                <div className="comment-form-footer">
+                  <span className="char-count">{newComment.length}/1000</span>
+                  <button type="submit" disabled={commentLoading || !newComment.trim()}>
+                    {commentLoading ? 'Posting...' : 'Post Comment'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="login-prompt">
+                <p>Connect your wallet to join the discussion</p>
+              </div>
+            )}
+            
+            <div className="comments-list">
+              {comments.length === 0 ? (
+                <p className="no-comments">No comments yet. Be the first to share your thoughts!</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="comment-card">
+                    <div className="comment-header">
+                      <span className="comment-author">{comment.user_account}</span>
+                      <span className="comment-time">
+                        {new Date(comment.created_at * 1000).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="comment-text">{comment.comment_text}</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
