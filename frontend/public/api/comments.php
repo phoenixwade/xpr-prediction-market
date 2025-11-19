@@ -15,6 +15,12 @@ if (!file_exists($dataDir)) {
     mkdir($dataDir, 0755, true);
 }
 
+if (!in_array('sqlite', PDO::getAvailableDrivers())) {
+    http_response_code(500);
+    echo json_encode(['error' => 'PDO SQLite driver not available on this server']);
+    exit;
+}
+
 try {
     $db = new PDO('sqlite:' . $dbPath);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -24,13 +30,14 @@ try {
         market_id INTEGER NOT NULL,
         user_account TEXT NOT NULL,
         comment_text TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        INDEX(market_id)
+        created_at INTEGER NOT NULL
     )");
+    
+    $db->exec("CREATE INDEX IF NOT EXISTS idx_comments_market_id ON comments(market_id)");
     
 } catch (PDOException $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Database initialization failed: ' . $e->getMessage()]);
     exit;
 }
 
