@@ -39,15 +39,45 @@ try {
         market_id INTEGER NOT NULL,
         user_account TEXT NOT NULL,
         comment_text TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        parent_comment_id INTEGER DEFAULT NULL,
-        is_deleted INTEGER DEFAULT 0,
-        deleted_by TEXT DEFAULT NULL,
-        deleted_at INTEGER DEFAULT NULL
+        created_at INTEGER NOT NULL
     )");
     
     $db->exec("CREATE INDEX IF NOT EXISTS idx_comments_market_id ON comments(market_id)");
-    $db->exec("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_comment_id)");
+    
+    try {
+        $cols = $db->query("PRAGMA table_info(comments)")->fetchAll(PDO::FETCH_ASSOC);
+        $columnNames = array_map(function($c) { return $c['name']; }, $cols);
+        
+        $db->beginTransaction();
+        
+        if (!in_array('parent_comment_id', $columnNames)) {
+            $db->exec("ALTER TABLE comments ADD COLUMN parent_comment_id INTEGER DEFAULT NULL");
+        }
+        
+        if (!in_array('is_deleted', $columnNames)) {
+            $db->exec("ALTER TABLE comments ADD COLUMN is_deleted INTEGER DEFAULT 0");
+        }
+        
+        if (!in_array('deleted_by', $columnNames)) {
+            $db->exec("ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT NULL");
+        }
+        
+        if (!in_array('deleted_at', $columnNames)) {
+            $db->exec("ALTER TABLE comments ADD COLUMN deleted_at INTEGER DEFAULT NULL");
+        }
+        
+        $db->commit();
+        
+        $db->exec("CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_comment_id)");
+        
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        http_response_code(500);
+        echo json_encode(['error' => 'Schema migration failed: ' . $e->getMessage()]);
+        exit;
+    }
     
 } catch (PDOException $e) {
     http_response_code(500);
