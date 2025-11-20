@@ -176,7 +176,11 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
             <div
               key={market.id}
               className="market-card"
-              onClick={() => onSelectMarket(market.id)}
+              onClick={() => {
+                const url = getMarketUrl(market.id);
+                window.history.pushState({}, '', url);
+                onSelectMarket(market.id);
+              }}
             >
               <div className="market-card-content">
                 {market.image_url && (

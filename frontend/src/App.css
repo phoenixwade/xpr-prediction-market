@@ -40,6 +40,12 @@ body {
   font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.8rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.app-header h1:hover {
+  opacity: 0.8;
 }
 
 .xpr-highlight {
