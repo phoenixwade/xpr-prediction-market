@@ -1852,3 +1852,35 @@ body {
   background: rgba(124, 58, 237, 0.2);
   border-color: rgba(124, 58, 237, 0.5);
 }
+
+.quoted-message {
+  background: rgba(124, 58, 237, 0.08);
+  border-left: 3px solid rgba(124, 58, 237, 0.5);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
+
+.quote-author {
+  color: #8E96FF;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.quote-text {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.reply-text {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.comment-text.deleted-text {
+  font-style: italic;
+  color: #94a3b8;
+}

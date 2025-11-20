@@ -290,15 +290,43 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     
     setReplyingTo(comment);
     
-    const quotedText = comment.comment_text.split('\n')[0].substring(0, 50);
-    const suffix = comment.comment_text.length > 50 ? '...' : '';
-    setNewComment(`> ${quotedText}${suffix}\n\n`);
+    const quotedText = comment.comment_text.split('\n')[0].substring(0, 80);
+    const suffix = comment.comment_text.length > 80 ? '...' : '';
+    setNewComment(`@${comment.user_account}\n${quotedText}${suffix}\n\n`);
     
     const textarea = document.querySelector('.comment-form textarea') as HTMLTextAreaElement;
     if (textarea) {
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     }
+  };
+
+  const renderCommentText = (comment: Comment) => {
+    if (comment.is_deleted) {
+      return <div className="comment-text deleted-text">[Moderator Deleted]</div>;
+    }
+
+    const lines = comment.comment_text.split('\n');
+    if (comment.parent_comment_id && lines.length > 0 && lines[0].startsWith('@')) {
+      const quotedAuthor = lines[0];
+      const quotedText = lines.slice(1).join('\n').trim();
+      const replyText = quotedText.split('\n\n').slice(1).join('\n\n');
+      const quote = quotedText.split('\n\n')[0];
+
+      return (
+        <div className="comment-text">
+          {quote && (
+            <div className="quoted-message">
+              <div className="quote-author">{quotedAuthor}</div>
+              <div className="quote-text">{quote}</div>
+            </div>
+          )}
+          {replyText && <div className="reply-text">{replyText}</div>}
+        </div>
+      );
+    }
+
+    return <div className="comment-text">{comment.comment_text}</div>;
   };
 
   const handleDeleteComment = async (commentId: number) => {
@@ -654,9 +682,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                             {new Date(comment.created_at * 1000).toLocaleString()}
                           </span>
                         </div>
-                        <div className="comment-text">
-                          {comment.is_deleted ? '[Moderator Deleted]' : comment.comment_text}
-                        </div>
+                        {renderCommentText(comment)}
                         {!comment.is_deleted && (
                           <div className="comment-actions">
                             <button onClick={() => handleReply(comment)} className="reply-button">
@@ -681,9 +707,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                                 {new Date(reply.created_at * 1000).toLocaleString()}
                               </span>
                             </div>
-                            <div className="comment-text">
-                              {reply.is_deleted ? '[Moderator Deleted]' : reply.comment_text}
-                            </div>
+                            {renderCommentText(reply)}
                             {!reply.is_deleted && (
                               <div className="comment-actions">
                                 <button onClick={() => handleReply(reply)} className="reply-button">
