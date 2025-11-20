@@ -17,7 +17,7 @@ if (file_exists($envPath)) {
     }
 }
 
-$dbPath = __DIR__ . '/../data/comments.db';
+$dbPath = getenv('COMMENTS_DB_PATH') ?: __DIR__ . '/../data/comments.db';
 $dataDir = dirname($dbPath);
 
 if (!file_exists($dataDir)) {
