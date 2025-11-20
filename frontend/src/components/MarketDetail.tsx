@@ -30,6 +30,22 @@ interface Comment {
   deleted_at: number | null;
 }
 
+interface Activity {
+  type: string;
+  market_id: number;
+  user: string;
+  timestamp: string;
+  block_num: number;
+  trx_id: string;
+  outcome_id?: number;
+  side?: string;
+  price?: string;
+  quantity?: number;
+  question?: string;
+  category?: string;
+  outcome?: number;
+}
+
 interface MarketDetailProps {
   session: any;
   marketId: number;
@@ -48,9 +64,13 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'trade' | 'comments'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'comments' | 'activity'>('trade');
   const [commentAdmins, setCommentAdmins] = useState<string[]>([]);
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<string>('');
+  const [activityUserFilter, setActivityUserFilter] = useState<string>('');
 
   const fetchMarketData = useCallback(async () => {
     try {
@@ -123,12 +143,43 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   }, [marketId]);
 
+  const fetchActivity = useCallback(async () => {
+    try {
+      setActivityLoading(true);
+      let url = `/api/activity.php?market_id=${marketId}&limit=50`;
+      
+      if (activityFilter) {
+        url += `&event_type=${activityFilter}`;
+      }
+      
+      if (activityUserFilter) {
+        url += `&user=${activityUserFilter}`;
+      }
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.success) {
+        setActivities(data.activities);
+      }
+    } catch (error) {
+      console.error('Error fetching activity:', error);
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [marketId, activityFilter, activityUserFilter]);
+
   useEffect(() => {
     fetchMarketData();
     fetchComments();
-    const interval = setInterval(fetchMarketData, 5000);
-    return () => clearInterval(interval);
-  }, [fetchMarketData, fetchComments]);
+    fetchActivity();
+    const marketInterval = setInterval(fetchMarketData, 5000);
+    const activityInterval = setInterval(fetchActivity, 30000);
+    return () => {
+      clearInterval(marketInterval);
+      clearInterval(activityInterval);
+    };
+  }, [fetchMarketData, fetchComments, fetchActivity]);
 
   const handlePlaceOrder = async () => {
     if (!session || !price || !quantity) {
@@ -443,10 +494,116 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         >
           Comments ({comments.length})
         </button>
+        <button
+          className={activeTab === 'activity' ? 'active' : ''}
+          onClick={() => setActiveTab('activity')}
+        >
+          Activity
+        </button>
       </div>
 
       <div className="market-content">
-        {activeTab === 'trade' ? (
+        {activeTab === 'activity' ? (
+          <div className="activity-section">
+            <div className="activity-filters">
+              <div className="filter-group">
+                <label>Event Type:</label>
+                <select 
+                  value={activityFilter} 
+                  onChange={(e) => setActivityFilter(e.target.value)}
+                >
+                  <option value="">All Events</option>
+                  <option value="createmkt">Market Created</option>
+                  <option value="placeorder">Order Placed</option>
+                  <option value="resolve">Market Resolved</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>User:</label>
+                <input
+                  type="text"
+                  value={activityUserFilter}
+                  onChange={(e) => setActivityUserFilter(e.target.value)}
+                  placeholder="Filter by wallet address"
+                />
+              </div>
+            </div>
+
+            {activityLoading && activities.length === 0 ? (
+              <div className="loading">Loading activity...</div>
+            ) : (
+              <div className="activity-list">
+                {activities.length === 0 ? (
+                  <p className="no-activity">No activity found for this market.</p>
+                ) : (
+                  activities.map((activity, index) => {
+                    const activityTime = new Date(activity.timestamp);
+                    const now = new Date();
+                    const diffMs = now.getTime() - activityTime.getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMins / 60);
+                    const diffDays = Math.floor(diffHours / 24);
+                    
+                    let timeAgo = '';
+                    if (diffDays > 0) {
+                      timeAgo = `${diffDays}d ago`;
+                    } else if (diffHours > 0) {
+                      timeAgo = `${diffHours}h ago`;
+                    } else if (diffMins > 0) {
+                      timeAgo = `${diffMins}m ago`;
+                    } else {
+                      timeAgo = 'Just now';
+                    }
+
+                    let activityDescription = '';
+                    let activityClass = '';
+
+                    switch (activity.type) {
+                      case 'createmkt':
+                        activityDescription = `created this market`;
+                        activityClass = 'activity-create';
+                        break;
+                      case 'placeorder':
+                        const outcomeName = outcomes.find(o => o.outcome_id === activity.outcome_id)?.name || `Outcome ${activity.outcome_id}`;
+                        const priceValue = activity.price ? parseFloat(activity.price.split(' ')[0]) / 1000000 : 0;
+                        activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue.toFixed(4)} USDC`;
+                        activityClass = activity.side === 'buy' ? 'activity-buy' : 'activity-sell';
+                        break;
+                      case 'resolve':
+                        const resolvedOutcome = outcomes.find(o => o.outcome_id === activity.outcome)?.name || `Outcome ${activity.outcome}`;
+                        activityDescription = `resolved market to "${resolvedOutcome}"`;
+                        activityClass = 'activity-resolve';
+                        break;
+                      default:
+                        activityDescription = `performed ${activity.type}`;
+                        activityClass = 'activity-other';
+                    }
+
+                    return (
+                      <div key={`${activity.trx_id}-${index}`} className={`activity-item ${activityClass}`}>
+                        <div className="activity-header">
+                          <span className="activity-user">{activity.user}</span>
+                          <span className="activity-time">{timeAgo}</span>
+                        </div>
+                        <div className="activity-description">{activityDescription}</div>
+                        <div className="activity-meta">
+                          <a 
+                            href={`https://protonscan.io/transaction/${activity.trx_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="activity-link"
+                          >
+                            View on ProtonScan →
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'trade' ? (
           <>
         {session && myOrders.length > 0 && (
           <div className="my-orders">
