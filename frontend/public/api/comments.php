@@ -12,8 +12,9 @@ $commentAdmins = [];
 $envPath = __DIR__ . '/../../../.env';
 if (file_exists($envPath)) {
     $envContent = file_get_contents($envPath);
-    if (preg_match('/COMMENT_ADMINS=(.+)/', $envContent, $matches)) {
-        $commentAdmins = array_map('trim', explode('|', trim($matches[1])));
+    if (preg_match('/^\s*COMMENT_ADMINS\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^#\r\n]+))/m', $envContent, $matches)) {
+        $raw = $matches[1] ?: $matches[2] ?: trim($matches[3]);
+        $commentAdmins = array_values(array_filter(array_map('trim', explode('|', $raw))));
     }
 }
 
