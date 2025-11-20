@@ -13,6 +13,17 @@ CPANEL_HOME="/home/${CPANEL_USER}"
 PUBLIC_HTML="${CPANEL_HOME}/public_html"
 PROJECT_DIR="${CPANEL_HOME}/proton-prediction-market"
 FRONTEND_DIR="${PROJECT_DIR}/frontend"
+LOG_DIR="${CPANEL_HOME}/logs"
+LOG_FILE="${LOG_DIR}/deploy.log"
+
+mkdir -p "$LOG_DIR"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+log "=== Deployment started ==="
+log "Git commit: $(cd "$PROJECT_DIR" && git rev-parse HEAD 2>/dev/null || echo 'unknown')"
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}Proton Prediction Market - cPanel Deployment${NC}"
@@ -20,6 +31,7 @@ echo -e "${GREEN}========================================${NC}"
 echo ""
 
 if [ ! -d "$CPANEL_HOME" ]; then
+    log "ERROR: cPanel home directory not found at $CPANEL_HOME"
     echo -e "${RED}Error: cPanel home directory not found at $CPANEL_HOME${NC}"
     echo -e "${YELLOW}This script should be run on the cPanel server.${NC}"
     echo -e "${YELLOW}If running locally, use the local-build.sh script instead.${NC}"
@@ -27,6 +39,7 @@ if [ ! -d "$CPANEL_HOME" ]; then
 fi
 
 if [ ! -d "$PROJECT_DIR" ]; then
+    log "ERROR: Project directory not found at $PROJECT_DIR"
     echo -e "${RED}Error: Project directory not found at $PROJECT_DIR${NC}"
     echo -e "${YELLOW}Please upload the project to $PROJECT_DIR first.${NC}"
     exit 1
@@ -34,28 +47,38 @@ fi
 
 echo -e "${YELLOW}Navigating to frontend directory...${NC}"
 cd "$FRONTEND_DIR"
+log "Changed to frontend directory: $FRONTEND_DIR"
 
 if ! command -v node &> /dev/null; then
+    log "ERROR: Node.js is not installed or not in PATH"
     echo -e "${RED}Error: Node.js is not installed or not in PATH${NC}"
     echo -e "${YELLOW}Please enable Node.js in cPanel's 'Setup Node.js App' section.${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Node.js version: $(node --version)${NC}"
-echo -e "${GREEN}npm version: $(npm --version)${NC}"
+NODE_VERSION=$(node --version)
+NPM_VERSION=$(npm --version)
+log "Node.js version: $NODE_VERSION"
+log "npm version: $NPM_VERSION"
+echo -e "${GREEN}Node.js version: $NODE_VERSION${NC}"
+echo -e "${GREEN}npm version: $NPM_VERSION${NC}"
 echo ""
 
 if [ ! -d "node_modules" ]; then
+    log "Installing dependencies..."
     echo -e "${YELLOW}Installing dependencies...${NC}"
     npm install
+    log "Dependencies installed successfully"
     echo -e "${GREEN}Dependencies installed successfully!${NC}"
     echo ""
 else
+    log "Dependencies already installed"
     echo -e "${GREEN}Dependencies already installed.${NC}"
     echo ""
 fi
 
 if [ -f "../.env" ]; then
+    log "Generating frontend/.env from root .env"
     echo -e "${YELLOW}Generating frontend/.env from root .env...${NC}"
     
     PROTON_RPC="$(grep -E '^[[:space:]]*PROTON_RPC=' ../.env | sed -E 's/^[[:space:]]*PROTON_RPC=//' | sed 's/#.*//' | xargs)"
@@ -68,6 +91,8 @@ if [ -f "../.env" ]; then
     CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-prediction}"
     APP_NAME="${APP_NAME:-XPRedicting}"
     
+    log "Environment: RPC=$PROTON_RPC, CONTRACT=$CONTRACT_ACCOUNT"
+    
     cat > .env << EOF
 REACT_APP_PROTON_ENDPOINT=${PROTON_RPC}
 REACT_APP_CHAIN_ID=${PROTON_CHAIN_ID}
@@ -77,18 +102,22 @@ EOF
     echo -e "${GREEN}Frontend .env generated successfully!${NC}"
     echo ""
 else
+    log "WARNING: Root .env file not found, using defaults"
     echo -e "${YELLOW}Warning: Root .env file not found!${NC}"
     echo -e "${YELLOW}Using default environment variables.${NC}"
     echo ""
 fi
 
+log "Starting React build..."
 echo -e "${YELLOW}Building React application...${NC}"
 npm run build
 
 if [ $? -eq 0 ]; then
+    log "Build completed successfully"
     echo -e "${GREEN}Build completed successfully!${NC}"
     echo ""
 else
+    log "ERROR: Build failed"
     echo -e "${RED}Build failed!${NC}"
     exit 1
 fi
@@ -97,10 +126,12 @@ if [ -d "$PUBLIC_HTML" ] && [ "$(ls -A $PUBLIC_HTML)" ]; then
     BACKUP_DIR="${CPANEL_HOME}/public_html_backup"
     
     if [ -d "$BACKUP_DIR" ]; then
+        log "Removing old backup at $BACKUP_DIR"
         echo -e "${YELLOW}Removing old backup...${NC}"
         rm -rf "$BACKUP_DIR"
     fi
     
+    log "Backing up existing public_html to $BACKUP_DIR"
     echo -e "${YELLOW}Backing up existing public_html to $BACKUP_DIR${NC}"
     cp -r "$PUBLIC_HTML" "$BACKUP_DIR"
     echo -e "${GREEN}Backup created successfully!${NC}"
@@ -111,13 +142,16 @@ mkdir -p "$PUBLIC_HTML"
 mkdir -p "$PUBLIC_HTML/images"
 mkdir -p "$PUBLIC_HTML/api"
 
+log "Deploying to $PUBLIC_HTML (excluding images/, api/, data/)"
 echo -e "${YELLOW}Deploying to $PUBLIC_HTML...${NC}"
 rsync -av --delete --exclude 'images/' --exclude 'api/' --exclude 'data/' build/ "$PUBLIC_HTML/"
 
 if [ $? -eq 0 ]; then
+    log "Deployment completed successfully"
     echo -e "${GREEN}Deployment completed successfully!${NC}"
     echo ""
 else
+    log "ERROR: Deployment failed"
     echo -e "${RED}Deployment failed!${NC}"
     exit 1
 fi
@@ -172,13 +206,21 @@ find "$PUBLIC_HTML" -type d -exec chmod 755 {} \;
 echo -e "${GREEN}Permissions set successfully!${NC}"
 echo ""
 
+BUILD_SIZE=$(du -sh $PUBLIC_HTML | cut -f1)
+FILES_COUNT=$(find $PUBLIC_HTML -type f | wc -l)
+
+log "=== Deployment completed successfully ==="
+log "Build size: $BUILD_SIZE"
+log "Files deployed: $FILES_COUNT"
+log ""
+
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}Deployment Summary${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo -e "Project Directory: ${YELLOW}$PROJECT_DIR${NC}"
 echo -e "Public HTML: ${YELLOW}$PUBLIC_HTML${NC}"
-echo -e "Build Size: ${YELLOW}$(du -sh $PUBLIC_HTML | cut -f1)${NC}"
-echo -e "Files Deployed: ${YELLOW}$(find $PUBLIC_HTML -type f | wc -l)${NC}"
+echo -e "Build Size: ${YELLOW}$BUILD_SIZE${NC}"
+echo -e "Files Deployed: ${YELLOW}$FILES_COUNT${NC}"
 echo ""
 echo -e "${GREEN}✓ Deployment completed successfully!${NC}"
 echo -e "${GREEN}Your app should now be live at: ${YELLOW}https://pawnline.io${NC}"
