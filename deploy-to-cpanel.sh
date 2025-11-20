@@ -58,15 +58,15 @@ fi
 if [ -f "../.env" ]; then
     echo -e "${YELLOW}Generating frontend/.env from root .env...${NC}"
     
-    PROTON_RPC=$(grep -E '^[[:space:]]*PROTON_RPC=' ../.env | sed -E 's/^[[:space:]]*PROTON_RPC=//' | sed 's/#.*//' | xargs)
-    PROTON_CHAIN_ID=$(grep -E '^[[:space:]]*PROTON_CHAIN_ID=' ../.env | sed -E 's/^[[:space:]]*PROTON_CHAIN_ID=//' | sed 's/#.*//' | xargs)
-    CONTRACT_ACCOUNT=$(grep -E '^[[:space:]]*CONTRACT_ACCOUNT=' ../.env | sed -E 's/^[[:space:]]*CONTRACT_ACCOUNT=//' | sed 's/#.*//' | xargs)
-    APP_NAME=$(grep -E '^[[:space:]]*APP_NAME=' ../.env | sed -E 's/^[[:space:]]*APP_NAME=//' | sed 's/#.*//' | xargs)
+    PROTON_RPC="$(grep -E '^[[:space:]]*PROTON_RPC=' ../.env | sed -E 's/^[[:space:]]*PROTON_RPC=//' | sed 's/#.*//' | xargs)"
+    PROTON_CHAIN_ID="$(grep -E '^[[:space:]]*PROTON_CHAIN_ID=' ../.env | sed -E 's/^[[:space:]]*PROTON_CHAIN_ID=//' | sed 's/#.*//' | xargs)"
+    CONTRACT_ACCOUNT="$(grep -E '^[[:space:]]*CONTRACT_ACCOUNT=' ../.env | sed -E 's/^[[:space:]]*CONTRACT_ACCOUNT=//' | sed 's/#.*//' | xargs)"
+    APP_NAME="$(grep -E '^[[:space:]]*APP_NAME=' ../.env | sed -E 's/^[[:space:]]*APP_NAME=//' | sed 's/#.*//' | xargs)"
     
-    PROTON_RPC=${PROTON_RPC:-https://testnet.protonchain.com}
-    PROTON_CHAIN_ID=${PROTON_CHAIN_ID:-71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd}
-    CONTRACT_ACCOUNT=${CONTRACT_ACCOUNT:-prediction}
-    APP_NAME=${APP_NAME:-XPRedicting}
+    PROTON_RPC="${PROTON_RPC:-https://testnet.protonchain.com}"
+    PROTON_CHAIN_ID="${PROTON_CHAIN_ID:-71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd}"
+    CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-prediction}"
+    APP_NAME="${APP_NAME:-XPRedicting}"
     
     cat > .env << EOF
 REACT_APP_PROTON_ENDPOINT=${PROTON_RPC}
