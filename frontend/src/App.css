@@ -1770,3 +1770,117 @@ body {
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+
+.comment-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.reply-button,
+.delete-button {
+  background: transparent;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #8E96FF;
+  padding: 0.375rem 0.875rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reply-button:hover {
+  background: rgba(124, 58, 237, 0.1);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.delete-button {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.delete-button:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.comment-card.reply {
+  margin-left: 2rem;
+  margin-top: 0.75rem;
+  border-left: 3px solid rgba(124, 58, 237, 0.4);
+}
+
+.comment-card.deleted {
+  opacity: 0.6;
+}
+
+.comment-card.deleted .comment-text {
+  font-style: italic;
+  color: #94a3b8;
+}
+
+.replying-to-banner {
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.replying-to-banner span {
+  color: #cbd5e1;
+  font-size: 0.875rem;
+}
+
+.replying-to-banner button {
+  background: transparent;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #8E96FF;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.replying-to-banner button:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.quoted-message {
+  background: rgba(124, 58, 237, 0.08);
+  border-left: 3px solid rgba(124, 58, 237, 0.5);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
+
+.quote-author {
+  color: #8E96FF;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+.quote-text {
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.reply-text {
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.comment-text.deleted-text {
+  font-style: italic;
+  color: #94a3b8;
+}

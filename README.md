@@ -9,20 +9,27 @@ This platform combines the best features of Polymarket, Kalshi, and PredictIt to
 ## Features
 
 ### Smart Contract Features
-- **Binary Markets**: Yes/No prediction markets on any topic
+- **Multi-Outcome Markets**: Support for binary (Yes/No) and multi-outcome prediction markets
 - **Central Limit Order Book (CLOB)**: On-chain order matching engine
 - **Non-Custodial**: Users maintain full control of funds via Proton WebAuth
 - **Minimal Fees**: 0.01% taker fee, 0% maker fee
 - **Automated Settlement**: Smart contract handles market resolution and payouts
-- **Collateral Management**: Automatic handling of short selling collateral (1 XPR per share)
+- **Collateral Management**: Automatic handling of short selling collateral (1 XUSDC per share)
+- **Market Approval Workflow**: Admin approval required before markets go live
+- **Settings Singleton**: Contract-level configuration management
 
 ### Frontend Features
 - **Wallet Integration**: Seamless Proton WebAuth connection
-- **Markets List**: Browse and filter markets by category and status
+- **Markets List**: Browse and filter markets by category and status (defaults to Active)
 - **Order Book Display**: Real-time bid/ask order book visualization
 - **Trading Interface**: Place buy/sell orders with limit pricing
+- **Multi-Outcome Support**: Trade on markets with 2+ outcomes
 - **Portfolio Management**: View positions, balances, and claim winnings
-- **Admin Panel**: Create and resolve markets
+- **My Orders Section**: View all your orders across all outcomes in one place
+- **Admin Panel**: Create markets, approve pending markets, and resolve markets
+- **Comments System**: Discussion threads on each market with moderation
+- **Image Upload**: Market thumbnails for visual appeal
+- **Social Sharing**: Share markets on Twitter, Telegram, and Facebook
 - **Real-time Updates**: Automatic polling every 5 seconds
 - **Mobile Responsive**: Optimized for all screen sizes
 
@@ -208,14 +215,62 @@ This project includes automated deployment scripts for cPanel hosting:
 - Smart contract handles all collateral and settlement automatically
 - Admin actions (create/resolve) require proper authorization
 
-## Future Enhancements
+## Development Phases
+
+### ✅ Completed Phases
+
+**Phase 1: Multi-Outcome Markets** (PR #31)
+- Support for markets with 2+ outcomes (beyond binary Yes/No)
+- Smart contract updates to handle multiple outcomes
+- Frontend UI updates for outcome selection and trading
+- Neutral color scheme for non-binary markets
+
+**Phase 2: Settings Singleton** (PR #40)
+- Contract-level configuration management
+- Admin-controlled settings (fees, limits, etc.)
+- Persistent configuration storage
+
+**Phase 3: Market Approval Workflow** (PR #40)
+- Admin approval required before markets go live
+- "Approve Markets" tab in Admin Panel
+- Market status tracking (pending/approved)
+
+**Phase 4: Comments System** (PRs #42-#46)
+- SQLite database for persistent comment storage
+- PHP REST API for comment CRUD operations
+- Tabbed interface (Trade/Comments) in market detail pages
+- User authentication via Proton wallet required to post
+- Single discussion thread per market
+
+**Phase 4.5: Comments Expansion** (In Progress)
+- Reply functionality with Telegram-style partial quote
+- Comment moderation with admin delete capability
+- Threaded discussions for better conversation flow
+
+### 🚧 Upcoming Phases
+
+**Phase 5: Market Activity Feed**
+- Real-time activity stream showing trades and orders
+- Market event notifications
+- Activity filtering and sorting
+- User activity tracking
+
+**Phase 6: User Portfolio & Holdings**
+- Comprehensive portfolio dashboard
+- Profit/loss calculations across all positions
+- Portfolio value tracking over time
+- Performance analytics and charts
+
+### 💡 Future Enhancements
 
 - Trade history and price charts
 - Community governance for market creation
-- Multi-outcome markets (beyond binary)
 - Advanced order types (stop-loss, take-profit)
 - Liquidity incentives and market maker rewards
 - Mobile app with native wallet integration
+- Email/push notifications for market events
+- Market categories and advanced filtering
+- Leaderboards and user reputation system
 
 ## Contributing
 
