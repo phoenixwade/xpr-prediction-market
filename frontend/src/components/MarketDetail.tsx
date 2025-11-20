@@ -341,7 +341,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       return;
     }
     
-    if (!confirm('Are you sure you want to delete this comment? It will be replaced with "[Moderator Deleted]".')) {
+    if (!window.confirm('Are you sure you want to delete this comment? It will be replaced with "[Moderator Deleted]".')) {
       return;
     }
     
