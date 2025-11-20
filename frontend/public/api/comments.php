@@ -9,13 +9,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 $commentAdmins = [];
-$envPath = __DIR__ . '/../../../.env';
-if (file_exists($envPath)) {
-    $envContent = file_get_contents($envPath);
-    if (preg_match('/^\s*COMMENT_ADMINS\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^#\r\n]+))/m', $envContent, $matches)) {
-        $raw = $matches[1] ?: $matches[2] ?: trim($matches[3]);
-        $commentAdmins = array_values(array_filter(array_map('trim', explode('|', $raw))));
+$raw = getenv('COMMENT_ADMINS'); // Prefer server environment variable if set
+
+if (!$raw) {
+    $candidates = [];
+    
+    $candidates[] = __DIR__ . '/../../../.env';
+    
+    $candidates[] = __DIR__ . '/../.env';
+    
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? null;
+    if ($docRoot) {
+        $candidates[] = dirname($docRoot) . '/proton-prediction-market/.env';
     }
+    
+    foreach ($candidates as $path) {
+        if ($path && file_exists($path)) {
+            $envContent = file_get_contents($path);
+            if (preg_match('/^\s*COMMENT_ADMINS\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^#\r\n]+))/m', $envContent, $matches)) {
+                $raw = $matches[1] ?: $matches[2] ?: trim($matches[3]);
+                break;
+            }
+        }
+    }
+}
+
+if ($raw !== null && $raw !== '') {
+    $commentAdmins = array_values(array_filter(array_map('trim', explode('|', $raw))));
 }
 
 $dbPath = getenv('COMMENTS_DB_PATH') ?: __DIR__ . '/../data/comments.db';
