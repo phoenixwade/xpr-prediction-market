@@ -156,6 +156,27 @@ else
     exit 1
 fi
 
+log "Deploying API files from frontend/public/api/ to $PUBLIC_HTML/api/"
+echo -e "${YELLOW}Deploying API files...${NC}"
+if [ -d "$FRONTEND_DIR/public/api" ]; then
+    rsync -av "$FRONTEND_DIR/public/api/" "$PUBLIC_HTML/api/"
+    
+    if [ $? -eq 0 ]; then
+        API_FILES_COUNT=$(find "$PUBLIC_HTML/api" -type f -name "*.php" | wc -l)
+        log "API files deployed successfully ($API_FILES_COUNT PHP files)"
+        echo -e "${GREEN}API files deployed successfully ($API_FILES_COUNT PHP files)${NC}"
+        echo ""
+    else
+        log "ERROR: API files deployment failed"
+        echo -e "${RED}API files deployment failed!${NC}"
+        exit 1
+    fi
+else
+    log "WARNING: API source directory not found at $FRONTEND_DIR/public/api"
+    echo -e "${YELLOW}Warning: API source directory not found${NC}"
+    echo ""
+fi
+
 HTACCESS_FILE="${PUBLIC_HTML}/.htaccess"
 if [ ! -f "$HTACCESS_FILE" ]; then
     echo -e "${YELLOW}Creating .htaccess file for React Router...${NC}"
