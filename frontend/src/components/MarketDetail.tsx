@@ -24,6 +24,10 @@ interface Comment {
   user_account: string;
   comment_text: string;
   created_at: number;
+  parent_comment_id: number | null;
+  is_deleted: number;
+  deleted_by: string | null;
+  deleted_at: number | null;
 }
 
 interface MarketDetailProps {
@@ -45,6 +49,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'trade' | 'comments'>('trade');
+  const [commentAdmins, setCommentAdmins] = useState<string[]>([]);
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
 
   const fetchMarketData = useCallback(async () => {
     try {
@@ -108,6 +114,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const data = await response.json();
       if (data.success) {
         setComments(data.comments);
+        if (data.admins) {
+          setCommentAdmins(data.admins);
+        }
       }
     } catch (error) {
       console.error('Error fetching comments:', error);
@@ -243,6 +252,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           market_id: marketId,
           user_account: session.auth.actor.toString(),
           comment_text: newComment.trim(),
+          parent_comment_id: replyingTo ? replyingTo.id : null,
         }),
       });
       
@@ -259,6 +269,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       
       if (data.success) {
         setNewComment('');
+        setReplyingTo(null);
         fetchComments();
       } else {
         alert('Failed to post comment: ' + (data.error || 'Unknown error'));
@@ -268,6 +279,66 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       alert('Failed to post comment: ' + error);
     } finally {
       setCommentLoading(false);
+    }
+  };
+
+  const handleReply = (comment: Comment) => {
+    if (!session) {
+      alert('Please connect your wallet to reply');
+      return;
+    }
+    
+    setReplyingTo(comment);
+    
+    const quotedText = comment.comment_text.split('\n')[0].substring(0, 50);
+    const suffix = comment.comment_text.length > 50 ? '...' : '';
+    setNewComment(`> ${quotedText}${suffix}\n\n`);
+    
+    const textarea = document.querySelector('.comment-form textarea') as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    if (!session) {
+      alert('Please connect your wallet');
+      return;
+    }
+    
+    const userAccount = session.auth.actor.toString();
+    if (!commentAdmins.includes(userAccount)) {
+      alert('You do not have permission to delete comments');
+      return;
+    }
+    
+    if (!confirm('Are you sure you want to delete this comment? It will be replaced with "[Moderator Deleted]".')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/comments.php', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          comment_id: commentId,
+          user_account: userAccount,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        fetchComments();
+      } else {
+        alert('Failed to delete comment: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Failed to delete comment: ' + error);
     }
   };
 
@@ -561,21 +632,75 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
             )}
             
+            {replyingTo && (
+              <div className="replying-to-banner">
+                <span>Replying to {replyingTo.user_account}</span>
+                <button onClick={() => { setReplyingTo(null); setNewComment(''); }}>Cancel</button>
+              </div>
+            )}
+            
             <div className="comments-list">
               {comments.length === 0 ? (
                 <p className="no-comments">No comments yet. Be the first to share your thoughts!</p>
               ) : (
-                comments.map((comment) => (
-                  <div key={comment.id} className="comment-card">
-                    <div className="comment-header">
-                      <span className="comment-author">{comment.user_account}</span>
-                      <span className="comment-time">
-                        {new Date(comment.created_at * 1000).toLocaleString()}
-                      </span>
+                comments
+                  .filter(c => !c.parent_comment_id)
+                  .map((comment) => (
+                    <div key={comment.id}>
+                      <div className={`comment-card ${comment.is_deleted ? 'deleted' : ''}`}>
+                        <div className="comment-header">
+                          <span className="comment-author">{comment.user_account}</span>
+                          <span className="comment-time">
+                            {new Date(comment.created_at * 1000).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="comment-text">
+                          {comment.is_deleted ? '[Moderator Deleted]' : comment.comment_text}
+                        </div>
+                        {!comment.is_deleted && (
+                          <div className="comment-actions">
+                            <button onClick={() => handleReply(comment)} className="reply-button">
+                              Reply
+                            </button>
+                            {session && commentAdmins.includes(session.auth.actor.toString()) && (
+                              <button onClick={() => handleDeleteComment(comment.id)} className="delete-button">
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {comments
+                        .filter(r => r.parent_comment_id === comment.id)
+                        .map((reply) => (
+                          <div key={reply.id} className={`comment-card reply ${reply.is_deleted ? 'deleted' : ''}`}>
+                            <div className="comment-header">
+                              <span className="comment-author">{reply.user_account}</span>
+                              <span className="comment-time">
+                                {new Date(reply.created_at * 1000).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="comment-text">
+                              {reply.is_deleted ? '[Moderator Deleted]' : reply.comment_text}
+                            </div>
+                            {!reply.is_deleted && (
+                              <div className="comment-actions">
+                                <button onClick={() => handleReply(reply)} className="reply-button">
+                                  Reply
+                                </button>
+                                {session && commentAdmins.includes(session.auth.actor.toString()) && (
+                                  <button onClick={() => handleDeleteComment(reply.id)} className="delete-button">
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      }
                     </div>
-                    <div className="comment-text">{comment.comment_text}</div>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           </div>
