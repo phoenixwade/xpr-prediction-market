@@ -101,7 +101,15 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>
+        <h1 
+          onClick={() => {
+            window.history.pushState({}, '', window.location.pathname);
+            setSelectedMarket(null);
+            setActiveTab('markets');
+            setShowHelp(false);
+          }}
+          style={{ cursor: 'pointer' }}
+        >
           <span className="xpr-highlight">XPR</span>
           {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
         </h1>
