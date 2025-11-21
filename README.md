@@ -1,6 +1,6 @@
 # Proton Prediction Market Platform
 
-A decentralized prediction market platform built on the Proton (XPR) blockchain, featuring binary Yes/No markets with an on-chain order book trading engine.
+A decentralized prediction market platform built on the Proton (XPR) blockchain, featuring multi-outcome markets with an on-chain order book trading engine.
 
 ## Overview
 
@@ -8,290 +8,252 @@ This platform combines the best features of Polymarket, Kalshi, and PredictIt to
 
 ## Features
 
-### Smart Contract Features
+### Core Trading Features
 - **Multi-Outcome Markets**: Support for binary (Yes/No) and multi-outcome prediction markets
-- **Central Limit Order Book (CLOB)**: On-chain order matching engine
+- **Central Limit Order Book (CLOB)**: On-chain order matching engine with automatic trade execution
 - **Non-Custodial**: Users maintain full control of funds via Proton WebAuth
 - **Minimal Fees**: 0.01% taker fee, 0% maker fee
 - **Automated Settlement**: Smart contract handles market resolution and payouts
 - **Collateral Management**: Automatic handling of short selling collateral (1 XUSDC per share)
+
+### Market Management
 - **Market Approval Workflow**: Admin approval required before markets go live
 - **Settings Singleton**: Contract-level configuration management
+- **Market Categories**: Organize markets by topic (Politics, Sports, Crypto, etc.)
+- **Image Upload**: Market thumbnails for visual appeal
+- **Shareable Links**: Direct links to specific markets for social sharing
 
-### Frontend Features
+### User Interface
 - **Wallet Integration**: Seamless Proton WebAuth connection
 - **Markets List**: Browse and filter markets by category and status (defaults to Active)
 - **Order Book Display**: Real-time bid/ask order book visualization
 - **Trading Interface**: Place buy/sell orders with limit pricing
-- **Multi-Outcome Support**: Trade on markets with 2+ outcomes
-- **Portfolio Management**: View positions, balances, and claim winnings
 - **My Orders Section**: View all your orders across all outcomes in one place
-- **Admin Panel**: Create markets, approve pending markets, and resolve markets
-- **Comments System**: Discussion threads on each market with moderation
-- **Image Upload**: Market thumbnails for visual appeal
-- **Social Sharing**: Share markets on Twitter, Telegram, and Facebook
-- **Real-time Updates**: Automatic polling every 5 seconds
+- **Portfolio Management**: View positions, balances, and claim winnings
 - **Mobile Responsive**: Optimized for all screen sizes
+
+### Social Features
+- **Comments System**: Discussion threads on each market with reply functionality
+- **Comment Moderation**: Admin delete capability for inappropriate content
+- **Activity Feed**: Real-time stream of market events (trades, orders, resolutions)
+- **Social Sharing**: Share markets on Twitter, Telegram, and Facebook
+
+### Admin Features
+- **Admin Panel**: Create markets, approve pending markets, and resolve markets
+- **Market Approval**: Review and approve user-submitted markets before they go live
+- **Market Resolution**: Resolve markets with the correct outcome after expiry
+- **Fee Collection**: Withdraw accumulated platform fees
+
+### Technical Features
+- **Real-time Updates**: Automatic polling every 5 seconds
+- **Comprehensive Logging**: API request logging for debugging and monitoring
+- **Automated Backups**: Daily/weekly/monthly backups of database and configuration
+- **SQLite Backend**: Persistent storage for comments and activity data
 
 ## Technology Stack
 
 - **Blockchain**: Proton (XPR Network) - EOSIO-based with WASM smart contracts
 - **Smart Contracts**: TypeScript/AssemblyScript using proton-tsc SDK
-- **Frontend**: React with TypeScript
+- **Frontend**: React 18 with TypeScript
 - **Wallet**: Proton WebAuth (@proton/web-sdk)
 - **Blockchain Interaction**: @proton/js for RPC queries
+- **Backend**: PHP 8.x with SQLite 3
+- **Node.js**: v20.x (required for compatibility)
 
 ## Project Structure
 
-```
-proton-prediction-market/
-├── contracts/                 # Smart contract code
-│   ├── assembly/
-│   │   ├── tables/           # Data table definitions
-│   │   │   ├── market.table.ts
-│   │   │   ├── order.table.ts
-│   │   │   ├── position.table.ts
-│   │   │   ├── balance.table.ts
-│   │   │   └── index.ts
-│   │   ├── target/           # Compiled WASM output
-│   │   │   ├── prediction.contract.wasm
-│   │   │   └── prediction.contract.abi
-│   │   └── prediction.contract.ts  # Main contract
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── asconfig.json
-└── frontend/                  # React frontend
-    ├── src/
-    │   ├── components/
-    │   │   ├── MarketsList.tsx
-    │   │   ├── MarketDetail.tsx
-    │   │   ├── Portfolio.tsx
-    │   │   └── AdminPanel.tsx
-    │   ├── App.tsx
-    │   └── App.css
-    ├── package.json
-    └── .env
-```
+See the repository for the complete project structure including contracts, frontend components, API files, and automation scripts.
 
 ## Smart Contract Architecture
 
 ### Data Tables
 
-1. **Markets Table** (`markets`)
-   - Stores market questions, categories, expiry times, and resolution status
-   - Scoped by contract account
-
-2. **Orders Table** (`orders`)
-   - Central limit order book with bids/asks
-   - Scoped by market ID for efficient querying
-
-3. **Positions Table** (`positions`)
-   - Tracks user holdings of Yes/No shares per market
-   - Scoped by user account
-
-4. **Balances Table** (`balances`)
-   - Internal ledger for deposited XPR funds
-   - Scoped by contract account
+1. **Markets Table** - Market questions, categories, expiry, resolution status
+2. **Outcomes Table** - Outcome names and IDs for multi-outcome support
+3. **Orders Table** - Central limit order book with automatic matching
+4. **Positions Table** - User holdings of shares per outcome
+5. **Balances Table** - Internal ledger for deposited XUSDC funds
+6. **Settings Table** - Contract-level configuration
 
 ### Contract Actions
 
-1. **transfer (notify)** - Deposit XPR tokens into the contract
-2. **withdraw** - Withdraw XPR tokens from internal balance
-3. **createmkt** - Create a new prediction market (admin only)
-4. **placeorder** - Place a buy/sell order for Yes/No shares
-5. **cancelorder** - Cancel an open order and refund collateral
-6. **resolve** - Resolve a market with Yes/No outcome (admin only)
-7. **claim** - Claim winnings from resolved markets
-8. **collectfees** - Collect accumulated platform fees (admin only)
+1. **transfer (notify)** - Deposit XUSDC tokens
+2. **withdraw** - Withdraw XUSDC tokens
+3. **createmkt** - Create new prediction market (requires approval)
+4. **approvemkt** - Approve pending market (admin only)
+5. **placeorder** - Place buy/sell order for outcome shares
+6. **cancelorder** - Cancel open order and refund collateral
+7. **resolve** - Resolve market with winning outcome (admin only)
+8. **claim** - Claim winnings from resolved markets
+9. **collectfees** - Collect platform fees (admin only)
+10. **updatesettings** - Update contract settings (admin only)
 
 ### Trading Mechanics
 
 - **Order Matching**: Automatic on-chain matching of compatible bids and asks
-- **Collateral System**: 
-  - Buyers lock `price × quantity` in XPR
-  - Sellers either provide shares or lock 1 XPR per share for short positions
-- **Share Creation**: Yes/No shares created on-demand when trades execute
-- **Fee Structure**: 0.01% charged to taker, maker receives full amount minus fee
-- **Price Discovery**: Market-driven through order book (0-1 XPR per share)
+- **Collateral System**: Buyers lock price × quantity in XUSDC; sellers provide shares or lock 1 XUSDC per share
+- **Share Creation**: Outcome shares created on-demand when trades execute
+- **Fee Structure**: 0.01% taker fee, 0% maker fee
+- **Price Discovery**: Market-driven through order book (0-1 XUSDC per share)
 
-## Installation
+## Installation & Setup
 
-For detailed installation, deployment, and configuration instructions, see **[INSTALLATION.md](INSTALLATION.md)**.
+### Prerequisites
 
-The installation guide covers:
-- Prerequisites and system requirements (Node.js 22, AlmaLinux packages)
-- Smart contract setup and deployment
-- Frontend setup and configuration
-- **cPanel deployment** (step-by-step with .htaccess configuration)
-- Other hosting providers (Vercel, Netlify, GitHub Pages)
-- User testing guide (for traders and admins)
-- Troubleshooting common issues
+- **Node.js v20.x** (required for compatibility)
+- **npm** (comes with Node.js)
+- **Git** for version control
+- **Proton Testnet Account** for smart contract deployment
+- **Web Server** (Apache/Nginx) for production deployment
 
 ### Quick Start
 
 ```bash
-# Install Node.js 22
-nvm install 22 && nvm use 22
+# Install Node.js 20
+nvm install 20 && nvm use 20
 
-# Smart contract
+# Clone repository
+git clone https://github.com/phoenixwade/proton-prediction-market.git
+cd proton-prediction-market
+
+# Smart Contract Setup
 cd contracts && npm install && npm run build
 
-# Frontend - copy example.env and configure
+# Frontend Setup
 cd ../frontend
-cp example.env .env
-# Edit .env with your contract account name
+cp .env.example .env
+# Edit .env with your configuration
 npm install && npm start
 ```
 
-**Environment Configuration:**
-- Copy `frontend/example.env` to `frontend/.env`
-- Update `REACT_APP_CONTRACT_NAME` with your deployed contract account
-- See [INSTALLATION.md](INSTALLATION.md) for detailed configuration options
+### Environment Configuration
 
-## Deployment
+Copy `.env.example` to `.env` and configure with your contract account, admin accounts, and API settings.
 
-For production deployment (including cPanel), see [INSTALLATION.md](INSTALLATION.md).
+### Production Deployment
 
-### Automated Deployment Scripts
-
-This project includes automated deployment scripts for cPanel hosting:
-
-**Method 1: Build on Server**
 ```bash
-# Upload project to /home/pawnline/proton-prediction-market/
-# Then run:
-./deploy-to-cpanel.sh
+cd frontend && npm run build
+cd .. && ./deploy-to-cpanel.sh
 ```
-
-**Method 2: Build Locally**
-```bash
-# Build locally and create deployment package:
-./local-build.sh
-
-# Upload deploy-package/ contents to /home/pawnline/public_html/
-```
-
-📖 **See [DEPLOYMENT.md](DEPLOYMENT.md) for additional deployment automation details**, including:
-- Automated deployment script usage
-- .htaccess configuration for React Router
-- Deployment troubleshooting tips
 
 ## Usage Guide
 
 ### For Traders
 
-1. **Connect Wallet**: Click "Connect Wallet" and authenticate with Proton WebAuth
-2. **Deposit Funds**: Transfer XPR to the contract to fund your trading account
-3. **Browse Markets**: View available markets and filter by category
-4. **Place Orders**: Select a market, choose Yes/No, set price and quantity
-5. **Manage Portfolio**: View your positions and available balance
-6. **Claim Winnings**: After market resolution, claim payouts for winning shares
-7. **Withdraw**: Withdraw XPR from your internal balance back to your wallet
+1. Connect wallet with Proton WebAuth
+2. Deposit XUSDC to fund trading account
+3. Browse markets and filter by category
+4. Place orders on outcomes
+5. View activity feed for market events
+6. Manage portfolio and claim winnings
+7. Withdraw funds anytime
+
+### For Market Creators
+
+1. Create markets via Admin panel
+2. Add multiple outcomes and optional thumbnail
+3. Wait for admin approval before market goes live
 
 ### For Admins
 
-1. **Create Markets**: Use the Admin panel to create new prediction markets
-   - Enter question, category, and expiration date
-   - Markets become active immediately
-
-2. **Resolve Markets**: After expiry, resolve markets with the correct outcome
-   - Select market ID and choose Yes/No outcome
-   - Users can then claim winnings
-
-3. **Collect Fees**: Withdraw accumulated platform fees to admin account
+1. Approve pending markets
+2. Resolve markets after expiry
+3. Moderate comments
+4. Collect platform fees
 
 ## Fee Structure
 
-- **Maker Fee**: 0% (no fee for providing liquidity)
-- **Taker Fee**: 0.01% (fee charged when taking liquidity)
+- **Maker Fee**: 0%
+- **Taker Fee**: 0.01%
 - **Withdrawal Fee**: None
-- **Market Creation**: Free (admin only)
+- **Market Creation**: Free (requires approval)
 
-## Security Considerations
-
-- All funds are held in the smart contract with full transparency
-- Users maintain control via their Proton wallet
-- No custodial risk - withdraw anytime
-- Smart contract handles all collateral and settlement automatically
-- Admin actions (create/resolve) require proper authorization
-
-## Development Phases
+## Development Roadmap
 
 ### ✅ Completed Phases
 
-**Phase 1: Multi-Outcome Markets** (PR #31)
-- Support for markets with 2+ outcomes (beyond binary Yes/No)
-- Smart contract updates to handle multiple outcomes
-- Frontend UI updates for outcome selection and trading
-- Neutral color scheme for non-binary markets
+**Phase 1: Core Platform** (PR #1)
+- Multi-outcome markets, CLOB, trading interface, portfolio management
 
 **Phase 2: Settings Singleton** (PR #40)
 - Contract-level configuration management
-- Admin-controlled settings (fees, limits, etc.)
-- Persistent configuration storage
 
 **Phase 3: Market Approval Workflow** (PR #40)
 - Admin approval required before markets go live
-- "Approve Markets" tab in Admin Panel
-- Market status tracking (pending/approved)
 
 **Phase 4: Comments System** (PRs #42-#46)
-- SQLite database for persistent comment storage
-- PHP REST API for comment CRUD operations
-- Tabbed interface (Trade/Comments) in market detail pages
-- User authentication via Proton wallet required to post
-- Single discussion thread per market
+- SQLite backend, reply functionality, moderation
 
-**Phase 4.5: Comments Expansion** (In Progress)
-- Reply functionality with Telegram-style partial quote
-- Comment moderation with admin delete capability
-- Threaded discussions for better conversation flow
+**Phase 5: Activity Feed** (PR #59)
+- Real-time activity stream with filtering
 
-### 🚧 Upcoming Phases
+**Additional Enhancements**
+- Logging system (PR #54)
+- Automated backups (PR #54)
+- Shareable links (PR #58)
+- Activity tab readability (PR #60)
 
-**Phase 5: Market Activity Feed**
-- Real-time activity stream showing trades and orders
-- Market event notifications
-- Activity filtering and sorting
-- User activity tracking
+### 🚧 Next Phase
 
-**Phase 6: User Portfolio & Holdings**
-- Comprehensive portfolio dashboard
-- Profit/loss calculations across all positions
-- Portfolio value tracking over time
-- Performance analytics and charts
+**Phase 6: User Portfolio & Holdings Dashboard**
+- Comprehensive analytics, P/L calculations, performance charts
 
 ### 💡 Future Enhancements
 
-- Trade history and price charts
-- Community governance for market creation
-- Advanced order types (stop-loss, take-profit)
-- Liquidity incentives and market maker rewards
-- Mobile app with native wallet integration
-- Email/push notifications for market events
-- Market categories and advanced filtering
-- Leaderboards and user reputation system
+- Price charts and historical data
+- Advanced order types
+- Liquidity incentives
+- Community governance
+- Mobile app
+- Notifications
+- Leaderboards
+
+## Backup & Logging
+
+### Automated Backups
+
+- **Daily**: 3:05 AM (keeps 7)
+- **Weekly**: 3:10 AM Sundays (keeps 4)
+- **Monthly**: 3:15 AM 1st of month (keeps 3)
+
+Backs up SQLite database, images, .env, API files, and metadata to `~/backups/proton-prediction-market/`
+
+### Logging System
+
+- **API Logs**: `~/logs/api.log`
+- **Deployment Logs**: `~/logs/deploy.log`
+- **Backup Logs**: `~/logs/backup.log`
+
+## Security Considerations
+
+- Non-custodial with full on-chain transparency
+- Users maintain wallet control
+- Admin authorization required for sensitive actions
+- Comment moderation to prevent abuse
+- Secure backup storage with owner-only permissions
+- API logging for audit trail
 
 ## Contributing
 
-Contributions are welcome! Please follow these guidelines:
-
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes with clear commit messages
-4. Test thoroughly on testnet
-5. Submit a pull request
+2. Create feature branch
+3. Make changes with clear commits
+4. Test on testnet
+5. Run linting: `cd frontend && npm run lint`
+6. Submit pull request
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License
 
 ## Support
 
-For issues, questions, or feature requests, please open an issue on GitHub.
+Open issues on GitHub: https://github.com/phoenixwade/proton-prediction-market/issues
 
-## Acknowledgments
+## Links
 
-- Built on the Proton blockchain
-- Inspired by Polymarket, Kalshi, and PredictIt
-- Uses Proton WebAuth for seamless wallet integration
+- **Live Platform**: https://pawnline.io
+- **GitHub**: https://github.com/phoenixwade/proton-prediction-market
+- **Proton Blockchain**: https://www.protonchain.com/
+- **ProtonScan**: https://protonscan.io/
