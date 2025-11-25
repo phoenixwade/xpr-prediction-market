@@ -73,13 +73,14 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
         code: contractName,
         scope: contractName,
         table: 'markets',
-        lower_bound: '0',
-        limit: 100,
+        limit: 200,
+        reverse: true,
       });
       
       const normalizedMarkets = await Promise.all(result.rows.map(async (row: any) => {
         const market = {
           ...row,
+          category: row.category || 'General',
           expireSec: normalizeTimestamp(row.expire),
           outcomes_count: row.outcomes_count || 2,
         };
@@ -129,10 +130,9 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
     .filter(market => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
-      return (
-        market.question.toLowerCase().includes(query) ||
-        market.category.toLowerCase().includes(query)
-      );
+      const question = (market.question || '').toLowerCase();
+      const category = (market.category || '').toLowerCase();
+      return question.includes(query) || category.includes(query);
     })
     .filter(market => {
       if (!categoryFilter) return true;
@@ -151,7 +151,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
       }
     });
 
-  const categories = Array.from(new Set(markets.map(m => m.category))).sort();
+  const categories = Array.from(new Set(markets.map(m => m.category).filter(Boolean))).sort();
 
   const getMarketUrl = (marketId: number) => {
     return `${window.location.origin}${window.location.pathname}?market=${marketId}`;
