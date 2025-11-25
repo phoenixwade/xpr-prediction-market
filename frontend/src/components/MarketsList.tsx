@@ -73,6 +73,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
         code: contractName,
         scope: contractName,
         table: 'markets',
+        lower_bound: '104',
         limit: 200,
         reverse: true,
       });
