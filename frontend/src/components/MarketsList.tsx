@@ -33,12 +33,36 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('active');
   const [copiedMarketId, setCopiedMarketId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'newest' | 'expiry' | 'popular'>('newest');
+  const [watchlist, setWatchlist] = useState<number[]>([]);
 
   useEffect(() => {
     fetchMarkets();
     const interval = setInterval(fetchMarkets, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('watchlist');
+    if (saved) {
+      try {
+        setWatchlist(JSON.parse(saved));
+      } catch (error) {
+        console.error('Error loading watchlist:', error);
+      }
+    }
+  }, []);
+
+  const toggleWatchlist = (marketId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newWatchlist = watchlist.includes(marketId)
+      ? watchlist.filter(id => id !== marketId)
+      : [...watchlist, marketId];
+    setWatchlist(newWatchlist);
+    localStorage.setItem('watchlist', JSON.stringify(newWatchlist));
+  };
 
   const fetchMarkets = async () => {
     try {
@@ -49,7 +73,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
         code: contractName,
         scope: contractName,
         table: 'markets',
-        lower_bound: '104',
+        lower_bound: '0',
         limit: 100,
       });
       
@@ -95,11 +119,39 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
     }
   };
 
-  const filteredMarkets = markets.filter(market => {
-    if (filter === 'active') return !market.resolved;
-    if (filter === 'resolved') return market.resolved;
-    return true;
-  });
+  const filteredMarkets = markets
+    .filter(market => {
+      if (filter === 'active') return !market.resolved;
+      if (filter === 'resolved') return market.resolved;
+      if (filter === 'watchlist') return watchlist.includes(market.id);
+      return true;
+    })
+    .filter(market => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        market.question.toLowerCase().includes(query) ||
+        market.category.toLowerCase().includes(query)
+      );
+    })
+    .filter(market => {
+      if (!categoryFilter) return true;
+      return market.category === categoryFilter;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return b.id - a.id;
+        case 'expiry':
+          return a.expireSec - b.expireSec;
+        case 'popular':
+          return 0;
+        default:
+          return 0;
+      }
+    });
+
+  const categories = Array.from(new Set(markets.map(m => m.category))).sort();
 
   const getMarketUrl = (marketId: number) => {
     return `${window.location.origin}${window.location.pathname}?market=${marketId}`;
@@ -165,6 +217,49 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
               Resolved
             </button>
           </Tooltip>
+          <Tooltip text="Show only markets you've added to your watchlist" position="bottom">
+            <button
+              className={filter === 'watchlist' ? 'active' : ''}
+              onClick={() => setFilter('watchlist')}
+            >
+              Watchlist ({watchlist.length})
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+
+      <div className="markets-filters">
+        <div className="search-box">
+          <input
+            type="text"
+            placeholder="Search markets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="search-input"
+          />
+        </div>
+        <div className="filter-group">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="category-select"
+          >
+            <option value="">All Categories</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'expiry' | 'popular')}
+            className="sort-select"
+          >
+            <option value="newest">Newest First</option>
+            <option value="expiry">Expiring Soon</option>
+            <option value="popular">Most Popular</option>
+          </select>
         </div>
       </div>
 
@@ -230,6 +325,22 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                 </div>
               </div>
               <div className="market-share-buttons">
+                <button
+                  className={`share-button watchlist-button ${watchlist.includes(market.id) ? 'active' : ''}`}
+                  onClick={(e) => toggleWatchlist(market.id, e)}
+                  title={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                  aria-label={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                >
+                  {watchlist.includes(market.id) ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                  )}
+                </button>
                 <button
                   className="share-button share-twitter"
                   onClick={(e) => handleShare(market.id, 'twitter', e)}
