@@ -997,6 +997,143 @@ body {
   text-align: center;
   padding: 3rem;
   color: #94a3b8;
+}
+
+/* History Section */
+.history-section {
+  margin-top: 2rem;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.history-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.history-filters {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(26, 31, 58, 0.6);
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.history-filters button {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.history-filters button.active {
+  background: rgba(124, 58, 237, 0.3);
+  color: #a78bfa;
+}
+
+.history-filters button:hover {
+  background: rgba(124, 58, 237, 0.2);
+  color: #c4b5fd;
+}
+
+.export-csv-button {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.export-csv-button:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.history-list {
+  overflow-x: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.history-table thead {
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.history-table th {
+  padding: 1rem;
+  text-align: left;
+  color: #a78bfa;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.history-table td {
+  padding: 1rem;
+  color: #f1f5f9;
+  border-top: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.history-table tbody tr:hover {
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.market-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trade-side {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.trade-side.buy {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.trade-side.sell {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.no-history {
+  text-align: center;
+  padding: 3rem;
+  color: #94a3b8;
   font-size: 1.125rem;
 }
 

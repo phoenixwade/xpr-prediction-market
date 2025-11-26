@@ -40,6 +40,22 @@ interface Order {
   outcome_name?: string;
 }
 
+interface Trade {
+  id: number;
+  account: string;
+  market_id: number;
+  outcome_id: number;
+  side: string;
+  price: number;
+  quantity: number;
+  fee: number;
+  timestamp: number;
+  tx_id?: string;
+  order_id?: number;
+  market_question?: string;
+  outcome_name?: string;
+}
+
 interface PortfolioProps {
   session: any;
 }
@@ -49,12 +65,16 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeOrders, setActiveOrders] = useState<Order[]>([]);
-  const [activeTab, setActiveTab] = useState<'positions' | 'orders'>('positions');
-  const [pnlData, setPnlData] = useState<{totalValue: number, invested: number, pnl: number}>({
+  const [activeTab, setActiveTab] = useState<'positions' | 'orders' | 'history'>('positions');
+  const [pnlData, setPnlData] = useState<{totalValue: number, invested: number, pnl: number, unrealized: number, realized: number}>({
     totalValue: 0,
     invested: 0,
-    pnl: 0
+    pnl: 0,
+    unrealized: 0,
+    realized: 0
   });
+  const [tradeHistory, setTradeHistory] = useState<Trade[]>([]);
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'buy' | 'sell'>('all');
 
   const fetchPortfolio = useCallback(async () => {
     if (!session) return;
@@ -173,18 +193,54 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
       }
       setActiveOrders(allOrders);
 
+      try {
+        const tradesResponse = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/trades.php?account=${session.auth.actor}`);
+        if (tradesResponse.ok) {
+          const tradesData = await tradesResponse.json();
+          
+          const enrichedTrades = await Promise.all(tradesData.trades.map(async (trade: any) => {
+            const market = marketsResult.rows.find((m: any) => m.id === trade.market_id);
+            if (market) {
+              const outcomesResult = await rpc.get_table_rows({
+                code: contractName,
+                scope: market.id.toString(),
+                table: 'outcomes',
+                limit: 100,
+              });
+              const outcome = outcomesResult.rows.find((o: any) => o.outcome_id === trade.outcome_id);
+              return {
+                ...trade,
+                market_question: market.question,
+                outcome_name: outcome?.name || `Outcome ${trade.outcome_id}`,
+              };
+            }
+            return trade;
+          }));
+          
+          setTradeHistory(enrichedTrades);
+        }
+      } catch (error) {
+        console.error('Error fetching trade history:', error);
+      }
+
       let totalValue = 0;
       let invested = 0;
       for (const mp of Array.from(marketPositionsMap.values())) {
         for (const pos of mp.positions) {
           totalValue += pos.shares * 0.5;
-          invested += pos.shares * 0.5; // Simplified - would need order history for actual cost basis
+          invested += pos.shares * 0.5;
         }
       }
+      
+      const unrealized = totalValue - invested;
+      const realized = 0;
+      
       setPnlData({
         totalValue,
         invested,
-        pnl: totalValue - invested
+        pnl: unrealized + realized,
+        unrealized,
+        realized
       });
 
       setLoading(false);
@@ -322,6 +378,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
     }
   };
 
+  const handleExportCSV = () => {
+    if (!session) return;
+    const apiUrl = process.env.REACT_APP_API_URL || '';
+    window.open(`${apiUrl}/api/trades.php?account=${session.auth.actor}&format=csv`, '_blank');
+  };
+
   if (loading) {
     return <div className="loading">Loading portfolio...</div>;
   }
@@ -366,7 +428,13 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
               <span className="pnl-value">{pnlData.totalValue.toFixed(2)} XUSDC</span>
             </div>
             <div className="pnl-item">
-              <span className="pnl-label">P&L:</span>
+              <span className="pnl-label">Unrealized P&L:</span>
+              <span className={`pnl-value ${pnlData.unrealized >= 0 ? 'positive' : 'negative'}`}>
+                {pnlData.unrealized >= 0 ? '+' : ''}{pnlData.unrealized.toFixed(2)} XUSDC
+              </span>
+            </div>
+            <div className="pnl-item">
+              <span className="pnl-label">Total P&L:</span>
               <span className={`pnl-value ${pnlData.pnl >= 0 ? 'positive' : 'negative'}`}>
                 {pnlData.pnl >= 0 ? '+' : ''}{pnlData.pnl.toFixed(2)} XUSDC
               </span>
@@ -387,6 +455,12 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           onClick={() => setActiveTab('orders')}
         >
           Active Orders ({activeOrders.length})
+        </button>
+        <button
+          className={activeTab === 'history' ? 'active' : ''}
+          onClick={() => setActiveTab('history')}
+        >
+          History ({tradeHistory.length})
         </button>
       </div>
 
@@ -445,7 +519,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             </div>
           )}
         </div>
-      ) : (
+      ) : activeTab === 'orders' ? (
         <div className="orders-section">
           <div className="orders-header">
             <h3>
@@ -501,7 +575,78 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             </div>
           )}
         </div>
-      )}
+      ) : activeTab === 'history' ? (
+        <div className="history-section">
+          <div className="history-header">
+            <h3>Trade History</h3>
+            <div className="history-controls">
+              <div className="history-filters">
+                <button
+                  className={historyFilter === 'all' ? 'active' : ''}
+                  onClick={() => setHistoryFilter('all')}
+                >
+                  All
+                </button>
+                <button
+                  className={historyFilter === 'buy' ? 'active' : ''}
+                  onClick={() => setHistoryFilter('buy')}
+                >
+                  Buys
+                </button>
+                <button
+                  className={historyFilter === 'sell' ? 'active' : ''}
+                  onClick={() => setHistoryFilter('sell')}
+                >
+                  Sells
+                </button>
+              </div>
+              <button onClick={handleExportCSV} className="export-csv-button">
+                Export CSV
+              </button>
+            </div>
+          </div>
+          {tradeHistory.length === 0 ? (
+            <div className="no-history">No trade history yet</div>
+          ) : (
+            <div className="history-list">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Market</th>
+                    <th>Outcome</th>
+                    <th>Side</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Fee</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tradeHistory
+                    .filter(trade => historyFilter === 'all' || trade.side === historyFilter)
+                    .map(trade => (
+                      <tr key={trade.id}>
+                        <td>{new Date(trade.timestamp * 1000).toLocaleString()}</td>
+                        <td className="market-cell">{trade.market_question || `Market ${trade.market_id}`}</td>
+                        <td>{trade.outcome_name || `Outcome ${trade.outcome_id}`}</td>
+                        <td>
+                          <span className={`trade-side ${trade.side}`}>
+                            {trade.side.toUpperCase()}
+                          </span>
+                        </td>
+                        <td>{(trade.price / 1000000).toFixed(4)} XUSDC</td>
+                        <td>{trade.quantity}</td>
+                        <td>{(trade.fee / 1000000).toFixed(4)} XUSDC</td>
+                        <td>{((trade.price * trade.quantity) / 1000000).toFixed(4)} XUSDC</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };
