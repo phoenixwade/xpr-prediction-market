@@ -113,6 +113,11 @@ function App() {
           <span className="xpr-highlight">XPR</span>
           {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
         </h1>
+        {process.env.REACT_APP_IS_TEST_SITE === 'true' && (
+          <div className="test-site-banner">
+            THIS IS A TEST SITE ONLY
+          </div>
+        )}
         <div className="header-actions">
           {!session ? (
             <Tooltip text="Connect your Proton wallet to start trading. You'll need XUSDC tokens to place orders." position="bottom">
