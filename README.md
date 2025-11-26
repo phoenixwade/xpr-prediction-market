@@ -188,16 +188,20 @@ cd .. && ./deploy-to-cpanel.sh
 **Phase 5: Activity Feed** (PR #59)
 - Real-time activity stream with filtering
 
+**Phase 6 & 7: Market Discovery and Portfolio Enhancements** (PR #62)
+- Search functionality across markets
+- Category filtering and sorting (newest, expiring soon, popular)
+- Watchlist/favorites system with local storage
+- Active Orders tab showing all orders across markets
+- Bulk order cancellation
+- Portfolio P&L tracking and value calculations
+
 **Additional Enhancements**
 - Logging system (PR #54)
 - Automated backups (PR #54)
 - Shareable links (PR #58)
-- Activity tab readability (PR #60)
-
-### 🚧 Next Phase
-
-**Phase 6: User Portfolio & Holdings Dashboard**
-- Comprehensive analytics, P/L calculations, performance charts
+- Test site banner (PR #65-66)
+- Legacy market handling (PR #63-64)
 
 ### 💡 Future Enhancements
 
