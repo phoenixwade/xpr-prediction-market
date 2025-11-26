@@ -36,6 +36,19 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.test-site-banner {
+  margin-left: 2rem;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+  white-space: nowrap;
+}
+
 .app-header h1 {
   font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.8rem;

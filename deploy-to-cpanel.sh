@@ -99,6 +99,8 @@ REACT_APP_CHAIN_ID=${PROTON_CHAIN_ID}
 REACT_APP_CONTRACT_NAME=${CONTRACT_ACCOUNT}
 REACT_APP_NAME=${APP_NAME}
 EOF
+    
+    grep -E '^[[:space:]]*REACT_APP_' ../.env | sed -E 's/^[[:space:]]*//' >> .env
     echo -e "${GREEN}Frontend .env generated successfully!${NC}"
     echo ""
 else
