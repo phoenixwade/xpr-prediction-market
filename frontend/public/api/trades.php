@@ -131,7 +131,7 @@ try {
                 $stmt->bindValue(':avg_price', $newAvgPrice, SQLITE3_FLOAT);
                 $stmt->bindValue(':total_cost', $newTotalCost, SQLITE3_FLOAT);
                 $stmt->bindValue(':fees_paid', $newFeesPaid, SQLITE3_FLOAT);
-                $stmt:bindValue(':timestamp', $timestamp, SQLITE3_INTEGER);
+                $stmt->bindValue(':timestamp', $timestamp, SQLITE3_INTEGER);
                 $stmt->bindValue(':account', $account, SQLITE3_TEXT);
                 $stmt->bindValue(':market_id', $marketId, SQLITE3_INTEGER);
                 $stmt->bindValue(':outcome_id', $outcomeId, SQLITE3_INTEGER);
