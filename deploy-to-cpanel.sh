@@ -85,19 +85,22 @@ if [ -f "../.env" ]; then
     PROTON_CHAIN_ID="$(grep -E '^[[:space:]]*PROTON_CHAIN_ID=' ../.env | sed -E 's/^[[:space:]]*PROTON_CHAIN_ID=//' | sed 's/#.*//' | xargs)"
     CONTRACT_ACCOUNT="$(grep -E '^[[:space:]]*CONTRACT_ACCOUNT=' ../.env | sed -E 's/^[[:space:]]*CONTRACT_ACCOUNT=//' | sed 's/#.*//' | xargs)"
     APP_NAME="$(grep -E '^[[:space:]]*APP_NAME=' ../.env | sed -E 's/^[[:space:]]*APP_NAME=//' | sed 's/#.*//' | xargs)"
+    IS_TEST_SITE="$(grep -E '^[[:space:]]*IS_TEST_SITE=' ../.env | sed -E 's/^[[:space:]]*IS_TEST_SITE=//' | sed 's/#.*//' | xargs)"
     
     PROTON_RPC="${PROTON_RPC:-https://testnet.protonchain.com}"
     PROTON_CHAIN_ID="${PROTON_CHAIN_ID:-71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd}"
     CONTRACT_ACCOUNT="${CONTRACT_ACCOUNT:-prediction}"
     APP_NAME="${APP_NAME:-XPRedicting}"
+    IS_TEST_SITE="${IS_TEST_SITE:-false}"
     
-    log "Environment: RPC=$PROTON_RPC, CONTRACT=$CONTRACT_ACCOUNT"
+    log "Environment: RPC=$PROTON_RPC, CONTRACT=$CONTRACT_ACCOUNT, IS_TEST_SITE=$IS_TEST_SITE"
     
     cat > .env << EOF
 REACT_APP_PROTON_ENDPOINT=${PROTON_RPC}
 REACT_APP_CHAIN_ID=${PROTON_CHAIN_ID}
 REACT_APP_CONTRACT_NAME=${CONTRACT_ACCOUNT}
 REACT_APP_NAME=${APP_NAME}
+REACT_APP_IS_TEST_SITE=${IS_TEST_SITE}
 EOF
     echo -e "${GREEN}Frontend .env generated successfully!${NC}"
     echo ""
