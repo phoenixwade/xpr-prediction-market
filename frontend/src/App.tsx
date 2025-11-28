@@ -8,12 +8,14 @@ import AdminPanel from './components/AdminPanel';
 import Footer from './components/Footer';
 import HowToUse from './components/HowToUse';
 import Tooltip from './components/Tooltip';
+import Whitepaper from './components/Whitepaper';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help'>('markets');
+  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper'>('markets');
   const [showHelp, setShowHelp] = useState<boolean>(false);
+  const [showWhitepaper, setShowWhitepaper] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'Proton Prediction Market';
@@ -168,31 +170,37 @@ function App() {
       </nav>
 
       <main className="main-content">
-        {!showHelp && activeTab === 'markets' && !selectedMarket && (
+        {!showHelp && !showWhitepaper && activeTab === 'markets' && !selectedMarket && (
           <MarketsList
             session={session}
             onSelectMarket={setSelectedMarket}
           />
         )}
-        {!showHelp && activeTab === 'markets' && selectedMarket && (
+        {!showHelp && !showWhitepaper && activeTab === 'markets' && selectedMarket && (
           <MarketDetail
             session={session}
             marketId={selectedMarket}
             onBack={() => setSelectedMarket(null)}
           />
         )}
-        {!showHelp && activeTab === 'portfolio' && session && (
+        {!showHelp && !showWhitepaper && activeTab === 'portfolio' && session && (
           <Portfolio session={session} />
         )}
-        {!showHelp && activeTab === 'admin' && session && (
+        {!showHelp && !showWhitepaper && activeTab === 'admin' && session && (
           <AdminPanel session={session} />
         )}
-        {showHelp && (
+        {showHelp && !showWhitepaper && (
           <HowToUse />
+        )}
+        {showWhitepaper && (
+          <Whitepaper />
         )}
       </main>
       
-      <Footer onShowHelp={() => setShowHelp(true)} />
+      <Footer 
+        onShowHelp={() => { setShowHelp(true); setShowWhitepaper(false); }} 
+        onShowWhitepaper={() => { setShowWhitepaper(true); setShowHelp(false); setActiveTab('whitepaper'); }}
+      />
     </div>
   );
 }
