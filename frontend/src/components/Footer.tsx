@@ -2,9 +2,10 @@ import React from 'react';
 
 interface FooterProps {
   onShowHelp: () => void;
+  onShowWhitepaper: () => void;
 }
 
-const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
+const Footer: React.FC<FooterProps> = ({ onShowHelp, onShowWhitepaper }) => {
   const year = new Date().getFullYear();
   
   return (
@@ -39,6 +40,11 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp }) => {
             <li>
               <button type="button" className="link-button" onClick={onShowHelp}>
                 How to Use
+              </button>
+            </li>
+            <li>
+              <button type="button" className="link-button" onClick={onShowWhitepaper}>
+                Whitepaper
               </button>
             </li>
             <li>

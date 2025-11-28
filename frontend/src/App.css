@@ -2514,3 +2514,152 @@ body {
     gap: 0.25rem;
   }
 }
+
+/* ===================================
+   Whitepaper Page Styles
+   =================================== */
+
+.whitepaper-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.whitepaper-content {
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 12px;
+  padding: 3rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.whitepaper-title {
+  font-family: 'Clash Display', 'Inter', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.whitepaper-subtitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.whitepaper-divider {
+  border: none;
+  border-top: 1px solid rgba(124, 58, 237, 0.3);
+  margin: 2rem 0;
+}
+
+.whitepaper-section {
+  margin-bottom: 2.5rem;
+}
+
+.section-title {
+  font-family: 'Clash Display', 'Inter', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 1rem;
+  padding-top: 1rem;
+}
+
+.subsection {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.subsection-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.75rem;
+}
+
+.section-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1rem;
+  text-align: justify;
+}
+
+.section-text strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.bullet-list {
+  list-style-type: disc;
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+.bullet-list li {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.5rem;
+}
+
+.bullet-list li strong {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+/* Responsive Design for Whitepaper */
+@media (max-width: 768px) {
+  .whitepaper-container {
+    padding: 2rem 1rem;
+  }
+
+  .whitepaper-content {
+    padding: 2rem 1.5rem;
+  }
+
+  .whitepaper-title {
+    font-size: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .subsection-title {
+    font-size: 1.1rem;
+  }
+
+  .section-text {
+    font-size: 0.95rem;
+    text-align: left;
+  }
+
+  .bullet-list {
+    padding-left: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .whitepaper-container {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .whitepaper-content {
+    padding: 1.5rem 1rem;
+  }
+
+  .whitepaper-title {
+    font-size: 1.75rem;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+  }
+}
