@@ -445,7 +445,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     setLoadingIncome(true);
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
-      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'profitshare';
+      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'xpredicting';
       
       const result = await rpc.get_table_rows({
         json: true,
@@ -475,12 +475,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
     setClaimLoading(true);
     try {
-      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'profitshare';
+      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'xpredicting';
       
       await session.transact({
         actions: [{
           account: profitShareContract,
-          name: 'claim',
+          name: 'claimprofit',
           authorization: [{
             actor: session.auth.actor,
             permission: session.auth.permission,
