@@ -230,10 +230,16 @@ cd .. && ./deploy-to-cpanel.sh
 - Enhanced resolution tools with evidence tracking
 - Security improvements and webhook integrations
 
-**Phase 17: XPRED Token Whitepaper** (PR #71)
+**Phase 16: XPRED Token Whitepaper** (PR #71)
 - Comprehensive whitepaper page for XPRED token
 - Footer link integration
 - Responsive design for all devices
+
+**Phase 17: Price History & Database Maintenance** (PR #72)
+- Price snapshot cron job for chart data collection
+- Database cleanup cron job for old notifications, price snapshots, and soft-deleted comments
+- Log rotation and SQLite database vacuuming
+- Comprehensive cron job documentation
 
 ### 💡 Future Enhancements
 
