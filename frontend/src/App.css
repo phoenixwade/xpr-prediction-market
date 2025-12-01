@@ -47,6 +47,26 @@ body {
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.test-site-banner .telegram-link {
+  display: flex;
+  align-items: center;
+  color: #ffffff;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.test-site-banner .telegram-link:hover {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+.test-site-banner .telegram-link svg {
+  width: 20px;
+  height: 20px;
 }
 
 .app-header h1 {
