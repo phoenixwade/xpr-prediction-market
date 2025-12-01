@@ -4,7 +4,7 @@ const HowToUse: React.FC = () => {
   return (
     <div className="how-to-use-container">
       <div className="how-to-use-content">
-        <h1 className="how-to-use-title">How to Use {process.env.REACT_APP_NAME || 'Proton Prediction Market'}</h1>
+        <h1 className="how-to-use-title">How to Use {process.env.REACT_APP_NAME || 'XPR Prediction Market'}</h1>
         
         <div className="how-to-use-intro">
           <p>
@@ -19,8 +19,8 @@ const HowToUse: React.FC = () => {
           <div className="how-to-use-step">
             <h3>Step 1: Connect Your Wallet</h3>
             <p>
-              Click the "Connect Wallet" button in the top right corner of the page. You'll need a Proton wallet to use this platform.
-              If you don't have one, you can create a free account at <a href="https://www.protonchain.com/" target="_blank" rel="noopener noreferrer">protonchain.com</a>.
+                            Click the "Connect Wallet" button in the top right corner of the page. You'll need an XPR wallet to use this platform.
+                            If you don't have one, you can create a free account at <a href="https://xprnetwork.org/" target="_blank" rel="noopener noreferrer">xprnetwork.org</a>.
             </p>
             <ul>
               <li>Your wallet connection persists across page refreshes</li>
