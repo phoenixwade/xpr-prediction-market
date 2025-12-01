@@ -6,7 +6,7 @@
  * for price chart visualization.
  * 
  * Recommended cron schedule: Every 5 minutes
- * */5 * * * * php /path/to/public_html/api/cron/snapshot_prices.php >> /path/to/logs/price_snapshot.log 2>&1
+ * Example: 0/5 * * * * php /path/to/public_html/api/cron/snapshot_prices.php >> /path/to/logs/price_snapshot.log 2>&1
  */
 
 define('CRON_MODE', true);
