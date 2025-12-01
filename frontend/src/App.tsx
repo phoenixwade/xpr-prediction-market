@@ -175,7 +175,7 @@ function App() {
   const fetchXpredBalance = useCallback(async (accountName: string) => {
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
-      const xpredContract = process.env.REACT_APP_XPRED_CONTRACT || 'xpredicting';
+      const xpredContract = process.env.REACT_APP_XPRED_CONTRACT || 'tokencreate';
       
       const result = await rpc.get_currency_balance(xpredContract, accountName, 'XPRED');
       
