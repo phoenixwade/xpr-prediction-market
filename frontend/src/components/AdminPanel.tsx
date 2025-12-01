@@ -19,10 +19,11 @@ interface Outcome {
 
 interface AdminPanelProps {
   session: any;
+  xpredBalance?: number;
 }
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
-  const [activeTab, setActiveTab] = useState<'create' | 'resolve' | 'approve'>('create');
+const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) => {
+  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'resolve' | 'approve'>('income');
   
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
@@ -46,6 +47,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
   const [pendingMarkets, setPendingMarkets] = useState<Market[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [approveLoading, setApproveLoading] = useState(false);
+
+  const [unclaimedIncome, setUnclaimedIncome] = useState<string>('0.0000 XUSDC');
+  const [loadingIncome, setLoadingIncome] = useState(false);
+  const [claimLoading, setClaimLoading] = useState(false);
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -434,11 +439,88 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
     }
   };
 
+  const fetchUnclaimedIncome = useCallback(async () => {
+    if (!session) return;
+    
+    setLoadingIncome(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'profitshare';
+      
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: profitShareContract,
+        scope: profitShareContract,
+        table: 'unclaimed',
+        lower_bound: session.auth.actor.toString(),
+        upper_bound: session.auth.actor.toString(),
+        limit: 1,
+      });
+
+      if (result.rows && result.rows.length > 0) {
+        setUnclaimedIncome(result.rows[0].balance || '0.0000 XUSDC');
+      } else {
+        setUnclaimedIncome('0.0000 XUSDC');
+      }
+    } catch (error) {
+      console.error('Error fetching unclaimed income:', error);
+      setUnclaimedIncome('0.0000 XUSDC');
+    } finally {
+      setLoadingIncome(false);
+    }
+  }, [session]);
+
+  const handleClaimIncome = async () => {
+    if (!session) return;
+
+    setClaimLoading(true);
+    try {
+      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'profitshare';
+      
+      await session.transact({
+        actions: [{
+          account: profitShareContract,
+          name: 'claim',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            user: session.auth.actor.toString(),
+          },
+        }],
+      });
+
+      alert('Income claimed successfully!');
+      fetchUnclaimedIncome();
+    } catch (error) {
+      console.error('Error claiming income:', error);
+      alert('Failed to claim income: ' + error);
+    } finally {
+      setClaimLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session && activeTab === 'income') {
+      fetchUnclaimedIncome();
+    }
+  }, [session, activeTab, fetchUnclaimedIncome]);
+
   return (
     <div className="admin-panel">
-      <h2>Admin Panel</h2>
+      <h2>Admin Dashboard</h2>
+      <p className="admin-subtitle">
+        Your XPRED Balance: <strong>{xpredBalance.toLocaleString()} XPRED</strong>
+      </p>
       
       <div className="admin-tabs">
+        <button
+          className={activeTab === 'income' ? 'active' : ''}
+          onClick={() => setActiveTab('income')}
+        >
+          Claim Income
+        </button>
         <button
           className={activeTab === 'create' ? 'active' : ''}
           onClick={() => setActiveTab('create')}
@@ -458,6 +540,54 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session }) => {
           Approve Markets
         </button>
       </div>
+
+      {activeTab === 'income' && (
+        <div className="admin-section claim-income-section">
+          <h3>Claim Platform Income</h3>
+          <p className="section-description">
+            As an XPRED token holder, you are entitled to a share of the platform's weekly revenue. 
+            Your share is proportional to your XPRED holdings at the time of each distribution.
+          </p>
+          
+          <div className="income-display">
+            <div className="income-card">
+              <span className="income-label">Unclaimed Income</span>
+              {loadingIncome ? (
+                <span className="income-value loading">Loading...</span>
+              ) : (
+                <span className="income-value">{unclaimedIncome}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="claim-actions">
+            <button
+              onClick={handleClaimIncome}
+              disabled={claimLoading || loadingIncome || unclaimedIncome === '0.0000 XUSDC'}
+              className="claim-button"
+            >
+              {claimLoading ? 'Claiming...' : 'Claim Income'}
+            </button>
+            <button
+              onClick={fetchUnclaimedIncome}
+              disabled={loadingIncome}
+              className="refresh-button"
+            >
+              {loadingIncome ? 'Refreshing...' : 'Refresh Balance'}
+            </button>
+          </div>
+
+          <div className="income-info">
+            <h4>How Profit Sharing Works</h4>
+            <ul>
+              <li>Platform revenue is distributed weekly to XPRED holders</li>
+              <li>Your share is based on your XPRED balance at distribution time</li>
+              <li>Unclaimed income accumulates until you claim it</li>
+              <li>Income is paid in XUSDC stablecoin</li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'create' && (
         <div className="admin-section">

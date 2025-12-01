@@ -52,8 +52,8 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp, onShowWhitepaper }) => {
                 About XPR Network
               </a>
             </li>
-                        <li>
-              <a href="https://protonscan.io/" target="_blank" rel="noopener noreferrer">
+            <li>
+              <a href="https://explorer.xprnetwork.org" target="_blank" rel="noopener noreferrer">
                 Block Explorer
               </a>
             </li>

@@ -1339,6 +1339,165 @@ body {
   font-weight: 700;
 }
 
+.admin-subtitle {
+  color: #94a3b8;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-subtitle strong {
+  color: #a78bfa;
+}
+
+.section-description {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.claim-income-section .income-display {
+  margin-bottom: 2rem;
+}
+
+.claim-income-section .income-card {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(91, 33, 182, 0.15) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.claim-income-section .income-label {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.claim-income-section .income-value {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.claim-income-section .income-value.loading {
+  color: #94a3b8;
+  font-size: 1.5rem;
+}
+
+.claim-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.claim-button {
+  flex: 2;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.claim-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.claim-button:disabled {
+  background: rgba(148, 163, 184, 0.3);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.refresh-button {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  background: rgba(124, 58, 237, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(124, 58, 237, 0.3);
+  border-color: #7c3aed;
+}
+
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.income-info {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.income-info h4 {
+  color: #f1f5f9;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.income-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.income-info li {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.income-info li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #7c3aed;
+  border-radius: 50%;
+}
+
+@media (max-width: 768px) {
+  .claim-actions {
+    flex-direction: column;
+  }
+  
+  .claim-button,
+  .refresh-button {
+    flex: 1;
+  }
+  
+  .claim-income-section .income-value {
+    font-size: 2rem;
+  }
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;

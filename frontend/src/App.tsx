@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ConnectWallet from '@proton/web-sdk';
+import { JsonRpc } from '@proton/js';
 import './App.css';
 import MarketsList from './components/MarketsList';
 import MarketDetail from './components/MarketDetail';
@@ -18,6 +19,8 @@ function App() {
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [showWhitepaper, setShowWhitepaper] = useState<boolean>(false);
   const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
+  const [xpredBalance, setXpredBalance] = useState<number>(0);
+  const [isXpredHolder, setIsXpredHolder] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'XPR Prediction Market';
@@ -99,8 +102,42 @@ function App() {
         console.error('Logout error:', error);
       }
       setSession(null);
+      setXpredBalance(0);
+      setIsXpredHolder(false);
     }
   };
+
+  const fetchXpredBalance = useCallback(async (accountName: string) => {
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const xpredContract = process.env.REACT_APP_XPRED_CONTRACT || 'xpredicting';
+      
+      const result = await rpc.get_currency_balance(xpredContract, accountName, 'XPRED');
+      
+      if (result && result.length > 0) {
+        const balanceStr = result[0];
+        const balance = parseFloat(balanceStr.split(' ')[0]);
+        setXpredBalance(balance);
+        setIsXpredHolder(balance > 0);
+      } else {
+        setXpredBalance(0);
+        setIsXpredHolder(false);
+      }
+    } catch (error) {
+      console.error('Error fetching XPRED balance:', error);
+      setXpredBalance(0);
+      setIsXpredHolder(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session && session.auth && session.auth.actor) {
+      fetchXpredBalance(session.auth.actor.toString());
+    } else {
+      setXpredBalance(0);
+      setIsXpredHolder(false);
+    }
+  }, [session, fetchXpredBalance]);
 
   return (
     <div className="App">
@@ -157,13 +194,14 @@ function App() {
               >
                 Portfolio
               </button>
-              <button
-                className={activeTab === 'admin' ? 'active' : ''}
-                onClick={() => { setActiveTab('admin'); setShowHelp(false); setShowWhatIsXpred(false); }}
-                disabled={!session}
-              >
-                Admin
-              </button>
+              {isXpredHolder && (
+                <button
+                  className={activeTab === 'admin' ? 'active' : ''}
+                  onClick={() => { setActiveTab('admin'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                >
+                  Admin
+                </button>
+              )}
               <button
                 className={activeTab === 'help' ? 'active' : ''}
                 onClick={() => { setActiveTab('help'); setShowHelp(true); setShowWhatIsXpred(false); }}
@@ -219,8 +257,8 @@ function App() {
               {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'portfolio' && session && (
                 <Portfolio session={session} />
               )}
-              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && (
-                <AdminPanel session={session} />
+              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && isXpredHolder && (
+                <AdminPanel session={session} xpredBalance={xpredBalance} />
               )}
               {showHelp && !showWhitepaper && !showWhatIsXpred && (
                 <HowToUse />
