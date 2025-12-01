@@ -203,17 +203,76 @@ cd .. && ./deploy-to-cpanel.sh
 - Test site banner (PR #65-66)
 - Legacy market handling (PR #63-64)
 
+**Phase 7: Trade History & Portfolio Enhancements** (PR #67)
+- Trade history API with comprehensive tracking
+- History tab in portfolio view
+- Enhanced P&L tracking with detailed calculations
+- Bulk order management and cancellation
+
+**Phase 8: Charts & Analytics** (PR #68)
+- Price charts with SVG visualization (1H, 24H, 7D, All time ranges)
+- Order book depth visualization with bid/ask spread
+- Market statistics dashboard (volume, trades, unique traders)
+
+**Phase 9-10: Market Creation UX & Notifications** (PR #69)
+- Market templates for quick creation (Binary, Election, Price Range, Sports, Crypto)
+- Scheduled market creation with auto-open times
+- Notification center with real-time alerts
+- Market subscriptions and watchlist notifications
+
+**Phases 11-16: Advanced Features** (PR #69)
+- Advanced trading interface with limit/market orders
+- Time-in-force options (GTC, IOC, FOK)
+- Stop-loss and take-profit orders
+- Mobile-responsive PWA layout with install prompt
+- Bottom navigation for mobile users
+- Leaderboard with volume, trades, win rate, and P&L rankings
+- Enhanced resolution tools with evidence tracking
+- Security improvements and webhook integrations
+
+**Phase 16: XPRED Token Whitepaper** (PR #71)
+- Comprehensive whitepaper page for XPRED token
+- Footer link integration
+- Responsive design for all devices
+
+**Phase 17: Price History & Database Maintenance** (PR #72)
+- Price snapshot cron job for chart data collection
+- Database cleanup cron job for old notifications, price snapshots, and soft-deleted comments
+- Log rotation and SQLite database vacuuming
+- Comprehensive cron job documentation
+
 ### 💡 Future Enhancements
 
-- Price charts and historical data
-- Advanced order types
-- Liquidity incentives
-- Community governance
-- Mobile app
-- Notifications
-- Leaderboards
+- Liquidity incentives and market maker rewards
+- Community governance and voting
+- API documentation and developer tools
+- Advanced analytics and reporting
 
-## Backup & Logging
+## Cron Jobs & Maintenance
+
+### Required Cron Jobs
+
+Add these to your crontab (`crontab -e`):
+
+```bash
+# Backups
+5 3 * * * ~/proton-prediction-market/scripts/backup_site.sh daily >> ~/logs/backup.log 2>&1
+10 3 * * 0 ~/proton-prediction-market/scripts/backup_site.sh weekly >> ~/logs/backup.log 2>&1
+15 3 1 * * ~/proton-prediction-market/scripts/backup_site.sh monthly >> ~/logs/backup.log 2>&1
+
+# Price history snapshots (every 5 minutes for charts)
+*/5 * * * * php ~/public_html/api/cron/snapshot_prices.php >> ~/logs/price_snapshot.log 2>&1
+
+# Database cleanup (daily at 4 AM)
+0 4 * * * php ~/public_html/api/cron/cleanup.php >> ~/logs/cleanup.log 2>&1
+```
+
+### Cron Scripts
+
+Located in `frontend/public/api/cron/`:
+
+- **snapshot_prices.php**: Fetches current prices from blockchain order books and stores snapshots for price chart visualization. Runs every 5 minutes.
+- **cleanup.php**: Removes old notifications (30+ days), old price snapshots (7+ days), soft-deleted comments (90+ days), rotates log files, and vacuums SQLite databases.
 
 ### Automated Backups
 
@@ -228,6 +287,8 @@ Backs up SQLite database, images, .env, API files, and metadata to `~/backups/pr
 - **API Logs**: `~/logs/api.log`
 - **Deployment Logs**: `~/logs/deploy.log`
 - **Backup Logs**: `~/logs/backup.log`
+- **Price Snapshot Logs**: `~/logs/price_snapshot.log`
+- **Cleanup Logs**: `~/logs/cleanup.log`
 
 ## Security Considerations
 
