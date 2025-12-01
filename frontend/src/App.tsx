@@ -9,13 +9,15 @@ import Footer from './components/Footer';
 import HowToUse from './components/HowToUse';
 import Tooltip from './components/Tooltip';
 import Whitepaper from './components/Whitepaper';
+import WhatIsXpred from './components/WhatIsXpred';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper'>('markets');
+  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper' | 'whatisxpred'>('markets');
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [showWhitepaper, setShowWhitepaper] = useState<boolean>(false);
+  const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'Proton Prediction Market';
@@ -103,15 +105,16 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1 
-          onClick={() => {
-            window.history.pushState({}, '', window.location.pathname);
-            setSelectedMarket(null);
-            setActiveTab('markets');
-            setShowHelp(false);
-          }}
-          style={{ cursor: 'pointer' }}
-        >
+                <h1 
+                  onClick={() => {
+                    window.history.pushState({}, '', window.location.pathname);
+                    setSelectedMarket(null);
+                    setActiveTab('markets');
+                    setShowHelp(false);
+                    setShowWhatIsXpred(false);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
           <span className="xpr-highlight">XPR</span>
           {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
         </h1>
@@ -140,62 +143,95 @@ function App() {
         </div>
       </header>
 
-      <nav className="nav-tabs">
-        <button
-          className={activeTab === 'markets' ? 'active' : ''}
-          onClick={() => { setActiveTab('markets'); setShowHelp(false); }}
-        >
-          Markets
-        </button>
-        <button
-          className={activeTab === 'portfolio' ? 'active' : ''}
-          onClick={() => { setActiveTab('portfolio'); setShowHelp(false); }}
-          disabled={!session}
-        >
-          Portfolio
-        </button>
-        <button
-          className={activeTab === 'admin' ? 'active' : ''}
-          onClick={() => { setActiveTab('admin'); setShowHelp(false); }}
-          disabled={!session}
-        >
-          Admin
-        </button>
-        <button
-          className={activeTab === 'help' ? 'active' : ''}
-          onClick={() => { setActiveTab('help'); setShowHelp(true); }}
-        >
-          How to Use
-        </button>
-      </nav>
+            <nav className="nav-tabs">
+              <button
+                className={activeTab === 'markets' ? 'active' : ''}
+                onClick={() => { setActiveTab('markets'); setShowHelp(false); setShowWhatIsXpred(false); }}
+              >
+                Markets
+              </button>
+              <button
+                className={activeTab === 'portfolio' ? 'active' : ''}
+                onClick={() => { setActiveTab('portfolio'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                disabled={!session}
+              >
+                Portfolio
+              </button>
+              <button
+                className={activeTab === 'admin' ? 'active' : ''}
+                onClick={() => { setActiveTab('admin'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                disabled={!session}
+              >
+                Admin
+              </button>
+              <button
+                className={activeTab === 'help' ? 'active' : ''}
+                onClick={() => { setActiveTab('help'); setShowHelp(true); setShowWhatIsXpred(false); }}
+              >
+                How to Use
+              </button>
+              <div className="nav-dropdown">
+                <button className={`nav-dropdown-trigger ${activeTab === 'whatisxpred' ? 'active' : ''}`}>
+                  Buy XPRED
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <div className="nav-dropdown-menu">
+                  <a 
+                    href="https://alcor.exchange/trade/xpred-xprediction_xusdc-xtokens" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="nav-dropdown-item external-link"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Buy XPRED at Alcor Exchange
+                  </a>
+                  <button 
+                    className="nav-dropdown-item"
+                    onClick={() => { setActiveTab('whatisxpred'); setShowWhatIsXpred(true); setShowHelp(false); setShowWhitepaper(false); }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    What is XPRED
+                  </button>
+                </div>
+              </div>
+            </nav>
 
-      <main className="main-content">
-        {!showHelp && !showWhitepaper && activeTab === 'markets' && !selectedMarket && (
-          <MarketsList
-            session={session}
-            onSelectMarket={setSelectedMarket}
-          />
-        )}
-        {!showHelp && !showWhitepaper && activeTab === 'markets' && selectedMarket && (
-          <MarketDetail
-            session={session}
-            marketId={selectedMarket}
-            onBack={() => setSelectedMarket(null)}
-          />
-        )}
-        {!showHelp && !showWhitepaper && activeTab === 'portfolio' && session && (
-          <Portfolio session={session} />
-        )}
-        {!showHelp && !showWhitepaper && activeTab === 'admin' && session && (
-          <AdminPanel session={session} />
-        )}
-        {showHelp && !showWhitepaper && (
-          <HowToUse />
-        )}
-        {showWhitepaper && (
-          <Whitepaper />
-        )}
-      </main>
+            <main className="main-content">
+              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'markets' && !selectedMarket && (
+                <MarketsList
+                  session={session}
+                  onSelectMarket={setSelectedMarket}
+                />
+              )}
+              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'markets' && selectedMarket && (
+                <MarketDetail
+                  session={session}
+                  marketId={selectedMarket}
+                  onBack={() => setSelectedMarket(null)}
+                />
+              )}
+              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'portfolio' && session && (
+                <Portfolio session={session} />
+              )}
+              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && (
+                <AdminPanel session={session} />
+              )}
+              {showHelp && !showWhitepaper && !showWhatIsXpred && (
+                <HowToUse />
+              )}
+              {showWhitepaper && !showWhatIsXpred && (
+                <Whitepaper />
+              )}
+              {showWhatIsXpred && (
+                <WhatIsXpred />
+              )}
+            </main>
       
       <Footer 
         onShowHelp={() => { setShowHelp(true); setShowWhitepaper(false); }} 
