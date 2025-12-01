@@ -21,19 +21,84 @@ function App() {
   const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
   const [xpredBalance, setXpredBalance] = useState<number>(0);
   const [isXpredHolder, setIsXpredHolder] = useState<boolean>(false);
+  const [loginMessage, setLoginMessage] = useState<string | null>(null);
+
+  const updateUrl = useCallback((opts: { page?: string | null; market?: number | null }) => {
+    const url = new URL(window.location.href);
+
+    if (opts.page === null) {
+      url.searchParams.delete('page');
+    } else if (opts.page) {
+      url.searchParams.set('page', opts.page);
+    }
+
+    if (opts.market === null) {
+      url.searchParams.delete('market');
+    } else if (typeof opts.market === 'number') {
+      url.searchParams.set('market', String(opts.market));
+    }
+
+    window.history.pushState({}, '', url.toString());
+  }, []);
+
+  const syncStateWithUrl = useCallback((currentSession: any, currentIsXpredHolder: boolean) => {
+    const url = new URL(window.location.href);
+    const page = url.searchParams.get('page');
+    const marketParam = url.searchParams.get('market');
+
+    setShowHelp(false);
+    setShowWhitepaper(false);
+    setShowWhatIsXpred(false);
+    setSelectedMarket(null);
+    setLoginMessage(null);
+
+    if (page === 'help') {
+      setActiveTab('help');
+      setShowHelp(true);
+    } else if (page === 'whitepaper') {
+      setActiveTab('whitepaper');
+      setShowWhitepaper(true);
+    } else if (page === 'xpred') {
+      setActiveTab('whatisxpred');
+      setShowWhatIsXpred(true);
+    } else if (page === 'portfolio') {
+      if (!currentSession) {
+        setActiveTab('markets');
+        setLoginMessage('Please connect your wallet to view your portfolio.');
+        updateUrl({ page: null, market: null });
+      } else {
+        setActiveTab('portfolio');
+      }
+    } else if (page === 'admin') {
+      if (!currentSession) {
+        setActiveTab('markets');
+        setLoginMessage('Please connect your wallet to access the Admin panel.');
+        updateUrl({ page: null, market: null });
+      } else if (!currentIsXpredHolder) {
+        setActiveTab('markets');
+        setLoginMessage('You need to hold XPRED tokens to access the Admin panel.');
+        updateUrl({ page: null, market: null });
+      } else {
+        setActiveTab('admin');
+      }
+    } else {
+      setActiveTab('markets');
+    }
+
+    if (marketParam) {
+      const id = parseInt(marketParam, 10);
+      if (!Number.isNaN(id)) {
+        setSelectedMarket(id);
+        setActiveTab('markets');
+        setShowHelp(false);
+        setShowWhitepaper(false);
+        setShowWhatIsXpred(false);
+      }
+    }
+  }, [updateUrl]);
 
   useEffect(() => {
     document.title = process.env.REACT_APP_NAME || 'XPR Prediction Market';
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const marketParam = urlParams.get('market');
-    if (marketParam) {
-      const marketId = parseInt(marketParam, 10);
-      if (!isNaN(marketId)) {
-        setSelectedMarket(marketId);
-        setActiveTab('markets');
-      }
-    }
   }, []);
 
   useEffect(() => {
@@ -139,17 +204,49 @@ function App() {
     }
   }, [session, fetchXpredBalance]);
 
+  useEffect(() => {
+    syncStateWithUrl(session, isXpredHolder);
+    
+    const handlePopState = () => {
+      syncStateWithUrl(session, isXpredHolder);
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [session, isXpredHolder, syncStateWithUrl]);
+
+  const navigateTo = useCallback((page: string | null, opts?: { market?: number | null }) => {
+    setLoginMessage(null);
+    setShowHelp(false);
+    setShowWhitepaper(false);
+    setShowWhatIsXpred(false);
+    setSelectedMarket(opts?.market ?? null);
+
+    if (page === 'help') {
+      setActiveTab('help');
+      setShowHelp(true);
+    } else if (page === 'whitepaper') {
+      setActiveTab('whitepaper');
+      setShowWhitepaper(true);
+    } else if (page === 'xpred') {
+      setActiveTab('whatisxpred');
+      setShowWhatIsXpred(true);
+    } else if (page === 'portfolio') {
+      setActiveTab('portfolio');
+    } else if (page === 'admin') {
+      setActiveTab('admin');
+    } else {
+      setActiveTab('markets');
+    }
+
+    updateUrl({ page, market: opts?.market ?? null });
+  }, [updateUrl]);
+
   return (
     <div className="App">
       <header className="app-header">
                 <h1 
-                  onClick={() => {
-                    window.history.pushState({}, '', window.location.pathname);
-                    setSelectedMarket(null);
-                    setActiveTab('markets');
-                    setShowHelp(false);
-                    setShowWhatIsXpred(false);
-                  }}
+                  onClick={() => navigateTo(null)}
                   style={{ cursor: 'pointer' }}
                 >
           <span className="xpr-highlight">XPR</span>
@@ -183,13 +280,13 @@ function App() {
             <nav className="nav-tabs">
               <button
                 className={activeTab === 'markets' ? 'active' : ''}
-                onClick={() => { setActiveTab('markets'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                onClick={() => navigateTo(null)}
               >
                 Markets
               </button>
               <button
                 className={activeTab === 'portfolio' ? 'active' : ''}
-                onClick={() => { setActiveTab('portfolio'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                onClick={() => navigateTo('portfolio')}
                 disabled={!session}
               >
                 Portfolio
@@ -197,14 +294,14 @@ function App() {
               {isXpredHolder && (
                 <button
                   className={activeTab === 'admin' ? 'active' : ''}
-                  onClick={() => { setActiveTab('admin'); setShowHelp(false); setShowWhatIsXpred(false); }}
+                  onClick={() => navigateTo('admin')}
                 >
                   Admin
                 </button>
               )}
               <button
                 className={activeTab === 'help' ? 'active' : ''}
-                onClick={() => { setActiveTab('help'); setShowHelp(true); setShowWhatIsXpred(false); }}
+                onClick={() => navigateTo('help')}
               >
                 How to Use
               </button>
@@ -229,7 +326,7 @@ function App() {
                   </a>
                   <button 
                     className="nav-dropdown-item"
-                    onClick={() => { setActiveTab('whatisxpred'); setShowWhatIsXpred(true); setShowHelp(false); setShowWhitepaper(false); }}
+                    onClick={() => navigateTo('xpred')}
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -241,17 +338,29 @@ function App() {
             </nav>
 
             <main className="main-content">
+              {loginMessage && (
+                <div className="login-message">
+                  <p>{loginMessage}</p>
+                  <button onClick={() => setLoginMessage(null)} className="dismiss-button">Dismiss</button>
+                </div>
+              )}
               {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'markets' && !selectedMarket && (
                 <MarketsList
                   session={session}
-                  onSelectMarket={setSelectedMarket}
+                  onSelectMarket={(id) => {
+                    setSelectedMarket(id);
+                    updateUrl({ page: null, market: id });
+                  }}
                 />
               )}
               {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'markets' && selectedMarket && (
                 <MarketDetail
                   session={session}
                   marketId={selectedMarket}
-                  onBack={() => setSelectedMarket(null)}
+                  onBack={() => {
+                    setSelectedMarket(null);
+                    updateUrl({ page: null, market: null });
+                  }}
                 />
               )}
               {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'portfolio' && session && (
@@ -272,8 +381,8 @@ function App() {
             </main>
       
       <Footer 
-        onShowHelp={() => { setShowHelp(true); setShowWhitepaper(false); }} 
-        onShowWhitepaper={() => { setShowWhitepaper(true); setShowHelp(false); setActiveTab('whitepaper'); }}
+        onShowHelp={() => navigateTo('help')} 
+        onShowWhitepaper={() => navigateTo('whitepaper')}
       />
     </div>
   );

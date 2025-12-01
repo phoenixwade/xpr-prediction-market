@@ -1498,6 +1498,50 @@ body {
   }
 }
 
+.login-message {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.login-message p {
+  color: #fbbf24;
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.login-message .dismiss-button {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.login-message .dismiss-button:hover {
+  background: rgba(251, 191, 36, 0.3);
+  border-color: #fbbf24;
+}
+
+@media (max-width: 768px) {
+  .login-message {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;
