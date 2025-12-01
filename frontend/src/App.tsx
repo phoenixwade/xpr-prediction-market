@@ -179,7 +179,7 @@ function App() {
                 </button>
                 <div className="nav-dropdown-menu">
                   <a 
-                    href="https://alcor.exchange/trade/xpred-xprediction_xusdc-xtokens" 
+                    href="https://proton.alcor.exchange/trade/xpred-tokencreate_xusdc-xtokens" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="nav-dropdown-item external-link"

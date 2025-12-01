@@ -90,7 +90,7 @@ const WhatIsXpred: React.FC = () => {
 
         <div className="cta-section">
           <a 
-            href="https://alcor.exchange/trade/xpred-xprediction_xusdc-xtokens" 
+            href="https://proton.alcor.exchange/trade/xpred-tokencreate_xusdc-xtokens" 
             target="_blank" 
             rel="noopener noreferrer"
             className="buy-xpred-cta"
