@@ -242,7 +242,31 @@ cd .. && ./deploy-to-cpanel.sh
 - API documentation and developer tools
 - Advanced analytics and reporting
 
-## Backup & Logging
+## Cron Jobs & Maintenance
+
+### Required Cron Jobs
+
+Add these to your crontab (`crontab -e`):
+
+```bash
+# Backups
+5 3 * * * ~/proton-prediction-market/scripts/backup_site.sh daily >> ~/logs/backup.log 2>&1
+10 3 * * 0 ~/proton-prediction-market/scripts/backup_site.sh weekly >> ~/logs/backup.log 2>&1
+15 3 1 * * ~/proton-prediction-market/scripts/backup_site.sh monthly >> ~/logs/backup.log 2>&1
+
+# Price history snapshots (every 5 minutes for charts)
+*/5 * * * * php ~/public_html/api/cron/snapshot_prices.php >> ~/logs/price_snapshot.log 2>&1
+
+# Database cleanup (daily at 4 AM)
+0 4 * * * php ~/public_html/api/cron/cleanup.php >> ~/logs/cleanup.log 2>&1
+```
+
+### Cron Scripts
+
+Located in `frontend/public/api/cron/`:
+
+- **snapshot_prices.php**: Fetches current prices from blockchain order books and stores snapshots for price chart visualization. Runs every 5 minutes.
+- **cleanup.php**: Removes old notifications (30+ days), old price snapshots (7+ days), soft-deleted comments (90+ days), rotates log files, and vacuums SQLite databases.
 
 ### Automated Backups
 
@@ -257,6 +281,8 @@ Backs up SQLite database, images, .env, API files, and metadata to `~/backups/pr
 - **API Logs**: `~/logs/api.log`
 - **Deployment Logs**: `~/logs/deploy.log`
 - **Backup Logs**: `~/logs/backup.log`
+- **Price Snapshot Logs**: `~/logs/price_snapshot.log`
+- **Cleanup Logs**: `~/logs/cleanup.log`
 
 ## Security Considerations
 
