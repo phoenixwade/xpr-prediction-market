@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "build": "proton-asc assembly/prediction.contract.ts --target release",
+    "build:profitshare": "proton-asc assembly/profitshare.contract.ts --target release",
+    "build:all": "npm run build && npm run build:profitshare",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

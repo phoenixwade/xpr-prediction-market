@@ -1,29 +1,39 @@
 # Contract Installation Guide
 
-This guide covers deploying the updated `xpredicting` smart contract with Phase 19 (Profit Sharing) and Phase 20 (Multisig Resolution) features.
+This guide covers deploying the prediction market smart contracts:
+- **xpredicting**: Prediction market + Multisig resolution (Phase 20)
+- **xpredprofit**: Profit sharing (Phase 19)
 
 ## Prerequisites
 
 - Proton CLI (`proton`) installed and configured
-- Access to the `xpredicting` account private key
-- Node.js v20.x for building the contract
+- Access to the `xpredicting` and `xpredprofit` account private keys
+- Node.js v20.x for building the contracts
 
-## Building the Contract
+## Building the Contracts
 
 From the `contracts` directory:
 
 ```bash
 npm install
+
+# Build prediction market contract (for xpredicting)
 npm run build
+
+# Build profit sharing contract (for xpredprofit)
+npm run build:profitshare
+
+# Or build both at once
+npm run build:all
 ```
 
 This generates:
-- `assembly/target/prediction.contract.wasm`
-- `assembly/target/prediction.contract.abi`
+- `assembly/target/prediction.contract.wasm` and `.abi` (for xpredicting)
+- `assembly/target/profitshare.contract.wasm` and `.abi` (for xpredprofit)
 
-## Deploying the Contract
+## Deploying the Contracts
 
-Deploy the updated contract to the `xpredicting` account:
+### Deploy Prediction Market Contract (xpredicting)
 
 ```bash
 proton contract:set xpredicting assembly/target/prediction.contract
@@ -35,24 +45,54 @@ Or using cleos:
 cleos -u https://proton.eosusa.io set contract xpredicting assembly/target prediction.contract.wasm prediction.contract.abi
 ```
 
-## New Tables
+### Deploy Profit Sharing Contract (xpredprofit)
 
-After deployment, the following new tables will be available:
+```bash
+proton contract:set xpredprofit assembly/target/profitshare.contract
+```
 
+Or using cleos:
+
+```bash
+cleos -u https://proton.eosusa.io set contract xpredprofit assembly/target profitshare.contract.wasm profitshare.contract.abi
+```
+
+## Contract Architecture
+
+### xpredicting (Prediction Market + Multisig)
+
+Tables:
 | Table | Scope | Description |
 |-------|-------|-------------|
-| `unclaimed` | `xpredicting` | Tracks unclaimed profit balances per user |
-| `profitrounds` | `xpredicting` | Audit trail of profit distribution rounds |
+| `markets` | `xpredicting` | All prediction markets |
+| `balances` | `xpredicting` | User XUSDC balances |
 | `resolvers` | `xpredicting` | Top 21 XPRED holders for market resolution |
 
-## New Actions
+Key Actions:
+- `createmkt` - Create a new market (requires expiry at least 24 hours in future)
+- `placeorder` - Place buy/sell orders
+- `resolve` - Admin resolves a market (backwards compatible)
+- `resolvemkt` - Multisig resolution (5-of-21 threshold)
+- `updateres` - Update resolver list
 
-### Phase 19 - Profit Sharing
+### xpredprofit (Profit Sharing)
+
+Tables:
+| Table | Scope | Description |
+|-------|-------|-------------|
+| `unclaimed` | `xpredprofit` | Tracks unclaimed profit balances per user |
+| `profitrounds` | `xpredprofit` | Audit trail of profit distribution rounds |
+
+Key Actions:
+- `distribute` - Admin records off-chain computed profit shares
+- `claimprofit` - Users withdraw their accumulated profits
+
+## Profit Sharing Actions (xpredprofit)
 
 **distribute** - Admin action to record off-chain computed profit shares
 
 ```bash
-proton action:push xpredicting distribute '{
+proton action:push xpredprofit distribute '{
   "admin": "adminaccount",
   "users": ["user1", "user2", "user3"],
   "amounts": [100000, 200000, 150000],
@@ -66,17 +106,19 @@ Parameters:
 - `amounts`: Array of amounts in XUSDC (6 decimal precision, so 100000 = 0.100000 XUSDC)
 - `round_id`: Unique identifier for this distribution round
 
+**Important**: Before calling `distribute`, ensure XUSDC funds are deposited to the `xpredprofit` account to cover the total distribution amount.
+
 **claimprofit** - User action to withdraw accumulated profits
 
 ```bash
-proton action:push xpredicting claimprofit '{
+proton action:push xpredprofit claimprofit '{
   "user": "username"
 }' -p username@active
 ```
 
-This transfers the user's unclaimed XUSDC balance from the contract to their account.
+This transfers the user's unclaimed XUSDC balance from the `xpredprofit` contract to their account.
 
-### Phase 20 - Multisig Resolution
+## Multisig Resolution Actions (xpredicting)
 
 **updateres** - Admin action to update the resolver list (top 21 XPRED holders)
 
@@ -192,24 +234,41 @@ Example cron schedule (every Sunday at 1 AM):
 0 1 * * 0 /path/to/update_resolvers_script.sh
 ```
 
+## Market Creation Validation
+
+The `createmkt` action now enforces that market expiry must be at least 24 hours in the future. This prevents users from creating markets with past or near-future expiry dates.
+
+Error message: "Market expiry must be at least 24 hours in the future"
+
 ## Verification
 
-After deployment, verify the new tables exist:
+After deployment, verify the tables exist:
 
 ```bash
-# Check unclaimed table
-proton table:get xpredicting xpredicting unclaimed
-
-# Check profitrounds table
-proton table:get xpredicting xpredicting profitrounds
-
-# Check resolvers table
+# xpredicting tables
 proton table:get xpredicting xpredicting resolvers
+
+# xpredprofit tables
+proton table:get xpredprofit xpredprofit unclaimed
+proton table:get xpredprofit xpredprofit profitrounds
 ```
+
+## Frontend Configuration
+
+The frontend uses environment variables to configure contract accounts:
+
+```env
+REACT_APP_CONTRACT_NAME=xpredicting
+REACT_APP_PROFIT_SHARE_CONTRACT=xpredprofit
+```
+
+If not set, defaults are:
+- Prediction market: `xpredicting`
+- Profit sharing: `xpredprofit`
 
 ## Backwards Compatibility
 
-The existing `resolve` action is preserved for backwards compatibility. It can be used as an admin escape hatch if the multisig process fails or is unavailable.
+The existing `resolve` action on `xpredicting` is preserved for backwards compatibility. It can be used as an admin escape hatch if the multisig process fails or is unavailable.
 
 ```bash
 proton action:push xpredicting resolve '{
@@ -222,15 +281,22 @@ proton action:push xpredicting resolve '{
 ## Troubleshooting
 
 **"No unclaimed profit for this account"**
-- The user has no profit shares recorded. Check if `distribute` was called with their account.
+- The user has no profit shares recorded. Check if `distribute` was called on `xpredprofit` with their account.
 
 **"Market not found"**
-- The market_id doesn't exist. Verify the market exists in the `markets` table.
+- The market_id doesn't exist. Verify the market exists in the `markets` table on `xpredicting`.
 
 **"Market already resolved"**
 - The market has already been resolved. Check the `resolved` field in the market record.
+
+**"Market expiry must be at least 24 hours in the future"**
+- The expiry timestamp provided is less than 24 hours from now. Provide a valid future timestamp.
 
 **Multisig proposal not executing**
 - Ensure at least 5 resolvers have approved the proposal
 - Verify the `resolvers` permission is correctly configured with threshold 5
 - Check that `resolvemkt` action is linked to `resolvers` permission
+
+**Profit claim fails with insufficient balance**
+- Ensure XUSDC funds are deposited to `xpredprofit` before calling `distribute`
+- The contract needs sufficient XUSDC balance to pay out claims
