@@ -203,15 +203,44 @@ cd .. && ./deploy-to-cpanel.sh
 - Test site banner (PR #65-66)
 - Legacy market handling (PR #63-64)
 
+**Phase 7: Trade History & Portfolio Enhancements** (PR #67)
+- Trade history API with comprehensive tracking
+- History tab in portfolio view
+- Enhanced P&L tracking with detailed calculations
+- Bulk order management and cancellation
+
+**Phase 8: Charts & Analytics** (PR #68)
+- Price charts with SVG visualization (1H, 24H, 7D, All time ranges)
+- Order book depth visualization with bid/ask spread
+- Market statistics dashboard (volume, trades, unique traders)
+
+**Phase 9-10: Market Creation UX & Notifications** (PR #69)
+- Market templates for quick creation (Binary, Election, Price Range, Sports, Crypto)
+- Scheduled market creation with auto-open times
+- Notification center with real-time alerts
+- Market subscriptions and watchlist notifications
+
+**Phases 11-16: Advanced Features** (PR #69)
+- Advanced trading interface with limit/market orders
+- Time-in-force options (GTC, IOC, FOK)
+- Stop-loss and take-profit orders
+- Mobile-responsive PWA layout with install prompt
+- Bottom navigation for mobile users
+- Leaderboard with volume, trades, win rate, and P&L rankings
+- Enhanced resolution tools with evidence tracking
+- Security improvements and webhook integrations
+
+**Phase 17: XPRED Token Whitepaper** (PR #71)
+- Comprehensive whitepaper page for XPRED token
+- Footer link integration
+- Responsive design for all devices
+
 ### 💡 Future Enhancements
 
-- Price charts and historical data
-- Advanced order types
-- Liquidity incentives
-- Community governance
-- Mobile app
-- Notifications
-- Leaderboards
+- Liquidity incentives and market maker rewards
+- Community governance and voting
+- API documentation and developer tools
+- Advanced analytics and reporting
 
 ## Backup & Logging
 
