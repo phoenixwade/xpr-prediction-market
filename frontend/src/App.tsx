@@ -20,7 +20,7 @@ function App() {
   const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
 
   useEffect(() => {
-    document.title = process.env.REACT_APP_NAME || 'Proton Prediction Market';
+    document.title = process.env.REACT_APP_NAME || 'XPR Prediction Market';
     
     const urlParams = new URLSearchParams(window.location.search);
     const marketParam = urlParams.get('market');
@@ -41,13 +41,13 @@ function App() {
             endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com'],
             chainId: process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd',
             restoreSession: true,
-            storagePrefix: process.env.REACT_APP_NAME || 'proton-prediction-market',
+            storagePrefix: process.env.REACT_APP_NAME || 'xpr-prediction-market',
           },
           transportOptions: {
             requestAccount: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
           },
           selectorOptions: {
-            appName: process.env.REACT_APP_NAME || 'Proton Prediction Market',
+            appName: process.env.REACT_APP_NAME || 'XPR Prediction Market',
             appLogo: 'https://protonchain.com/logo.png',
           },
         });
@@ -67,13 +67,13 @@ function App() {
         linkOptions: {
           endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com'],
           chainId: process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd',
-          storagePrefix: process.env.REACT_APP_NAME || 'proton-prediction-market',
+          storagePrefix: process.env.REACT_APP_NAME || 'xpr-prediction-market',
         },
         transportOptions: {
           requestAccount: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
         },
         selectorOptions: {
-          appName: process.env.REACT_APP_NAME || 'Proton Prediction Market',
+          appName: process.env.REACT_APP_NAME || 'XPR Prediction Market',
           appLogo: 'https://protonchain.com/logo.png',
         },
       });
@@ -116,7 +116,7 @@ function App() {
                   style={{ cursor: 'pointer' }}
                 >
           <span className="xpr-highlight">XPR</span>
-          {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
+          {(process.env.REACT_APP_NAME || 'XPR Prediction Market').replace('XPR', '')}
         </h1>
         {process.env.REACT_APP_IS_TEST_SITE === 'true' && (
           <div className="test-site-banner">
@@ -125,14 +125,14 @@ function App() {
         )}
         <div className="header-actions">
           {!session ? (
-            <Tooltip text="Connect your Proton wallet to start trading. You'll need XUSDC tokens to place orders." position="bottom">
+            <Tooltip text="Connect your XPR wallet to start trading. You'll need XUSDC tokens to place orders." position="bottom">
               <button onClick={handleLogin} className="connect-button">
                 Connect Wallet
               </button>
             </Tooltip>
           ) : (
             <div className="user-info">
-              <Tooltip text="Your connected Proton account. Click Disconnect to log out." position="bottom">
+              <Tooltip text="Your connected XPR account. Click Disconnect to log out." position="bottom">
                 <span>Connected: {session.auth.actor}</span>
               </Tooltip>
               <button onClick={handleLogout} className="disconnect-button">

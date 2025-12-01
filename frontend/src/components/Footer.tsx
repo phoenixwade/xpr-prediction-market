@@ -16,7 +16,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp, onShowWhitepaper }) => {
           <div className="footer-brand">
             <span className="footer-logo-text">
               <span className="xpr-highlight">XPR</span>
-              {(process.env.REACT_APP_NAME || 'Proton Prediction Market').replace('XPR', '')}
+              {(process.env.REACT_APP_NAME || 'XPR Prediction Market').replace('XPR', '')}
             </span>
           </div>
           <div className="footer-xpr">
@@ -30,7 +30,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp, onShowWhitepaper }) => {
             </a>
           </div>
           <p className="footer-copyright">
-            © {year} {process.env.REACT_APP_NAME || 'Proton Prediction Market'}, all rights reserved
+            © {year} {process.env.REACT_APP_NAME || 'XPR Prediction Market'}, all rights reserved
           </p>
         </div>
         
@@ -52,12 +52,7 @@ const Footer: React.FC<FooterProps> = ({ onShowHelp, onShowWhitepaper }) => {
                 About XPR Network
               </a>
             </li>
-            <li>
-              <a href="https://proton.org/" target="_blank" rel="noopener noreferrer">
-                Proton Blockchain
-              </a>
-            </li>
-            <li>
+                        <li>
               <a href="https://protonscan.io/" target="_blank" rel="noopener noreferrer">
                 Block Explorer
               </a>

@@ -54,7 +54,7 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
         >
           ☰
         </button>
-        <div className="mobile-logo">Proton Prediction</div>
+        <div className="mobile-logo">XPR Prediction</div>
         {installPrompt && (
           <button 
             className="install-pwa"
