@@ -15,8 +15,8 @@ import {
 import { MarketTable, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, ConfigTable, ResolverTable } from "./tables";
 import { currentTimeSec } from "proton-tsc";
 
-const XUSDC_SYMBOL = new Symbol("XUSDC", 6);
-const ONE_XUSDC: i64 = 1000000;
+const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
+const ONE_TESTIES: i64 = 100;
 
 @packer
 class Transfer {
@@ -48,8 +48,8 @@ export class PredictionMarketContract extends Contract {
     if (to != this.receiver) return;
     
     check(
-      quantity.symbol.code == XUSDC_SYMBOL.code && quantity.symbol.precision == XUSDC_SYMBOL.precision,
-      "Only XUSDC token deposits allowed"
+      quantity.symbol.code == TESTIES_SYMBOL.code && quantity.symbol.precision == TESTIES_SYMBOL.precision,
+      "Only TESTIES token deposits allowed"
     );
     check(quantity.amount > 0, "Deposit amount must be positive");
 
@@ -77,7 +77,7 @@ export class PredictionMarketContract extends Contract {
     this.balancesTable.update(bal!, to);
 
     const transferAction = new InlineAction<Transfer>("transfer");
-    const action = transferAction.act(Name.fromString("xtokens"), new PermissionLevel(this.receiver));
+    const action = transferAction.act(Name.fromString("tokencreate"), new PermissionLevel(this.receiver));
     const transferParams = new Transfer(this.receiver, to, quantity, "Withdrawal from prediction market");
     action.send(transferParams);
     
@@ -169,7 +169,7 @@ export class PredictionMarketContract extends Contract {
       } else {
         const heldShares = pos != null ? pos.shares : 0;
         const shortedShares = quantity - heldShares;
-        cost = ONE_XUSDC * shortedShares;
+        cost = ONE_TESTIES * shortedShares;
         
         let bal = this.balancesTable.get(account.N);
         check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell collateral");
@@ -215,7 +215,7 @@ export class PredictionMarketContract extends Contract {
       const refundAmount = order!.price * order!.quantity;
       let bal = this.balancesTable.get(account.N);
       if (bal == null) {
-        bal = new BalanceTable(account, new Asset(refundAmount, XUSDC_SYMBOL));
+        bal = new BalanceTable(account, new Asset(refundAmount, TESTIES_SYMBOL));
         this.balancesTable.set(bal, account);
       } else {
         bal.funds = new Asset(bal.funds.amount + refundAmount, bal.funds.symbol);
@@ -229,13 +229,13 @@ export class PredictionMarketContract extends Contract {
       if (pos != null && pos.shares < 0) {
         const shortedShares = 0 - pos.shares;
         if (shortedShares >= i64(order!.quantity)) {
-          const refund = ONE_XUSDC * i64(order!.quantity);
+          const refund = ONE_TESTIES * i64(order!.quantity);
           pos.shares += i64(order!.quantity);
           positionsV2Table.update(pos, this.receiver);
           
           let bal = this.balancesTable.get(account.N);
           if (bal == null) {
-            bal = new BalanceTable(account, new Asset(refund, XUSDC_SYMBOL));
+            bal = new BalanceTable(account, new Asset(refund, TESTIES_SYMBOL));
             this.balancesTable.set(bal, account);
           } else {
             bal.funds = new Asset(bal.funds.amount + refund, bal.funds.symbol);
@@ -275,13 +275,13 @@ export class PredictionMarketContract extends Contract {
     
     check(pos != null && pos.shares > 0, "No winning position for user in this market");
 
-    const payout = ONE_XUSDC * pos!.shares;
+    const payout = ONE_TESTIES * pos!.shares;
     pos!.shares = 0;
     positionsV2Table.update(pos!, this.receiver);
 
     let bal = this.balancesTable.get(user.N);
     if (bal == null) {
-      bal = new BalanceTable(user, new Asset(payout, XUSDC_SYMBOL));
+      bal = new BalanceTable(user, new Asset(payout, TESTIES_SYMBOL));
       this.balancesTable.set(bal, user);
     } else {
       bal.funds = new Asset(bal.funds.amount + payout, bal.funds.symbol);
@@ -298,11 +298,11 @@ export class PredictionMarketContract extends Contract {
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal != null && feeBal.funds.amount > 0) {
       const amount = feeBal.funds;
-      feeBal.funds = new Asset(0, XUSDC_SYMBOL);
+      feeBal.funds = new Asset(0, TESTIES_SYMBOL);
       this.balancesTable.update(feeBal, this.receiver);
 
       const transferAction = new InlineAction<Transfer>("transfer");
-      const action = transferAction.act(Name.fromString("xtokens"), new PermissionLevel(this.receiver));
+      const action = transferAction.act(Name.fromString("tokencreate"), new PermissionLevel(this.receiver));
       const transferParams = new Transfer(this.receiver, to, amount, "Fee collection");
       action.send(transferParams);
     }
@@ -443,7 +443,7 @@ export class PredictionMarketContract extends Contract {
 
     let sellerBal = this.balancesTable.get(seller.N);
     if (sellerBal == null) {
-      sellerBal = new BalanceTable(seller, new Asset(payout, XUSDC_SYMBOL));
+      sellerBal = new BalanceTable(seller, new Asset(payout, TESTIES_SYMBOL));
       this.balancesTable.set(sellerBal, seller);
     } else {
       sellerBal.funds = new Asset(sellerBal.funds.amount + payout, sellerBal.funds.symbol);
@@ -452,7 +452,7 @@ export class PredictionMarketContract extends Contract {
 
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal == null) {
-      feeBal = new BalanceTable(this.receiver, new Asset(fee, XUSDC_SYMBOL));
+      feeBal = new BalanceTable(this.receiver, new Asset(fee, TESTIES_SYMBOL));
       this.balancesTable.set(feeBal, this.receiver);
     } else {
       feeBal.funds = new Asset(feeBal.funds.amount + fee, feeBal.funds.symbol);

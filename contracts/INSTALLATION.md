@@ -4,6 +4,12 @@ This guide covers deploying the prediction market smart contracts:
 - **xpredicting**: Prediction market + Multisig resolution (Phase 20)
 - **xpredprofit**: Profit sharing (Phase 19)
 
+## Token Configuration
+
+**Current Token**: TESTIES (2 decimal precision) on `tokencreate` contract
+
+This is a test token for development/testing purposes. The contracts accept TESTIES deposits and handle all balances/payouts in TESTIES instead of XUSDC.
+
 ## Prerequisites
 
 - Proton CLI (`proton`) installed and configured
@@ -65,7 +71,7 @@ Tables:
 | Table | Scope | Description |
 |-------|-------|-------------|
 | `markets` | `xpredicting` | All prediction markets |
-| `balances` | `xpredicting` | User XUSDC balances |
+| `balances` | `xpredicting` | User TESTIES balances |
 | `resolvers` | `xpredicting` | Top 21 XPRED holders for market resolution |
 
 Key Actions:
@@ -103,10 +109,10 @@ proton action:push xpredprofit distribute '{
 Parameters:
 - `admin`: Account calling the action (must have authorization)
 - `users`: Array of account names to receive profit shares
-- `amounts`: Array of amounts in XUSDC (6 decimal precision, so 100000 = 0.100000 XUSDC)
+- `amounts`: Array of amounts in TESTIES (2 decimal precision, so 100 = 1.00 TESTIES)
 - `round_id`: Unique identifier for this distribution round
 
-**Important**: Before calling `distribute`, ensure XUSDC funds are deposited to the `xpredprofit` account to cover the total distribution amount.
+**Important**: Before calling `distribute`, ensure TESTIES funds are deposited to the `xpredprofit` account to cover the total distribution amount.
 
 **claimprofit** - User action to withdraw accumulated profits
 
@@ -116,7 +122,7 @@ proton action:push xpredprofit claimprofit '{
 }' -p username@active
 ```
 
-This transfers the user's unclaimed XUSDC balance from the `xpredprofit` contract to their account.
+This transfers the user's unclaimed TESTIES balance from the `xpredprofit` contract to their account.
 
 ## Multisig Resolution Actions (xpredicting)
 
@@ -298,5 +304,5 @@ proton action:push xpredicting resolve '{
 - Check that `resolvemkt` action is linked to `resolvers` permission
 
 **Profit claim fails with insufficient balance**
-- Ensure XUSDC funds are deposited to `xpredprofit` before calling `distribute`
-- The contract needs sufficient XUSDC balance to pay out claims
+- Ensure TESTIES funds are deposited to `xpredprofit` before calling `distribute`
+- The contract needs sufficient TESTIES balance to pay out claims
