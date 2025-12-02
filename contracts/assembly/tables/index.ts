@@ -6,6 +6,7 @@ export { PositionV2Table } from "./positionv2.table";
 export { OutcomeTable } from "./outcome.table";
 export { BalanceTable } from "./balance.table";
 export { ConfigTable } from "./config.table";
+export { Config2Table } from "./config2.table";
 export { UnclaimedTable } from "./unclaimed.table";
 export { ResolverTable } from "./resolver.table";
 export { ProfitRoundTable } from "./profitround.table";
