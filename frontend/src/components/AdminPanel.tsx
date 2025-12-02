@@ -48,7 +48,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [loadingPending, setLoadingPending] = useState(false);
   const [approveLoading, setApproveLoading] = useState(false);
 
-  const [unclaimedIncome, setUnclaimedIncome] = useState<string>('0.0000 XUSDC');
+  const [unclaimedIncome, setUnclaimedIncome] = useState<string>('0.0000 TESTIES');
   const [loadingIncome, setLoadingIncome] = useState(false);
   const [claimLoading, setClaimLoading] = useState(false);
 
@@ -458,13 +458,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       });
 
       if (result.rows && result.rows.length > 0) {
-        setUnclaimedIncome(result.rows[0].balance || '0.0000 XUSDC');
+        setUnclaimedIncome(result.rows[0].balance || '0.0000 TESTIES');
       } else {
-        setUnclaimedIncome('0.0000 XUSDC');
+        setUnclaimedIncome('0.0000 TESTIES');
       }
     } catch (error) {
       console.error('Error fetching unclaimed income:', error);
-      setUnclaimedIncome('0.0000 XUSDC');
+      setUnclaimedIncome('0.0000 TESTIES');
     } finally {
       setLoadingIncome(false);
     }
@@ -563,7 +563,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
           <div className="claim-actions">
             <button
               onClick={handleClaimIncome}
-              disabled={claimLoading || loadingIncome || unclaimedIncome === '0.0000 XUSDC'}
+              disabled={claimLoading || loadingIncome || unclaimedIncome === '0.0000 TESTIES'}
               className="claim-button"
             >
               {claimLoading ? 'Claiming...' : 'Claim Income'}
@@ -583,7 +583,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
               <li>Platform revenue is distributed weekly to XPRED holders</li>
               <li>Your share is based on your XPRED balance at distribution time</li>
               <li>Unclaimed income accumulates until you claim it</li>
-              <li>Income is paid in XUSDC stablecoin</li>
+              <li>Income is paid in TESTIES stablecoin</li>
             </ul>
           </div>
         </div>

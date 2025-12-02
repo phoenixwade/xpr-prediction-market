@@ -287,7 +287,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
   const handleWithdraw = async () => {
     if (!session || !balance) return;
 
-    const amount = prompt('Enter amount to withdraw (XUSDC):');
+    const amount = prompt('Enter amount to withdraw (TESTIES):');
     if (!amount) return;
 
     try {
@@ -307,7 +307,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           }],
           data: {
             to: session.auth.actor,
-            quantity: `${withdrawAmount.toFixed(6)} XUSDC`,
+            quantity: `${withdrawAmount.toFixed(6)} TESTIES`,
           },
         }],
       });
@@ -401,14 +401,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
         <div className="balance-card">
           <h3>
             Available Balance
-            <Tooltip text="Your internal balance from deposits, trade profits, cancelled orders, and claimed winnings. Withdraw to send XUSDC back to your wallet." position="right">
+            <Tooltip text="Your internal balance from deposits, trade profits, cancelled orders, and claimed winnings. Withdraw to send TESTIES back to your wallet." position="right">
               <span className="tooltip-icon">ℹ</span>
             </Tooltip>
           </h3>
           <div className="balance-amount">
-            {balance ? balance.funds : '0.000000 XUSDC'}
+            {balance ? balance.funds : '0.000000 TESTIES'}
           </div>
-          <Tooltip text="Withdraw XUSDC from your internal balance back to your wallet. Enter the amount when prompted." position="top">
+          <Tooltip text="Withdraw TESTIES from your internal balance back to your wallet. Enter the amount when prompted." position="top">
             <button onClick={handleWithdraw} className="withdraw-button">
               Withdraw
             </button>
@@ -425,18 +425,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           <div className="pnl-stats">
             <div className="pnl-item">
               <span className="pnl-label">Total Value:</span>
-              <span className="pnl-value">{pnlData.totalValue.toFixed(2)} XUSDC</span>
+              <span className="pnl-value">{pnlData.totalValue.toFixed(2)} TESTIES</span>
             </div>
             <div className="pnl-item">
               <span className="pnl-label">Unrealized P&L:</span>
               <span className={`pnl-value ${pnlData.unrealized >= 0 ? 'positive' : 'negative'}`}>
-                {pnlData.unrealized >= 0 ? '+' : ''}{pnlData.unrealized.toFixed(2)} XUSDC
+                {pnlData.unrealized >= 0 ? '+' : ''}{pnlData.unrealized.toFixed(2)} TESTIES
               </span>
             </div>
             <div className="pnl-item">
               <span className="pnl-label">Total P&L:</span>
               <span className={`pnl-value ${pnlData.pnl >= 0 ? 'positive' : 'negative'}`}>
-                {pnlData.pnl >= 0 ? '+' : ''}{pnlData.pnl.toFixed(2)} XUSDC
+                {pnlData.pnl >= 0 ? '+' : ''}{pnlData.pnl.toFixed(2)} TESTIES
               </span>
             </div>
           </div>
@@ -498,7 +498,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                   </div>
                   {hasWinningPosition && (
                     <div className="position-actions">
-                      <Tooltip text="Claim your winnings from this resolved market. Winning shares pay 1 XUSDC each." position="top">
+                      <Tooltip text="Claim your winnings from this resolved market. Winning shares pay 1 TESTIES each." position="top">
                         <button
                           onClick={() => handleClaim(mp.market_id)}
                           className="claim-button"
@@ -553,7 +553,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                     </div>
                     <div className="order-info">
                       <span className="label">Price:</span>
-                      <span className="value">{(order.price / 1000000).toFixed(4)} XUSDC</span>
+                      <span className="value">{(order.price / 1000000).toFixed(4)} TESTIES</span>
                     </div>
                     <div className="order-info">
                       <span className="label">Quantity:</span>
@@ -561,7 +561,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                     </div>
                     <div className="order-info">
                       <span className="label">Total:</span>
-                      <span className="value">{((order.price / 1000000) * order.quantity).toFixed(4)} XUSDC</span>
+                      <span className="value">{((order.price / 1000000) * order.quantity).toFixed(4)} TESTIES</span>
                     </div>
                   </div>
                   <button
@@ -635,10 +635,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                             {trade.side.toUpperCase()}
                           </span>
                         </td>
-                        <td>{(trade.price / 1000000).toFixed(4)} XUSDC</td>
+                        <td>{(trade.price / 1000000).toFixed(4)} TESTIES</td>
                         <td>{trade.quantity}</td>
-                        <td>{(trade.fee / 1000000).toFixed(4)} XUSDC</td>
-                        <td>{((trade.price * trade.quantity) / 1000000).toFixed(4)} XUSDC</td>
+                        <td>{(trade.fee / 1000000).toFixed(4)} TESTIES</td>
+                        <td>{((trade.price * trade.quantity) / 1000000).toFixed(4)} TESTIES</td>
                       </tr>
                     ))}
                 </tbody>
