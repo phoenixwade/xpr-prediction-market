@@ -105,7 +105,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
       const marketsResult = await rpc.get_table_rows({
         code: contractName,
         scope: contractName,
-        table: 'markets',
+        table: 'markets2',
         limit: 100,
       });
 
