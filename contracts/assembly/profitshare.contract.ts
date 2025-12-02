@@ -13,7 +13,7 @@ import {
 } from "proton-tsc";
 import { UnclaimedTable, ProfitRoundTable } from "./tables";
 
-const XUSDC_SYMBOL = new Symbol("XUSDC", 6);
+const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
 
 @packer
 class Transfer {
@@ -52,17 +52,17 @@ export class ProfitShareContract extends Contract {
 
       let unclaimed = this.unclaimedTable.get(user.N);
       if (unclaimed == null) {
-        unclaimed = new UnclaimedTable(user, new Asset(amount, XUSDC_SYMBOL));
+        unclaimed = new UnclaimedTable(user, new Asset(amount, TESTIES_SYMBOL));
         this.unclaimedTable.set(unclaimed, this.receiver);
       } else {
-        unclaimed.balance = new Asset(unclaimed.balance.amount + amount, XUSDC_SYMBOL);
+        unclaimed.balance = new Asset(unclaimed.balance.amount + amount, TESTIES_SYMBOL);
         this.unclaimedTable.update(unclaimed, this.receiver);
       }
       
       totalDistributed += amount;
     }
 
-    const round = new ProfitRoundTable(round_id, 0, new Asset(totalDistributed, XUSDC_SYMBOL));
+    const round = new ProfitRoundTable(round_id, 0, new Asset(totalDistributed, TESTIES_SYMBOL));
     this.profitRoundsTable.set(round, this.receiver);
 
     print(`Distributed ${totalDistributed} to ${users.length} users for round ${round_id}`);
@@ -81,7 +81,7 @@ export class ProfitShareContract extends Contract {
     this.unclaimedTable.remove(unclaimed!);
 
     const transferAction = new InlineAction<Transfer>("transfer");
-    const action = transferAction.act(Name.fromString("xtokens"), new PermissionLevel(this.receiver));
+    const action = transferAction.act(Name.fromString("tokencreate"), new PermissionLevel(this.receiver));
     const transferParams = new Transfer(this.receiver, user, amount, "Profit share claim");
     action.send(transferParams);
 
