@@ -195,7 +195,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         json: true,
         code: contractName,
         scope: contractName,
-        table: 'markets',
+        table: 'markets2',
         limit: 1000,
       });
 
@@ -250,7 +250,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         json: true,
         code: contractName,
         scope: contractName,
-        table: 'markets',
+        table: 'markets2',
         limit: 1000,
       });
 

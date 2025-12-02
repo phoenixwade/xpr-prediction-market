@@ -1,4 +1,5 @@
 export { MarketTable } from "./market.table";
+export { Market2Table } from "./market2.table";
 export { OrderTable } from "./order.table";
 export { PositionTable } from "./position.table";
 export { PositionV2Table } from "./positionv2.table";

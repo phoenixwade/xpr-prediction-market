@@ -12,7 +12,7 @@ import {
   InlineAction,
   PermissionLevel
 } from "proton-tsc";
-import { MarketTable, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, ConfigTable, ResolverTable } from "./tables";
+import { Market2Table, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, ConfigTable, ResolverTable } from "./tables";
 import { currentTimeSec } from "proton-tsc";
 
 const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
@@ -30,14 +30,14 @@ class Transfer {
 
 @contract
 export class PredictionMarketContract extends Contract {
-  marketsTable: TableStore<MarketTable>;
+  markets2Table: TableStore<Market2Table>;
   balancesTable: TableStore<BalanceTable>;
   configTable: TableStore<ConfigTable>;
   resolversTable: TableStore<ResolverTable>;
 
   constructor(receiver: Name, firstReceiver: Name, action: Name) {
     super(receiver, firstReceiver, action);
-    this.marketsTable = new TableStore<MarketTable>(this.receiver, this.receiver);
+    this.markets2Table = new TableStore<Market2Table>(this.receiver, this.receiver);
     this.balancesTable = new TableStore<BalanceTable>(this.receiver, this.receiver);
     this.configTable = new TableStore<ConfigTable>(this.receiver, this.receiver);
     this.resolversTable = new TableStore<ResolverTable>(this.receiver, this.receiver);
@@ -109,7 +109,7 @@ export class PredictionMarketContract extends Contract {
       outcomeNames = ["Yes", "No"];
     }
     
-    const market = new MarketTable(
+    const market = new Market2Table(
       newId,
       question,
       category,
@@ -120,7 +120,7 @@ export class PredictionMarketContract extends Contract {
       outcomesCount,
       new TimePointSec(0)
     );
-    this.marketsTable.set(market, this.receiver);
+    this.markets2Table.set(market, this.receiver);
     
     const outcomesTable = new TableStore<OutcomeTable>(this.receiver, Name.fromU64(newId));
     for (let i = 0; i < outcomeNames.length; i++) {
@@ -143,7 +143,7 @@ export class PredictionMarketContract extends Contract {
     requireAuth(account);
     check(price.amount > 0 && quantity > 0, "Price and quantity must be positive");
 
-    const market = this.marketsTable.get(market_id);
+    const market = this.markets2Table.get(market_id);
     check(market != null, "Market not found");
     check(!market!.resolved, "Market is already resolved, cannot trade");
     check(outcome_id < market!.outcomes_count, "Invalid outcome_id");
@@ -264,7 +264,7 @@ export class PredictionMarketContract extends Contract {
   claim(market_id: u64, user: Name): void {
     requireAuth(user);
     
-    const market = this.marketsTable.get(market_id);
+    const market = this.markets2Table.get(market_id);
     check(market != null && market!.resolved, "Market not resolved yet");
     check(market!.outcome < 255, "Market outcome not set");
 
@@ -344,25 +344,8 @@ export class PredictionMarketContract extends Contract {
     print(`Resolved market ${market_id} via multisig with winning outcome: ${winning_outcome_id}`);
   }
 
-  @action("clearmarkets")
-  clearMarkets(admin: Name): void {
-    requireAuth(admin);
-    check(admin == this.receiver, "Only contract account can clear markets");
-    
-    let market = this.marketsTable.first();
-    let count: u32 = 0;
-    while (market != null) {
-      const toRemove = market;
-      market = this.marketsTable.next(market);
-      this.marketsTable.remove(toRemove);
-      count++;
-    }
-    
-    print(`Cleared ${count} markets from table`);
-  }
-
   private doResolve(market_id: u64, winning_outcome_id: u8): void {
-    let market = this.marketsTable.get(market_id);
+    let market = this.markets2Table.get(market_id);
     check(market != null, "Market not found");
     check(!market!.resolved, "Market already resolved");
     check(winning_outcome_id < market!.outcomes_count, "Invalid winning outcome_id");
@@ -370,7 +353,7 @@ export class PredictionMarketContract extends Contract {
     market!.resolved = true;
     market!.outcome = winning_outcome_id;
     market!.resolved_at = new TimePointSec(0);
-    this.marketsTable.update(market!, this.receiver);
+    this.markets2Table.update(market!, this.receiver);
   }
 
   private matchOrders(market_id: u64, newOrder: OrderTable, outcome_id: u8): void {
