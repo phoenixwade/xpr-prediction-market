@@ -207,7 +207,7 @@ const Whitepaper: React.FC = () => {
               <strong>800,000 XPRED</strong> will be made available to community participants.
             </p>
             <p className="section-text">
-              Tokens may be acquired at an initial sales price of <strong>0.25 USDC per XPRED</strong>.
+              Tokens may be acquired at an initial sales price of <strong>0.25 TESTIES per XPRED</strong>.
             </p>
             <p className="section-text">
               This initial sale price establishes a <strong>starting platform valuation of $250,000</strong>, based solely on the initial token pricing and circulating supply.
