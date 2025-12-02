@@ -60,6 +60,13 @@ interface PortfolioProps {
   session: any;
 }
 
+const formatBalanceAsTESTIES = (funds: string | undefined): string => {
+  if (!funds) return '0.00 TESTIES';
+  const parts = funds.split(' ');
+  const amount = parseFloat(parts[0]) || 0;
+  return `${amount.toFixed(2)} TESTIES`;
+};
+
 const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
   const [marketPositions, setMarketPositions] = useState<MarketPositions[]>([]);
   const [balance, setBalance] = useState<Balance | null>(null);
@@ -307,7 +314,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           }],
           data: {
             to: session.auth.actor,
-            quantity: `${withdrawAmount.toFixed(6)} TESTIES`,
+            quantity: `${withdrawAmount.toFixed(2)} TESTIES`,
           },
         }],
       });
@@ -406,7 +413,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             </Tooltip>
           </h3>
           <div className="balance-amount">
-            {balance ? balance.funds : '0.000000 TESTIES'}
+            {formatBalanceAsTESTIES(balance?.funds)}
           </div>
           <Tooltip text="Withdraw TESTIES from your internal balance back to your wallet. Enter the amount when prompted." position="top">
             <button onClick={handleWithdraw} className="withdraw-button">
