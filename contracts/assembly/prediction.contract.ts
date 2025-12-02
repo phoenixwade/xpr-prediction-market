@@ -344,6 +344,23 @@ export class PredictionMarketContract extends Contract {
     print(`Resolved market ${market_id} via multisig with winning outcome: ${winning_outcome_id}`);
   }
 
+  @action("clearmarkets")
+  clearMarkets(admin: Name): void {
+    requireAuth(admin);
+    check(admin == this.receiver, "Only contract account can clear markets");
+    
+    let market = this.marketsTable.first();
+    let count: u32 = 0;
+    while (market != null) {
+      const toRemove = market;
+      market = this.marketsTable.next(market);
+      this.marketsTable.remove(toRemove);
+      count++;
+    }
+    
+    print(`Cleared ${count} markets from table`);
+  }
+
   private doResolve(market_id: u64, winning_outcome_id: u8): void {
     let market = this.marketsTable.get(market_id);
     check(market != null, "Market not found");

@@ -12,24 +12,45 @@ This is a test token for development/testing purposes. The contracts accept TEST
 
 ## Prerequisites
 
-- Proton CLI (`proton`) installed and configured
-- Access to the `xpredicting` and `xpredprofit` account private keys
+- Access to the `xpredicting` and `xpredprofit` account private keys (imported via `npx @proton/cli key:add`)
 - Node.js v20.x for building the contracts
 
-## Building the Contracts
+## Quick Start: Deploy Script
 
-From the `contracts` directory:
+The easiest way to deploy is using the provided script:
 
 ```bash
+cd contracts
+
+# Deploy both contracts
+./deploy-contracts.sh all
+
+# Clear old markets (one-time migration - DESTRUCTIVE!)
+./deploy-contracts.sh clearmarkets
+```
+
+**IMPORTANT**: After deploying contracts, users must **disconnect and reconnect their wallets** in the app to refresh the ABI cache. Failure to do this will cause "buffer overflow" errors when creating markets.
+
+### Deploy Script Commands
+
+| Command | Description |
+|---------|-------------|
+| `./deploy-contracts.sh build` | Build contracts only |
+| `./deploy-contracts.sh xpredicting` | Build and deploy xpredicting |
+| `./deploy-contracts.sh xpredprofit` | Build and deploy xpredprofit |
+| `./deploy-contracts.sh all` | Build and deploy both contracts |
+| `./deploy-contracts.sh clearmarkets` | Clear all markets (migration) |
+| `./deploy-contracts.sh help` | Show help |
+
+## Manual Deployment
+
+If you prefer manual deployment:
+
+### Building the Contracts
+
+```bash
+cd contracts
 npm install
-
-# Build prediction market contract (for xpredicting)
-npm run build
-
-# Build profit sharing contract (for xpredprofit)
-npm run build:profitshare
-
-# Or build both at once
 npm run build:all
 ```
 
@@ -37,31 +58,44 @@ This generates:
 - `assembly/target/prediction.contract.wasm` and `.abi` (for xpredicting)
 - `assembly/target/profitshare.contract.wasm` and `.abi` (for xpredprofit)
 
-## Deploying the Contracts
-
 ### Deploy Prediction Market Contract (xpredicting)
 
 ```bash
-proton contract:set xpredicting assembly/target/prediction.contract
-```
+# Create temp directory with only the xpredicting files
+mkdir -p /tmp/xpredicting
+cp assembly/target/prediction.contract.wasm /tmp/xpredicting/
+cp assembly/target/prediction.contract.abi /tmp/xpredicting/
 
-Or using cleos:
-
-```bash
-cleos -u https://proton.eosusa.io set contract xpredicting assembly/target prediction.contract.wasm prediction.contract.abi
+# Deploy
+npx @proton/cli contract:set xpredicting /tmp/xpredicting
 ```
 
 ### Deploy Profit Sharing Contract (xpredprofit)
 
 ```bash
-proton contract:set xpredprofit assembly/target/profitshare.contract
+# Create temp directory with only the xpredprofit files
+mkdir -p /tmp/xpredprofit
+cp assembly/target/profitshare.contract.wasm /tmp/xpredprofit/
+cp assembly/target/profitshare.contract.abi /tmp/xpredprofit/
+
+# Deploy
+npx @proton/cli contract:set xpredprofit /tmp/xpredprofit
 ```
 
-Or using cleos:
+### Clear Markets (One-Time Migration)
+
+If you have old markets with incompatible ABI (e.g., missing `image_url` field):
 
 ```bash
-cleos -u https://proton.eosusa.io set contract xpredprofit assembly/target profitshare.contract.wasm profitshare.contract.abi
+npx @proton/cli action:push xpredicting clearmarkets '{"admin":"xpredicting"}' -p xpredicting@active
 ```
+
+## Post-Deployment Checklist
+
+1. **Wallet Reconnect**: All users must disconnect and reconnect their wallets to refresh the ABI cache
+2. **Frontend Redeploy**: Run `~/proton-prediction-market/deploy-to-cpanel.sh` to deploy updated frontend
+3. **Verify Markets Load**: Check https://pawnline.io to confirm markets display correctly
+4. **Test Market Creation**: Create a test market to verify the full flow works
 
 ## Contract Architecture
 
