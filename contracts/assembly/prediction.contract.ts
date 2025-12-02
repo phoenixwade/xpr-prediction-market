@@ -12,7 +12,7 @@ import {
   InlineAction,
   PermissionLevel
 } from "proton-tsc";
-import { Market2Table, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, ConfigTable, ResolverTable } from "./tables";
+import { Market2Table, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, Config2Table, ResolverTable } from "./tables";
 import { currentTimeSec } from "proton-tsc";
 
 const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
@@ -32,14 +32,14 @@ class Transfer {
 export class PredictionMarketContract extends Contract {
   markets2Table: TableStore<Market2Table>;
   balancesTable: TableStore<BalanceTable>;
-  configTable: TableStore<ConfigTable>;
+  config2Table: TableStore<Config2Table>;
   resolversTable: TableStore<ResolverTable>;
 
   constructor(receiver: Name, firstReceiver: Name, action: Name) {
     super(receiver, firstReceiver, action);
     this.markets2Table = new TableStore<Market2Table>(this.receiver, this.receiver);
     this.balancesTable = new TableStore<BalanceTable>(this.receiver, this.receiver);
-    this.configTable = new TableStore<ConfigTable>(this.receiver, this.receiver);
+    this.config2Table = new TableStore<Config2Table>(this.receiver, this.receiver);
     this.resolversTable = new TableStore<ResolverTable>(this.receiver, this.receiver);
   }
 
@@ -460,10 +460,10 @@ export class PredictionMarketContract extends Contract {
     }
   }
 
-  private getConfig(): ConfigTable {
-    let config = this.configTable.get(0);
+  private getConfig(): Config2Table {
+    let config = this.config2Table.get(0);
     if (config == null) {
-      config = new ConfigTable(
+      config = new Config2Table(
         0, 1, 1,
         this.receiver, this.receiver, EMPTY_NAME,
         0, 0,
@@ -471,34 +471,34 @@ export class PredictionMarketContract extends Contract {
         false, false,
         1, 0, 0
       );
-      this.configTable.set(config, this.receiver);
+      this.config2Table.set(config, this.receiver);
     }
     return config;
   }
 
   private getNextMarketId(): u64 {
-    let config = this.configTable.get(0);
+    let config = this.config2Table.get(0);
     if (config == null) {
-      config = new ConfigTable(0, 101, 1);
-      this.configTable.set(config, this.receiver);
+      config = new Config2Table(0, 101, 1);
+      this.config2Table.set(config, this.receiver);
       return 100;
     }
     const id = config.nextMarketId;
     config.nextMarketId += 1;
-    this.configTable.update(config, this.receiver);
+    this.config2Table.update(config, this.receiver);
     return id;
   }
 
   private getNextOrderId(): u64 {
-    let config = this.configTable.get(0);
+    let config = this.config2Table.get(0);
     if (config == null) {
-      config = new ConfigTable(0, 1, 2);
-      this.configTable.set(config, this.receiver);
+      config = new Config2Table(0, 1, 2);
+      this.config2Table.set(config, this.receiver);
       return 1;
     }
     const id = config.nextOrderId;
     config.nextOrderId += 1;
-    this.configTable.update(config, this.receiver);
+    this.config2Table.update(config, this.receiver);
     return id;
   }
 }
