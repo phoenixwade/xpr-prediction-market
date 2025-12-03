@@ -1203,6 +1203,28 @@ body {
   box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
 }
 
+.balance-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.deposit-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.deposit-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
 .positions-section h3 {
   font-family: 'Clash Display', 'Inter', sans-serif;
   font-size: 1.5rem;

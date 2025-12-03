@@ -291,6 +291,47 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
     }
   };
 
+  const handleDeposit = async () => {
+    if (!session) return;
+
+    const amount = prompt('Enter amount to deposit (TESTIES):');
+    if (!amount) return;
+
+    try {
+      const depositAmount = parseFloat(amount);
+      if (depositAmount <= 0 || isNaN(depositAmount)) {
+        alert('Please enter a valid amount');
+        return;
+      }
+
+      const tokenContract = process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate';
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+
+      await session.transact({
+        actions: [{
+          account: tokenContract,
+          name: 'transfer',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            from: session.auth.actor,
+            to: contractName,
+            quantity: `${depositAmount.toFixed(2)} TESTIES`,
+            memo: 'deposit',
+          },
+        }],
+      });
+
+      alert('Deposit successful!');
+      fetchPortfolio();
+    } catch (error) {
+      console.error('Error depositing:', error);
+      alert('Failed to deposit: ' + error);
+    }
+  };
+
   const handleWithdraw = async () => {
     if (!session || !balance) return;
 
@@ -415,11 +456,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           <div className="balance-amount">
             {formatBalanceAsTESTIES(balance?.funds)}
           </div>
-          <Tooltip text="Withdraw TESTIES from your internal balance back to your wallet. Enter the amount when prompted." position="top">
-            <button onClick={handleWithdraw} className="withdraw-button">
-              Withdraw
-            </button>
-          </Tooltip>
+          <div className="balance-buttons">
+            <Tooltip text="Deposit TESTIES from your wallet into your trading balance. Enter the amount when prompted." position="top">
+              <button onClick={handleDeposit} className="deposit-button">
+                Deposit
+              </button>
+            </Tooltip>
+            <Tooltip text="Withdraw TESTIES from your internal balance back to your wallet. Enter the amount when prompted." position="top">
+              <button onClick={handleWithdraw} className="withdraw-button">
+                Withdraw
+              </button>
+            </Tooltip>
+          </div>
         </div>
 
         <div className="pnl-card">
