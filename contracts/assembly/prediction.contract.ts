@@ -15,8 +15,8 @@ import {
 import { Market2Table, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, Config2Table, ResolverTable } from "./tables";
 import { currentTimeSec } from "proton-tsc";
 
-const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
-const ONE_TESTIES: i64 = 100;
+const TESTIES_SYMBOL = new Symbol("TESTIES", 0);
+const ONE_TESTIES: i64 = 1;
 
 @packer
 class Transfer {
