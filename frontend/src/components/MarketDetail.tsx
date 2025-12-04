@@ -237,7 +237,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           data: {
             from: session.auth.actor,
             to: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-            quantity: `${lockAmount.toFixed(2)} TESTIES`,
+            quantity: `${Math.floor(lockAmount)} TESTIES`,
             memo: `Deposit for order ${marketId}`,
           },
         });

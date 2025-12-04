@@ -61,10 +61,10 @@ interface PortfolioProps {
 }
 
 const formatBalanceAsTESTIES = (funds: string | undefined): string => {
-  if (!funds) return '0.00 TESTIES';
+  if (!funds) return '0 TESTIES';
   const parts = funds.split(' ');
-  const amount = parseFloat(parts[0]) || 0;
-  return `${amount.toFixed(2)} TESTIES`;
+  const amount = Math.floor(parseFloat(parts[0]) || 0);
+  return `${amount} TESTIES`;
 };
 
 const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
@@ -318,7 +318,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           data: {
             from: session.auth.actor,
             to: contractName,
-            quantity: `${depositAmount.toFixed(2)} TESTIES`,
+            quantity: `${Math.floor(depositAmount)} TESTIES`,
             memo: 'deposit',
           },
         }],
@@ -355,7 +355,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           }],
           data: {
             to: session.auth.actor,
-            quantity: `${withdrawAmount.toFixed(2)} TESTIES`,
+            quantity: `${Math.floor(withdrawAmount)} TESTIES`,
           },
         }],
       });
@@ -480,18 +480,18 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           <div className="pnl-stats">
             <div className="pnl-item">
               <span className="pnl-label">Total Value:</span>
-              <span className="pnl-value">{pnlData.totalValue.toFixed(2)} TESTIES</span>
+              <span className="pnl-value">{Math.floor(pnlData.totalValue)} TESTIES</span>
             </div>
             <div className="pnl-item">
               <span className="pnl-label">Unrealized P&L:</span>
               <span className={`pnl-value ${pnlData.unrealized >= 0 ? 'positive' : 'negative'}`}>
-                {pnlData.unrealized >= 0 ? '+' : ''}{pnlData.unrealized.toFixed(2)} TESTIES
+                {pnlData.unrealized >= 0 ? '+' : ''}{Math.floor(pnlData.unrealized)} TESTIES
               </span>
             </div>
             <div className="pnl-item">
               <span className="pnl-label">Total P&L:</span>
               <span className={`pnl-value ${pnlData.pnl >= 0 ? 'positive' : 'negative'}`}>
-                {pnlData.pnl >= 0 ? '+' : ''}{pnlData.pnl.toFixed(2)} TESTIES
+                {pnlData.pnl >= 0 ? '+' : ''}{Math.floor(pnlData.pnl)} TESTIES
               </span>
             </div>
           </div>
