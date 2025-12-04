@@ -230,16 +230,26 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
         console.error('Error fetching trade history:', error);
       }
 
-      let totalValue = 0;
+      let positionValue = 0;
       let invested = 0;
       for (const mp of Array.from(marketPositionsMap.values())) {
         for (const pos of mp.positions) {
-          totalValue += pos.shares * 0.5;
+          positionValue += pos.shares * 0.5;
           invested += pos.shares * 0.5;
         }
       }
       
-      const unrealized = totalValue - invested;
+      // Parse available balance from "X TESTIES" format
+      let availableBalance = 0;
+      if (balanceResult.rows.length > 0 && balanceResult.rows[0].funds) {
+        const fundsStr = balanceResult.rows[0].funds;
+        const parts = fundsStr.split(' ');
+        availableBalance = Math.floor(parseFloat(parts[0]) || 0);
+      }
+      
+      // Total value = available balance + position value
+      const totalValue = availableBalance + positionValue;
+      const unrealized = positionValue - invested;
       const realized = 0;
       
       setPnlData({
