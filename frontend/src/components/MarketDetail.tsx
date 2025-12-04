@@ -74,7 +74,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
   const fetchMarketData = useCallback(async () => {
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
       const marketResult = await rpc.get_table_rows({
@@ -200,7 +200,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       if (isBid) {
         lockAmount = priceFloat * quantityInt;
       } else {
-        const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+        const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
         const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
         
         const compositeKey = (BigInt(session.auth.actor.value || 0) << BigInt(8)) | BigInt(selectedOutcomeId);
@@ -588,12 +588,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         <div className="activity-description">{activityDescription}</div>
                         <div className="activity-meta">
                           <a 
-                            href={`https://protonscan.io/transaction/${activity.trx_id}`}
+                            href={`https://explorer.xprnetwork.org/transaction/${activity.trx_id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="activity-link"
                           >
-                            View on ProtonScan →
+                            View on XPR Explorer →
                           </a>
                         </div>
                       </div>

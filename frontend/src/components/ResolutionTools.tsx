@@ -28,7 +28,7 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
   const fetchUnresolvedMarkets = async () => {
     try {
       const { JsonRpc } = await import('@proton/js');
-      const rpc = new JsonRpc([process.env.REACT_APP_RPC_URL || 'https://testnet.protonchain.com']);
+      const rpc = new JsonRpc([process.env.REACT_APP_RPC_URL || 'https://proton.eosusa.io']);
       
       const result = await rpc.get_table_rows({
         code: contractName,
