@@ -608,7 +608,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                     </div>
                     <div className="order-info">
                       <span className="label">Price:</span>
-                      <span className="value">{(order.price / 1000000).toFixed(4)} TESTIES</span>
+                      <span className="value">{order.price} TESTIES</span>
                     </div>
                     <div className="order-info">
                       <span className="label">Quantity:</span>
@@ -616,7 +616,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                     </div>
                     <div className="order-info">
                       <span className="label">Total:</span>
-                      <span className="value">{((order.price / 1000000) * order.quantity).toFixed(4)} TESTIES</span>
+                      <span className="value">{order.price * order.quantity} TESTIES</span>
                     </div>
                   </div>
                   <button
@@ -690,10 +690,10 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                             {trade.side.toUpperCase()}
                           </span>
                         </td>
-                        <td>{(trade.price / 1000000).toFixed(4)} TESTIES</td>
+                        <td>{trade.price} TESTIES</td>
                         <td>{trade.quantity}</td>
-                        <td>{(trade.fee / 1000000).toFixed(4)} TESTIES</td>
-                        <td>{((trade.price * trade.quantity) / 1000000).toFixed(4)} TESTIES</td>
+                        <td>{trade.fee} TESTIES</td>
+                        <td>{trade.price * trade.quantity} TESTIES</td>
                       </tr>
                     ))}
                 </tbody>

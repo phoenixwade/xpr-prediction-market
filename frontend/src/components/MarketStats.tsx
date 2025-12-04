@@ -56,7 +56,7 @@ const MarketStats: React.FC<MarketStatsProps> = ({ marketId }) => {
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Total Volume</div>
-          <div className="stat-value">{(stats.totalVolume / 1000000).toFixed(2)} TESTIES</div>
+          <div className="stat-value">{stats.totalVolume} TESTIES</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">Total Trades</div>
@@ -68,11 +68,11 @@ const MarketStats: React.FC<MarketStatsProps> = ({ marketId }) => {
         </div>
         <div className="stat-card">
           <div className="stat-label">Avg Trade Size</div>
-          <div className="stat-value">{(stats.avgTradeSize / 1000000).toFixed(2)} TESTIES</div>
+          <div className="stat-value">{stats.avgTradeSize} TESTIES</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">24h Volume</div>
-          <div className="stat-value">{(stats.last24hVolume / 1000000).toFixed(2)} TESTIES</div>
+          <div className="stat-value">{stats.last24hVolume} TESTIES</div>
         </div>
         <div className="stat-card">
           <div className="stat-label">24h Trades</div>

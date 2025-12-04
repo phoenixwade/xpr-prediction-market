@@ -30,17 +30,17 @@ const AdvancedTrading: React.FC<AdvancedTradingProps> = ({ marketId, outcomeId, 
     e.preventDefault();
     
     const params: TradeParams = {
-      price: orderType === 'market' ? 0 : parseFloat(price) * 1000000,
+      price: orderType === 'market' ? 0 : Math.round(parseFloat(price)),
       quantity: parseInt(quantity),
       slippageTolerance: parseFloat(slippageTolerance),
       timeInForce: timeInForce
     };
 
     if (stopLoss) {
-      params.stopLoss = parseFloat(stopLoss) * 1000000;
+      params.stopLoss = Math.round(parseFloat(stopLoss));
     }
     if (takeProfit) {
-      params.takeProfit = parseFloat(takeProfit) * 1000000;
+      params.takeProfit = Math.round(parseFloat(takeProfit));
     }
 
     onTrade(params);
