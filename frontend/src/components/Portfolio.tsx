@@ -87,7 +87,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
     if (!session) return;
 
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
 
       const balanceResult = await rpc.get_table_rows({

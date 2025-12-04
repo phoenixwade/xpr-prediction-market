@@ -66,7 +66,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
 
   const fetchMarkets = async () => {
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com');
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
       const result = await rpc.get_table_rows({

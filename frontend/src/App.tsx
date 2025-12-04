@@ -106,7 +106,7 @@ function App() {
       try {
         const { session: restoredSession } = await ConnectWallet({
           linkOptions: {
-            endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com'],
+            endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io'],
             chainId: process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd',
             restoreSession: true,
             storagePrefix: process.env.REACT_APP_NAME || 'xpr-prediction-market',
@@ -133,7 +133,7 @@ function App() {
     try {
       const { session } = await ConnectWallet({
         linkOptions: {
-          endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://testnet.protonchain.com'],
+          endpoints: [process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io'],
           chainId: process.env.REACT_APP_CHAIN_ID || '71ee83bcf52142d61019d95f9cc5427ba6a0d7ff8accd9e2088ae2abeaf3d3dd',
           storagePrefix: process.env.REACT_APP_NAME || 'xpr-prediction-market',
         },
