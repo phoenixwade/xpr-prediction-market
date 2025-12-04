@@ -192,7 +192,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       const priceFloat = parseFloat(price);
-      const priceAmount = Math.round(priceFloat * 1000000);
+      const priceAmount = Math.round(priceFloat);
       const quantityInt = parseInt(quantity);
 
       const isBid = orderType === 'buy';
@@ -286,7 +286,6 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       fetchMarketData();
     } catch (error) {
       console.error('Error placing order:', error);
-      alert('Failed to place order: ' + error);
     } finally {
       setLoading(false);
     }
@@ -583,8 +582,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         break;
                       case 'placeorder':
                         const outcomeName = outcomes.find(o => o.outcome_id === activity.outcome_id)?.name || `Outcome ${activity.outcome_id}`;
-                        const priceValue = activity.price ? parseFloat(activity.price.split(' ')[0]) / 1000000 : 0;
-                        activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue.toFixed(4)} TESTIES`;
+                        const priceValue = activity.price ? parseFloat(activity.price.split(' ')[0]) : 0;
+                        activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue} TESTIES`;
                         activityClass = activity.side === 'buy' ? 'activity-buy' : 'activity-sell';
                         break;
                       case 'resolve':
@@ -642,7 +641,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         <span className={`order-side ${order.isBid ? 'bid' : 'ask'}`}>
                           {order.isBid ? 'BUY' : 'SELL'}
                         </span>
-                        <span className="order-price">{(order.price / 1000000).toFixed(4)} TESTIES</span>
+                        <span className="order-price">{order.price} TESTIES</span>
                         <span className="order-quantity">×{order.quantity}</span>
                         <button 
                           onClick={() => handleCancelOrder(order.order_id)}
@@ -680,7 +679,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   bids.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 1000000).toFixed(4)} TESTIES</span>
+                      <span className="price">{order.price} TESTIES</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))
@@ -700,7 +699,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 ) : (
                   asks.map(order => (
                     <div key={order.order_id} className="order-row">
-                      <span className="price">{(order.price / 1000000).toFixed(4)} TESTIES</span>
+                      <span className="price">{order.price} TESTIES</span>
                       <span className="quantity">{order.quantity}</span>
                     </div>
                   ))
