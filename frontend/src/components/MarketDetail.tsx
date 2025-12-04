@@ -189,20 +189,19 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
     setLoading(true);
     try {
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       const priceFloat = parseFloat(price);
       const priceAmount = Math.round(priceFloat * 1000000);
       const quantityInt = parseInt(quantity);
 
       const isBid = orderType === 'buy';
 
-      let lockAmount = 0;
+      let requiredAmount = 0;
 
       if (isBid) {
-        lockAmount = priceFloat * quantityInt;
+        requiredAmount = priceFloat * quantityInt;
       } else {
-        const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
-        const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
-        
         const compositeKey = (BigInt(session.auth.actor.value || 0) << BigInt(8)) | BigInt(selectedOutcomeId);
         
         const positionResult = await rpc.get_table_rows({
@@ -221,14 +220,33 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         }
 
         const shortedShares = Math.max(0, quantityInt - heldShares);
-        lockAmount = shortedShares * 1.0;
+        requiredAmount = shortedShares * 1.0;
+      }
+
+      // Fetch user's internal balance to check if they have enough
+      const balanceResult = await rpc.get_table_rows({
+        code: contractName,
+        scope: contractName,
+        table: 'balances',
+        lower_bound: session.auth.actor.toString(),
+        upper_bound: session.auth.actor.toString(),
+        limit: 1,
+      });
+
+      let internalBalance = 0;
+      if (balanceResult.rows.length > 0) {
+        const funds = balanceResult.rows[0].funds;
+        const parts = funds.split(' ');
+        internalBalance = Math.floor(parseFloat(parts[0]) || 0);
       }
 
       const actions: any[] = [];
 
-      if (lockAmount > 0) {
+      // Only auto-deposit if internal balance is insufficient
+      const depositNeeded = Math.max(0, Math.floor(requiredAmount) - internalBalance);
+      if (depositNeeded > 0) {
         actions.push({
-          account: process.env.REACT_APP_TOKEN_CONTRACT || 'xtokens',
+          account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
           name: 'transfer',
           authorization: [{
             actor: session.auth.actor,
@@ -236,15 +254,15 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           }],
           data: {
             from: session.auth.actor,
-            to: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-            quantity: `${Math.floor(lockAmount)} TESTIES`,
+            to: contractName,
+            quantity: `${depositNeeded} TESTIES`,
             memo: `Deposit for order ${marketId}`,
           },
         });
       }
 
       actions.push({
-        account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+        account: contractName,
         name: 'placeorder',
         authorization: [{
           actor: session.auth.actor,
