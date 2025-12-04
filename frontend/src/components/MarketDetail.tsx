@@ -71,6 +71,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFilter, setActivityFilter] = useState<string>('');
   const [activityUserFilter, setActivityUserFilter] = useState<string>('');
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const fetchMarketData = useCallback(async () => {
     try {
@@ -280,7 +286,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
       await session.transact({ actions });
 
-      alert('Order placed successfully!');
+      showToast('Order placed successfully!', 'success');
       setPrice('');
       setQuantity('');
       fetchMarketData();
@@ -475,16 +481,22 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         }],
       });
       
-      alert('Order cancelled successfully!');
+      showToast('Order cancelled successfully!', 'success');
       fetchMarketData();
     } catch (error) {
       console.error('Error cancelling order:', error);
-      alert('Failed to cancel order: ' + error);
+      showToast('Failed to cancel order: ' + error, 'error');
     }
   };
 
   return (
     <div className="market-detail">
+      {toast && (
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-message">{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast(null)}>×</button>
+        </div>
+      )}
       <button onClick={onBack} className="back-button">← Back to Markets</button>
       
       <div className="market-header">
