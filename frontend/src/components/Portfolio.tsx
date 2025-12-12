@@ -166,14 +166,14 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           code: contractName,
           scope: market.id.toString(),
           table: 'orders',
-          index_position: 2,
-          key_type: 'i64',
-          lower_bound: session.auth.actor,
-          upper_bound: session.auth.actor,
-          limit: 100,
+          limit: 500,
         });
 
-        if (ordersResult.rows.length > 0) {
+        const userOrders = ordersResult.rows.filter(
+          (order: any) => order.account === session.auth.actor
+        );
+
+        if (userOrders.length > 0) {
           const outcomesResult = await rpc.get_table_rows({
             code: contractName,
             scope: market.id.toString(),
@@ -187,7 +187,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             display_order: row.display_order,
           }));
 
-          for (const order of ordersResult.rows) {
+          for (const order of userOrders) {
             const outcome = outcomes.find(o => o.outcome_id === order.outcome_id);
             allOrders.push({
               ...order,
