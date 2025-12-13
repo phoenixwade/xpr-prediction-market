@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
+import MarketTemplates from './MarketTemplates';
+import ScheduledMarkets from './ScheduledMarkets';
 
 interface Market {
   id: number;
@@ -23,7 +25,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) => {
-  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'resolve' | 'approve'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'resolve' | 'approve' | 'schedule'>('income');
   
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
@@ -127,6 +129,33 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     } else {
       setOutcomes(['Option 1', 'Option 2', 'Option 3']);
     }
+  };
+
+  const mapTemplateCategory = (templateCategory: string): string => {
+    const categoryMap: { [key: string]: string } = {
+      'Binary': 'Other',
+      'Politics': 'Politics',
+      'Finance': 'Finance',
+      'Sports': 'Sports',
+      'Crypto': 'Crypto'
+    };
+    return categoryMap[templateCategory] || 'Other';
+  };
+
+  const handleSelectTemplate = (template: { question: string; category: string; outcomes: string[] }) => {
+    setQuestion(template.question);
+    setCategory(mapTemplateCategory(template.category));
+    
+    const isBinary = template.outcomes.length === 2 && 
+      template.outcomes.includes('Yes') && 
+      template.outcomes.includes('No');
+    
+    setMarketType(isBinary ? 'binary' : 'multi');
+    setOutcomes(template.outcomes);
+  };
+
+  const handleScheduleMarket = () => {
+    alert('Scheduled market creation is coming soon! The backend infrastructure for automatic market opening is still in development.');
   };
 
   const handleCreateMarket = async (e: React.FormEvent) => {
@@ -539,6 +568,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         >
           Approve Markets
         </button>
+        <button
+          className={activeTab === 'schedule' ? 'active' : ''}
+          onClick={() => setActiveTab('schedule')}
+        >
+          Schedule Market
+        </button>
       </div>
 
       {activeTab === 'income' && (
@@ -591,7 +626,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
       {activeTab === 'create' && (
         <div className="admin-section">
+          <MarketTemplates onSelectTemplate={handleSelectTemplate} />
           <h3>Create New Market</h3>
+          <p className="template-hint">Select a template above to pre-fill the form, or create a custom market below.</p>
           <form onSubmit={handleCreateMarket} className="admin-form">
             <div className="form-group">
               <label>Question</label>
@@ -841,6 +878,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'schedule' && (
+        <div className="admin-section">
+          <div className="coming-soon-notice">
+            <span className="coming-soon-badge">Coming Soon</span>
+            <p>Scheduled market creation is currently in preview. The backend infrastructure for automatic market opening is still in development.</p>
+          </div>
+          <ScheduledMarkets onScheduleMarket={handleScheduleMarket} />
         </div>
       )}
     </div>
