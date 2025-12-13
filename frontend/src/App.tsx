@@ -11,6 +11,7 @@ import HowToUse from './components/HowToUse';
 import Tooltip from './components/Tooltip';
 import Whitepaper from './components/Whitepaper';
 import WhatIsXpred from './components/WhatIsXpred';
+import NotificationCenter from './components/NotificationCenter';
 
 function App() {
   const [session, setSession] = useState<any>(null);
@@ -286,6 +287,7 @@ function App() {
             </Tooltip>
           ) : (
             <div className="user-info">
+              <NotificationCenter account={session.auth.actor.toString()} />
               <Tooltip text="Your connected XPR account. Click Disconnect to log out." position="bottom">
                 <span>Connected: {session.auth.actor}</span>
               </Tooltip>

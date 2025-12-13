@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface Notification {
   id: number;
@@ -21,15 +21,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ account }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
-  useEffect(() => {
-    if (account) {
-      fetchNotifications();
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [account]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL || ''}/api/notifications.php?account=${account}`
@@ -42,7 +34,15 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ account }) => {
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }
-  };
+  }, [account]);
+
+  useEffect(() => {
+    if (account) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [account, fetchNotifications]);
 
   const markAsRead = async (notificationId: number) => {
     try {
