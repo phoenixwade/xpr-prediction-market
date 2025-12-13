@@ -14,6 +14,22 @@
 
 define('CRON_MODE', true);
 
+// Prevent overlapping runs with file lock
+$lockFile = __DIR__ . '/cleanup.lock';
+$lockHandle = fopen($lockFile, 'c');
+
+if ($lockHandle === false) {
+    echo "[" . date('Y-m-d H:i:s') . "] ERROR: Unable to open lock file\n";
+    exit(1);
+}
+
+if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    echo "[" . date('Y-m-d H:i:s') . "] Another cleanup process is already running, exiting.\n";
+    exit(0);
+}
+
+// Lock acquired, continue with script
+
 $dataDir = __DIR__ . '/../../data';
 $logDir = dirname(__DIR__) . '/../../../logs';
 
@@ -29,6 +45,7 @@ function cleanup_database($dbPath, $tableName, $timestampColumn, $maxAgeDays, $d
     
     try {
         $db = new SQLite3($dbPath);
+        $db->busyTimeout(5000); // Wait up to 5 seconds for locks
         $cutoffTime = time() - ($maxAgeDays * 24 * 60 * 60);
         
         $stmt = $db->prepare("DELETE FROM $tableName WHERE $timestampColumn < :cutoff");
@@ -61,6 +78,7 @@ function cleanup_soft_deleted($dbPath, $tableName, $deletedColumn, $timestampCol
     
     try {
         $db = new SQLite3($dbPath);
+        $db->busyTimeout(5000); // Wait up to 5 seconds for locks
         $cutoffTime = time() - ($maxAgeDays * 24 * 60 * 60);
         
         $stmt = $db->prepare("DELETE FROM $tableName WHERE $deletedColumn = 1 AND $timestampColumn < :cutoff");
@@ -125,6 +143,7 @@ function vacuum_database($dbPath, $description) {
         $sizeBefore = filesize($dbPath);
         
         $db = new SQLite3($dbPath);
+        $db->busyTimeout(5000); // Wait up to 5 seconds for locks
         $db->exec('VACUUM');
         $db->close();
         
