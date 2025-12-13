@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
+  onNavigate?: (page: 'markets' | 'portfolio' | 'leaderboard' | 'help' | null) => void;
+  activeTab?: string;
 }
 
-const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
+const MobileLayout: React.FC<MobileLayoutProps> = ({ children, onNavigate, activeTab }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
@@ -41,6 +43,13 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
     }
   };
 
+  const handleNavClick = (page: 'markets' | 'portfolio' | 'leaderboard' | 'help' | null) => {
+    if (onNavigate) {
+      onNavigate(page);
+    }
+    setShowMenu(false);
+  };
+
   if (!isMobile) {
     return <>{children}</>;
   }
@@ -68,10 +77,34 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       {showMenu && (
         <div className="mobile-menu">
           <nav>
-            <a href="/">Markets</a>
-            <a href="/portfolio">Portfolio</a>
-            <a href="/activity">Activity</a>
-            <a href="/create">Create Market</a>
+            <button 
+              type="button" 
+              onClick={() => handleNavClick(null)}
+              className={activeTab === 'markets' ? 'active' : ''}
+            >
+              Markets
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleNavClick('portfolio')}
+              className={activeTab === 'portfolio' ? 'active' : ''}
+            >
+              Portfolio
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleNavClick('leaderboard')}
+              className={activeTab === 'leaderboard' ? 'active' : ''}
+            >
+              Leaderboard
+            </button>
+            <button 
+              type="button" 
+              onClick={() => handleNavClick('help')}
+              className={activeTab === 'help' ? 'active' : ''}
+            >
+              How to Use
+            </button>
           </nav>
         </div>
       )}
@@ -81,22 +114,38 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
       </div>
 
       <div className="mobile-bottom-nav">
-        <a href="/" className="nav-item">
+        <button 
+          type="button" 
+          className={`nav-item ${activeTab === 'markets' ? 'active' : ''}`}
+          onClick={() => handleNavClick(null)}
+        >
           <span className="icon">📊</span>
           <span className="label">Markets</span>
-        </a>
-        <a href="/portfolio" className="nav-item">
+        </button>
+        <button 
+          type="button" 
+          className={`nav-item ${activeTab === 'portfolio' ? 'active' : ''}`}
+          onClick={() => handleNavClick('portfolio')}
+        >
           <span className="icon">💼</span>
           <span className="label">Portfolio</span>
-        </a>
-        <a href="/activity" className="nav-item">
-          <span className="icon">📈</span>
-          <span className="label">Activity</span>
-        </a>
-        <a href="/profile" className="nav-item">
-          <span className="icon">👤</span>
-          <span className="label">Profile</span>
-        </a>
+        </button>
+        <button 
+          type="button" 
+          className={`nav-item ${activeTab === 'leaderboard' ? 'active' : ''}`}
+          onClick={() => handleNavClick('leaderboard')}
+        >
+          <span className="icon">🏆</span>
+          <span className="label">Leaders</span>
+        </button>
+        <button 
+          type="button" 
+          className={`nav-item ${activeTab === 'help' ? 'active' : ''}`}
+          onClick={() => handleNavClick('help')}
+        >
+          <span className="icon">❓</span>
+          <span className="label">Help</span>
+        </button>
       </div>
     </div>
   );

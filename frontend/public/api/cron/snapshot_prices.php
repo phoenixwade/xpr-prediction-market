@@ -11,6 +11,23 @@
 
 define('CRON_MODE', true);
 
+// Prevent overlapping runs with file lock
+$lockFile = __DIR__ . '/snapshot_prices.lock';
+$lockHandle = fopen($lockFile, 'c');
+
+if ($lockHandle === false) {
+    echo "[" . date('Y-m-d H:i:s') . "] ERROR: Unable to open lock file\n";
+    exit(1);
+}
+
+if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
+    echo "[" . date('Y-m-d H:i:s') . "] Another snapshot process is already running, exiting.\n";
+    exit(0);
+}
+
+// Lock acquired, continue with script
+// Lock will be released when script ends or $lockHandle is closed
+
 $envFile = __DIR__ . '/../../../.env';
 $config = [];
 if (file_exists($envFile)) {
@@ -136,6 +153,12 @@ try {
     log_message("Contract: " . $contractAccount);
     
     $db = new SQLite3($priceDbPath);
+    
+    // Set busy timeout to wait up to 5 seconds for locks instead of failing immediately
+    $db->busyTimeout(5000);
+    
+    // Enable WAL mode for better concurrent access
+    $db->exec('PRAGMA journal_mode=WAL;');
     
     $db->exec('
         CREATE TABLE IF NOT EXISTS price_snapshots (

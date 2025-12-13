@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 import MarketTemplates from './MarketTemplates';
 import ScheduledMarkets from './ScheduledMarkets';
+import ResolutionTools from './ResolutionTools';
 
 interface Market {
   id: number;
@@ -778,66 +779,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         </div>
       )}
 
-      {activeTab === 'resolve' && (
-        <div className="admin-section">
-          <h3>Resolve Market</h3>
-          {loadingMarkets ? (
-            <p className="loading-message">Loading markets...</p>
-          ) : markets.length === 0 ? (
-            <p className="empty-state">No expired, unresolved markets found.</p>
-          ) : (
-            <form onSubmit={handleResolveMarket} className="admin-form">
-              <div className="form-group">
-                <label>Select Market</label>
-                <select
-                  value={resolveMarketId}
-                  onChange={(e) => handleMarketSelect(e.target.value)}
-                  required
-                >
-                  <option value="">Choose a market to resolve</option>
-                  {markets.map((market) => (
-                    <option key={market.id} value={market.id}>
-                      #{market.id} - {market.question} ({market.category})
-                    </option>
-                  ))}
-                </select>
+            {activeTab === 'resolve' && (
+              <div className="admin-section">
+                <ResolutionTools 
+                  session={session} 
+                  contractName={process.env.REACT_APP_CONTRACT_NAME || 'prediction'} 
+                />
               </div>
-
-              {resolveMarketId && (
-                <div className="form-group">
-                  <label>Winning Outcome</label>
-                  {loadingOutcomes ? (
-                    <p className="loading-message">Loading outcomes...</p>
-                  ) : marketOutcomes.length > 0 ? (
-                    <div className="outcomes-select">
-                      {marketOutcomes.map((outcome) => (
-                        <button
-                          key={outcome.outcome_id}
-                          type="button"
-                          className={resolveOutcomeId === outcome.outcome_id ? 'active outcome-button' : 'outcome-button'}
-                          onClick={() => setResolveOutcomeId(outcome.outcome_id)}
-                        >
-                          {outcome.name}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="empty-state">No outcomes found for this market</p>
-                  )}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={resolveLoading}
-                className="submit-button"
-              >
-                {resolveLoading ? 'Resolving...' : 'Resolve Market'}
-              </button>
-            </form>
-          )}
-        </div>
-      )}
+            )}
 
       {activeTab === 'approve' && (
         <div className="admin-section">
