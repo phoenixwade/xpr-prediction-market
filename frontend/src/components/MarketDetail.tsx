@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
+import AdvancedTrading from './AdvancedTrading';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
@@ -70,8 +71,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFilter, setActivityFilter] = useState<string>('');
-  const [activityUserFilter, setActivityUserFilter] = useState<string>('');
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [activityUserFilter, setActivityUserFilter] = useState<string>('');
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [showAdvancedTrading, setShowAdvancedTrading] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -286,18 +288,138 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
       await session.transact({ actions });
 
-      showToast('Order placed successfully!', 'success');
-      setPrice('');
-      setQuantity('');
-      fetchMarketData();
-    } catch (error) {
-      console.error('Error placing order:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        showToast('Order placed successfully!', 'success');
+        setPrice('');
+        setQuantity('');
+        fetchMarketData();
+      } catch (error) {
+        console.error('Error placing order:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handlePostComment = async (e: React.FormEvent) => {
+    const handleAdvancedTrade = async (params: { price: number; quantity: number; slippageTolerance?: number; timeInForce?: string; stopLoss?: number; takeProfit?: number }) => {
+      if (!session) {
+        alert('Please connect your wallet to trade');
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+        const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+        const priceAmount = params.price;
+        const quantityInt = params.quantity;
+        const isBid = orderType === 'buy';
+
+        let requiredAmount = 0;
+
+        if (isBid) {
+          requiredAmount = priceAmount * quantityInt;
+        } else {
+          const compositeKey = (BigInt(session.auth.actor.value || 0) << BigInt(8)) | BigInt(selectedOutcomeId);
+        
+          const positionResult = await rpc.get_table_rows({
+            code: contractName,
+            scope: marketId.toString(),
+            table: 'positionsv2',
+            lower_bound: compositeKey.toString(),
+            upper_bound: compositeKey.toString(),
+            limit: 1,
+          });
+
+          let heldShares = 0;
+          if (positionResult.rows.length > 0) {
+            const position = positionResult.rows[0];
+            heldShares = position.shares;
+          }
+
+          const shortedShares = Math.max(0, quantityInt - heldShares);
+          requiredAmount = shortedShares * 1.0;
+        }
+
+        const balanceResult = await rpc.get_table_rows({
+          code: contractName,
+          scope: contractName,
+          table: 'balances',
+          lower_bound: session.auth.actor.toString(),
+          upper_bound: session.auth.actor.toString(),
+          limit: 1,
+        });
+
+        let internalBalance = 0;
+        if (balanceResult.rows.length > 0) {
+          const funds = balanceResult.rows[0].funds;
+          const parts = funds.split(' ');
+          internalBalance = Math.floor(parseFloat(parts[0]) || 0);
+        }
+
+        const actions: any[] = [];
+
+        const depositNeeded = Math.max(0, Math.floor(requiredAmount) - internalBalance);
+        if (depositNeeded > 0) {
+          actions.push({
+            account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
+            name: 'transfer',
+            authorization: [{
+              actor: session.auth.actor,
+              permission: session.auth.permission,
+            }],
+            data: {
+              from: session.auth.actor,
+              to: contractName,
+              quantity: `${depositNeeded} TESTIES`,
+              memo: `Deposit for order ${marketId}`,
+            },
+          });
+        }
+
+        actions.push({
+          account: contractName,
+          name: 'placeorder',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            account: session.auth.actor,
+            market_id: marketId,
+            outcome_id: selectedOutcomeId,
+            bid: isBid,
+            price: `${priceAmount.toFixed(0)} TESTIES`,
+            quantity: quantityInt,
+          },
+        });
+
+        await session.transact({ actions });
+
+        const advancedInfo = [];
+        if (params.timeInForce && params.timeInForce !== 'GTC') {
+          advancedInfo.push(`TIF: ${params.timeInForce}`);
+        }
+        if (params.stopLoss) {
+          advancedInfo.push(`Stop-loss: ${params.stopLoss}`);
+        }
+        if (params.takeProfit) {
+          advancedInfo.push(`Take-profit: ${params.takeProfit}`);
+        }
+      
+        const message = advancedInfo.length > 0 
+          ? `Order placed! Note: ${advancedInfo.join(', ')} are UI preferences only - automated triggers not yet supported.`
+          : 'Order placed successfully!';
+      
+        showToast(message, 'success');
+        fetchMarketData();
+      } catch (error) {
+        console.error('Error placing advanced order:', error);
+        showToast('Failed to place order: ' + error, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!session) {
@@ -808,18 +930,35 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 />
               </div>
 
-              <button
-                onClick={handlePlaceOrder}
-                disabled={loading || !price || !quantity}
-                className="submit-button"
-              >
-                {loading ? 'Placing Order...' : 'Place Order'}
-              </button>
-            </div>
-          )}
-        </div>
-          </>
-        ) : (
+                      <button
+                        onClick={handlePlaceOrder}
+                        disabled={loading || !price || !quantity}
+                        className="submit-button"
+                      >
+                        {loading ? 'Placing Order...' : 'Place Order'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="toggle-advanced-btn"
+                        onClick={() => setShowAdvancedTrading(!showAdvancedTrading)}
+                      >
+                        {showAdvancedTrading ? 'Hide Advanced Trading' : 'Show Advanced Trading'}
+                      </button>
+                    </div>
+                  )}
+
+                  {showAdvancedTrading && session && !market.resolved && (
+                    <AdvancedTrading
+                      marketId={marketId}
+                      outcomeId={selectedOutcomeId}
+                      side={orderType}
+                      onTrade={handleAdvancedTrade}
+                    />
+                  )}
+                </div>
+                  </>
+                ) : (
           <div className="comments-section">
             <h3>Discussion</h3>
             

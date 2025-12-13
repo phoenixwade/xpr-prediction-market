@@ -63,28 +63,29 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
     }
   };
 
-  const handleResolve = async () => {
-    if (!selectedMarket || selectedOutcome === null) {
-      alert('Please select a market and outcome');
-      return;
-    }
+    const handleResolve = async () => {
+      if (!selectedMarket || selectedOutcome === null) {
+        alert('Please select a market and outcome');
+        return;
+      }
 
-    setLoading(true);
-    try {
-      const { link } = session;
-      
-      await link.transact({
-        actions: [{
-          account: contractName,
-          name: 'resolve',
-          authorization: [session.auth],
-          data: {
-            market_id: selectedMarket.id,
-            outcome_id: selectedOutcome,
-            resolver: session.auth.actor
-          }
-        }]
-      });
+      setLoading(true);
+      try {
+        await session.transact({
+          actions: [{
+            account: contractName,
+            name: 'resolve',
+            authorization: [{
+              actor: session.auth.actor,
+              permission: session.auth.permission,
+            }],
+            data: {
+              admin: session.auth.actor,
+              market_id: selectedMarket.id,
+              winning_outcome_id: selectedOutcome,
+            }
+          }]
+        });
 
       if (resolutionNotes || evidenceUrl) {
         await fetch(`${process.env.REACT_APP_API_URL || ''}/api/resolutions.php`, {

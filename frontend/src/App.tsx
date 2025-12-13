@@ -12,11 +12,13 @@ import Tooltip from './components/Tooltip';
 import Whitepaper from './components/Whitepaper';
 import WhatIsXpred from './components/WhatIsXpred';
 import NotificationCenter from './components/NotificationCenter';
+import Leaderboard from './components/Leaderboard';
+import MobileLayout from './components/MobileLayout';
 
 function App() {
   const [session, setSession] = useState<any>(null);
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper' | 'whatisxpred'>('markets');
+  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper' | 'whatisxpred' | 'leaderboard'>('markets');
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [showWhitepaper, setShowWhitepaper] = useState<boolean>(false);
   const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
@@ -70,21 +72,23 @@ function App() {
       } else {
         setActiveTab('portfolio');
       }
-    } else if (page === 'admin') {
-      if (!currentSession) {
-        setActiveTab('markets');
-        setLoginMessage('Please connect your wallet to access the Admin panel.');
-        updateUrl({ page: null, market: null });
-      } else if (!currentIsXpredHolder) {
-        setActiveTab('markets');
-        setLoginMessage('You need to hold XPRED tokens to access the Admin panel.');
-        updateUrl({ page: null, market: null });
-      } else {
-        setActiveTab('admin');
-      }
-    } else {
-      setActiveTab('markets');
-    }
+        } else if (page === 'admin') {
+          if (!currentSession) {
+            setActiveTab('markets');
+            setLoginMessage('Please connect your wallet to access the Admin panel.');
+            updateUrl({ page: null, market: null });
+          } else if (!currentIsXpredHolder) {
+            setActiveTab('markets');
+            setLoginMessage('You need to hold XPRED tokens to access the Admin panel.');
+            updateUrl({ page: null, market: null });
+          } else {
+            setActiveTab('admin');
+          }
+        } else if (page === 'leaderboard') {
+          setActiveTab('leaderboard');
+        } else {
+          setActiveTab('markets');
+        }
 
     if (marketParam) {
       const id = parseInt(marketParam, 10);
@@ -232,20 +236,27 @@ function App() {
     } else if (page === 'xpred') {
       setActiveTab('whatisxpred');
       setShowWhatIsXpred(true);
-    } else if (page === 'portfolio') {
-      setActiveTab('portfolio');
-    } else if (page === 'admin') {
-      setActiveTab('admin');
-    } else {
-      setActiveTab('markets');
-    }
+      } else if (page === 'portfolio') {
+        setActiveTab('portfolio');
+      } else if (page === 'admin') {
+        setActiveTab('admin');
+      } else if (page === 'leaderboard') {
+        setActiveTab('leaderboard');
+      } else {
+        setActiveTab('markets');
+      }
 
-    updateUrl({ page, market: opts?.market ?? null });
-  }, [updateUrl]);
+      updateUrl({ page, market: opts?.market ?? null });
+    }, [updateUrl]);
 
-  return (
-    <div className="App">
-      <header className="app-header">
+    const handleMobileNavigate = (page: 'markets' | 'portfolio' | 'leaderboard' | 'help' | null) => {
+      navigateTo(page);
+    };
+
+    return (
+      <MobileLayout onNavigate={handleMobileNavigate} activeTab={activeTab}>
+      <div className="App">
+        <header className="app-header">
                 <h1 
                   onClick={() => navigateTo(null)}
                   style={{ cursor: 'pointer' }}
@@ -321,13 +332,19 @@ function App() {
                   Admin
                 </button>
               )}
-              <button
-                className={activeTab === 'help' ? 'active' : ''}
-                onClick={() => navigateTo('help')}
-              >
-                How to Use
-              </button>
-              <div className="nav-dropdown">
+                            <button
+                              className={activeTab === 'leaderboard' ? 'active' : ''}
+                              onClick={() => navigateTo('leaderboard')}
+                            >
+                              Leaderboard
+                            </button>
+                            <button
+                              className={activeTab === 'help' ? 'active' : ''}
+                              onClick={() => navigateTo('help')}
+                            >
+                              How to Use
+                            </button>
+                            <div className="nav-dropdown">
                 <button className={`nav-dropdown-trigger ${activeTab === 'whatisxpred' ? 'active' : ''}`}>
                   Buy XPRED
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -388,10 +405,13 @@ function App() {
               {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'portfolio' && session && (
                 <Portfolio session={session} />
               )}
-              {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && isXpredHolder && (
-                <AdminPanel session={session} xpredBalance={xpredBalance} />
-              )}
-              {showHelp && !showWhitepaper && !showWhatIsXpred && (
+                            {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && isXpredHolder && (
+                              <AdminPanel session={session} xpredBalance={xpredBalance} />
+                            )}
+                            {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'leaderboard' && (
+                              <Leaderboard timeframe="all" />
+                            )}
+                            {showHelp && !showWhitepaper && !showWhatIsXpred && (
                 <HowToUse />
               )}
               {showWhitepaper && !showWhatIsXpred && (
@@ -407,6 +427,7 @@ function App() {
         onShowWhitepaper={() => navigateTo('whitepaper')}
       />
     </div>
+    </MobileLayout>
   );
 }
 
