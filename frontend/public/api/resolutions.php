@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/logger.php';
+require_once __DIR__ . '/notify_helper.php';
 
 $dbPath = __DIR__ . '/../data/resolutions.db';
 $dbDir = dirname($dbPath);
@@ -61,6 +62,14 @@ try {
         
         logApiRequest('resolutions', 'POST', ['market_id' => $data['market_id']]);
         echo json_encode(['success' => true, 'id' => $db->lastInsertRowID()]);
+        
+        // Notify all market participants about the resolution
+        $marketId = intval($data['market_id']);
+        $outcomeId = intval($data['outcome_id']);
+        $resolver = $data['resolver'];
+        $title = "Market resolved";
+        $message = "A market you participated in has been resolved. Check your positions to claim winnings.";
+        notifyMarketParticipants($marketId, 'resolution', $title, $message, $resolver);
         
     } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $marketId = isset($_GET['market_id']) ? intval($_GET['market_id']) : null;

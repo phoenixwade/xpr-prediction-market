@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/logger.php';
+require_once __DIR__ . '/notify_helper.php';
 
 $dbPath = __DIR__ . '/../data/trades.db';
 $dbDir = dirname($dbPath);
@@ -158,6 +159,12 @@ try {
             
             logApiRequest('trades', 'POST', ['success' => true, 'trade_id' => $tradeId]);
             echo json_encode(['success' => true, 'trade_id' => $tradeId]);
+            
+            // Create notification for the trader
+            $sideText = $side === 'buy' ? 'bought' : 'sold';
+            $title = "Trade executed";
+            $message = "You $sideText $quantity shares at $price each";
+            createNotification($account, 'trade', $title, $message, $marketId, "/market/$marketId");
         } else {
             logApiRequest('trades', 'POST', ['error' => 'Failed to insert trade']);
             http_response_code(500);
