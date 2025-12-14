@@ -20,6 +20,12 @@ interface Outcome {
   display_order: number;
 }
 
+interface ProfitRound {
+  round_id: number;
+  timestamp: number;
+  total_profit: string;
+}
+
 interface AdminPanelProps {
   session: any;
   xpredBalance?: number;
@@ -54,6 +60,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [unclaimedIncome, setUnclaimedIncome] = useState<string>('0.0000 TESTIES');
   const [loadingIncome, setLoadingIncome] = useState(false);
   const [claimLoading, setClaimLoading] = useState(false);
+  const [profitRounds, setProfitRounds] = useState<ProfitRound[]>([]);
+  const [loadingRounds, setLoadingRounds] = useState(false);
 
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -531,11 +539,45 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
+  const fetchProfitRounds = useCallback(async () => {
+    setLoadingRounds(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const profitShareContract = process.env.REACT_APP_PROFIT_SHARE_CONTRACT || 'xpredprofit';
+      
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: profitShareContract,
+        scope: profitShareContract,
+        table: 'profitrounds',
+        limit: 100,
+        reverse: true,
+      });
+
+      if (result.rows && result.rows.length > 0) {
+        const rounds: ProfitRound[] = result.rows.map((row: any) => ({
+          round_id: row.round_id,
+          timestamp: row.timestamp || 0,
+          total_profit: row.total_profit || '0.00 TESTIES',
+        }));
+        setProfitRounds(rounds);
+      } else {
+        setProfitRounds([]);
+      }
+    } catch (error) {
+      console.error('Error fetching profit rounds:', error);
+      setProfitRounds([]);
+    } finally {
+      setLoadingRounds(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (session && activeTab === 'income') {
       fetchUnclaimedIncome();
+      fetchProfitRounds();
     }
-  }, [session, activeTab, fetchUnclaimedIncome]);
+  }, [session, activeTab, fetchUnclaimedIncome, fetchProfitRounds]);
 
   return (
     <div className="admin-panel">
@@ -621,6 +663,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
               <li>Unclaimed income accumulates until you claim it</li>
               <li>Income is paid in TESTIES stablecoin</li>
             </ul>
+          </div>
+
+          <div className="profit-history-section">
+            <h4>Distribution History</h4>
+            {loadingRounds ? (
+              <p className="loading-message">Loading distribution history...</p>
+            ) : profitRounds.length === 0 ? (
+              <p className="empty-state">No distributions yet. Check back after the first weekly distribution.</p>
+            ) : (
+              <div className="profit-rounds-list">
+                <div className="profit-rounds-header">
+                  <span>Round</span>
+                  <span>Date</span>
+                  <span>Total Distributed</span>
+                </div>
+                {profitRounds.map((round) => (
+                  <div key={round.round_id} className="profit-round-row">
+                    <span className="round-id">#{round.round_id}</span>
+                    <span className="round-date">
+                      {round.timestamp > 0 
+                        ? new Date(round.timestamp * 1000).toLocaleDateString() 
+                        : 'N/A'}
+                    </span>
+                    <span className="round-amount">{round.total_profit}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
