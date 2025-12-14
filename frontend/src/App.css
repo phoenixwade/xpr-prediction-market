@@ -4088,15 +4088,47 @@ body {
   margin-bottom: 2rem;
 }
 
-.leaderboard-header h2 {
+.leaderboard-header h2,
+.leaderboard-header h3 {
   color: white;
   margin: 0 0 0.5rem 0;
   font-size: 1.75rem;
 }
 
 .leaderboard-header p {
-  color: #9ca3af;
+  color: #e2e8f0;
   margin: 0;
+}
+
+/* Sort options in leaderboard header */
+.sort-options {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.sort-options button {
+  padding: 0.5rem 1rem;
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 6px;
+  color: #e2e8f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.sort-options button:hover {
+  background: rgba(124, 58, 237, 0.2);
+  color: white;
+}
+
+.sort-options button.active {
+  background: #7c3aed;
+  color: white;
+  border-color: #7c3aed;
 }
 
 .leaderboard-controls {
@@ -4145,10 +4177,56 @@ body {
   border-collapse: collapse;
 }
 
+/* Div-based table structure for Leaderboard component */
+.leaderboard-table .table-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px 80px 100px 120px;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+  color: #e2e8f0;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.leaderboard-table .table-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 120px 80px 100px 120px;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  color: white;
+  transition: background 0.2s ease;
+}
+
+.leaderboard-table .table-row:hover {
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.leaderboard-table .no-entries {
+  text-align: center;
+  padding: 3rem;
+  color: #e2e8f0;
+}
+
+.leaderboard-table [class^="col-"] {
+  color: white;
+}
+
+.leaderboard-table .col-trader a {
+  color: #a78bfa;
+  text-decoration: none;
+}
+
+.leaderboard-table .col-trader a:hover {
+  color: #c4b5fd;
+  text-decoration: underline;
+}
+
 .leaderboard-table th {
   text-align: left;
   padding: 1rem;
-  color: #9ca3af;
+  color: #e2e8f0;
   font-weight: 500;
   font-size: 0.85rem;
   border-bottom: 1px solid rgba(124, 58, 237, 0.2);
@@ -4184,7 +4262,7 @@ body {
 .leaderboard-empty {
   text-align: center;
   padding: 3rem;
-  color: #6b7280;
+  color: #e2e8f0;
 }
 
 /* ==================== */
