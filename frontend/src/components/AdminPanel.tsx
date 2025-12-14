@@ -163,8 +163,57 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     setOutcomes(template.outcomes);
   };
 
-  const handleScheduleMarket = () => {
-    alert('Scheduled market creation is coming soon! The backend infrastructure for automatic market opening is still in development.');
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  const handleScheduleMarket = async (marketData: {
+    question: string;
+    outcomes: string[];
+    description: string;
+    resolutionCriteria: string;
+    scheduledOpenTime: number;
+    scheduledCloseTime: number;
+    autoResolve: boolean;
+    resolutionSource?: string;
+  }) => {
+    if (!session) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    setScheduleLoading(true);
+    try {
+      const response = await fetch('/api/scheduled_markets.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          creator: session.auth.actor.toString(),
+          question: marketData.question,
+          description: marketData.description,
+          outcomes: marketData.outcomes,
+          category: category || 'general',
+          resolution_criteria: marketData.resolutionCriteria,
+          scheduled_open_time: marketData.scheduledOpenTime,
+          scheduled_close_time: marketData.scheduledCloseTime,
+          auto_resolve: marketData.autoResolve,
+          resolution_source: marketData.resolutionSource || '',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to schedule market');
+      }
+
+      alert('Market scheduled successfully! You will be notified when it\'s ready to be created.');
+    } catch (error) {
+      console.error('Error scheduling market:', error);
+      alert('Failed to schedule market: ' + error);
+    } finally {
+      setScheduleLoading(false);
+    }
   };
 
   const handleCreateMarket = async (e: React.FormEvent) => {
@@ -902,11 +951,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
       {activeTab === 'schedule' && (
         <div className="admin-section">
-          <div className="coming-soon-notice">
-            <span className="coming-soon-badge">Coming Soon</span>
-            <p>Scheduled market creation is currently in preview. The backend infrastructure for automatic market opening is still in development.</p>
+          <div className="schedule-info-notice">
+            <p>Schedule a market to be created automatically at a future time. You will be notified when the scheduled time arrives and the market is ready to be finalized.</p>
           </div>
           <ScheduledMarkets onScheduleMarket={handleScheduleMarket} />
+          {scheduleLoading && <p className="loading-message">Scheduling market...</p>}
         </div>
       )}
     </div>

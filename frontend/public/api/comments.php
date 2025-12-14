@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/logger.php';
+require_once __DIR__ . '/notify_helper.php';
 
 Logger::init();
 Logger::info('Comments API request started');
@@ -223,6 +224,12 @@ if ($method === 'GET') {
                 'is_deleted' => 0
             ]
         ]);
+        
+        // Create notifications for replies and mentions
+        if ($parentCommentId) {
+            notifyCommentReply($parentCommentId, $userAccount, $marketId);
+        }
+        notifyMentions($commentText, $marketId, $userAccount);
         
     } catch (PDOException $e) {
         Logger::error('Failed to save comment', ['market_id' => $marketId, 'user' => $userAccount, 'error' => $e->getMessage()]);
