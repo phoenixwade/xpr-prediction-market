@@ -1532,6 +1532,72 @@ body {
   border-radius: 50%;
 }
 
+.profit-history-section {
+  margin-top: 2rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.profit-history-section h4 {
+  color: #f1f5f9;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.profit-rounds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profit-rounds-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 6px;
+  font-weight: 600;
+  color: #a78bfa;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.profit-round-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 6px;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+  transition: all 0.2s ease;
+}
+
+.profit-round-row:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.profit-round-row .round-id {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.profit-round-row .round-date {
+  color: #94a3b8;
+}
+
+.profit-round-row .round-amount {
+  color: #10b981;
+  font-weight: 600;
+  text-align: right;
+}
+
 @media (max-width: 768px) {
   .claim-actions {
     flex-direction: column;
@@ -1544,6 +1610,13 @@ body {
   
   .claim-income-section .income-value {
     font-size: 2rem;
+  }
+
+  .profit-rounds-header,
+  .profit-round-row {
+    grid-template-columns: 60px 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.85rem;
   }
 }
 
