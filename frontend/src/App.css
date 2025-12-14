@@ -13,6 +13,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(180deg, #0a0e27 0%, #1a1f3a 100%);
   min-height: 100vh;
+  color: #e5e7eb;
 }
 
 .App {
@@ -1007,6 +1008,73 @@ body {
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
   border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* My Orders Section in Market Detail */
+.my-orders {
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #e5e7eb;
+}
+
+.my-orders h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.my-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.outcome-orders h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+.my-order-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.my-order-row .order-price,
+.my-order-row .order-quantity {
+  font-size: 0.85rem;
+  color: #f9fafb;
+  font-weight: 500;
+}
+
+.my-order-row button {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.my-order-row button:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
 }
 
 .order-details {
