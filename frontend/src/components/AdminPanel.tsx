@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { JsonRpc } from '@proton/js';
 import MarketTemplates from './MarketTemplates';
 import ScheduledMarkets from './ScheduledMarkets';
@@ -63,7 +63,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [profitRounds, setProfitRounds] = useState<ProfitRound[]>([]);
   const [loadingRounds, setLoadingRounds] = useState(false);
 
-  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const createFormRef = useRef<HTMLFormElement>(null);
+
+  const handleImageFileChange= async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -161,6 +163,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     
     setMarketType(isBinary ? 'binary' : 'multi');
     setOutcomes(template.outcomes);
+    
+    setTimeout(() => {
+      createFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const [scheduleLoading, setScheduleLoading] = useState(false);
@@ -749,7 +755,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
           <MarketTemplates onSelectTemplate={handleSelectTemplate} />
           <h3>Create New Market</h3>
           <p className="template-hint">Select a template above to pre-fill the form, or create a custom market below.</p>
-          <form onSubmit={handleCreateMarket} className="admin-form">
+          <form ref={createFormRef} onSubmit={handleCreateMarket} className="admin-form">
             <div className="form-group">
               <label>Question</label>
               <input
