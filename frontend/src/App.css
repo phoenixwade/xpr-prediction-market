@@ -1013,18 +1013,20 @@ body {
 /* My Orders Section in Market Detail */
 .my-orders {
   margin-top: 1.5rem;
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  background: rgba(17, 24, 39, 0.8);
-  border: 1px solid rgba(124, 58, 237, 0.3);
+  padding: 2rem;
+  border-radius: 16px;
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   color: #e5e7eb;
 }
 
 .my-orders h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #f1f5f9;
   display: flex;
   align-items: center;
   gap: 0.5rem;
