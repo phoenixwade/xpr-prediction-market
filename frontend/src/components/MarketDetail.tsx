@@ -622,6 +622,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       <button onClick={onBack} className="back-button">← Back to Markets</button>
       
       <div className="market-header">
+        {market.image_url && (
+          <div className="market-header-image">
+            <img src={market.image_url} alt={market.question} />
+          </div>
+        )}
         <h2>{market.question}</h2>
         <div className="market-meta">
           <span className="category">{market.category}</span>
