@@ -376,6 +376,12 @@ body {
   border: 1px solid rgba(124, 58, 237, 0.3);
 }
 
+.market-participants {
+  font-size: 0.875rem;
+  color: #a78bfa;
+  font-weight: 500;
+}
+
 .market-expiry {
   font-size: 0.875rem;
   color: #94a3b8;
