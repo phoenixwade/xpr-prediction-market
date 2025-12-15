@@ -465,13 +465,26 @@ body {
 }
 
 /* Tighter typography for 3+ outcome markets */
+.market-probabilities.multi-outcome {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.market-probabilities.multi-outcome .probability-option {
+  flex: 0 0 calc(50% - 0.25rem);
+  min-width: 0;
+  padding: 0.75rem 0.5rem;
+}
+
 .market-probabilities.multi-outcome .probability-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   letter-spacing: 0.02em;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  margin-bottom: 0;
+  max-width: 100%;
 }
 
 .yes-option .probability-label {
