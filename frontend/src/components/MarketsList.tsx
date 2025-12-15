@@ -14,6 +14,7 @@ interface Market {
   image_url?: string;
   outcomes_count: number;
   outcomes?: Outcome[];
+  participants?: number;
 }
 
 interface Outcome {
@@ -108,6 +109,23 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
             console.error(`Error fetching outcomes for market ${row.id}:`, error);
             market.outcomes = [];
           }
+        }
+
+        // Fetch orders to count unique participants
+        try {
+          const ordersResult = await rpc.get_table_rows({
+            code: contractName,
+            scope: row.id.toString(),
+            table: 'orders',
+            limit: 1000,
+          });
+          
+          // Count unique accounts from orders
+          const uniqueAccounts = new Set(ordersResult.rows.map((order: any) => order.account));
+          market.participants = uniqueAccounts.size;
+        } catch (error) {
+          console.error(`Error fetching orders for market ${row.id}:`, error);
+          market.participants = 0;
         }
 
         return market;
@@ -288,6 +306,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   <div className="market-category">{market.category}</div>
                   <h3 className="market-question">{market.question}</h3>
               
+                  {/* Only show outcome options for active markets (without percentages) */}
                   {!market.resolved && market.outcomes && market.outcomes.length > 0 && (
                     <div className={`market-probabilities ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
                       {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => {
@@ -297,6 +316,29 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                           : 'other-option';
                         return (
                           <div key={outcome.outcome_id} className={`probability-option ${optionClass}`}>
+                            <div className="probability-label">{outcome.name}</div>
+                          </div>
+                        );
+                      })}
+                      {market.outcomes.length > 3 && (
+                        <div className="probability-option other-option">
+                          <div className="probability-label">+{market.outcomes.length - 3} more</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Show percentages only for resolved markets */}
+                  {market.resolved && market.outcomes && market.outcomes.length > 0 && (
+                    <div className={`market-probabilities resolved ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
+                      {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => {
+                        const isBinaryMarket = market.outcomes_count === 2;
+                        const optionClass = isBinaryMarket 
+                          ? (outcome.outcome_id === 0 ? 'yes-option' : 'no-option')
+                          : 'other-option';
+                        const isWinningOutcome = outcome.outcome_id === market.outcome;
+                        return (
+                          <div key={outcome.outcome_id} className={`probability-option ${optionClass} ${isWinningOutcome ? 'winning' : ''}`}>
                             <div className="probability-label">{outcome.name}</div>
                             <div className="probability-value">{outcome.probability?.toFixed(0)}%</div>
                           </div>
@@ -313,6 +355,9 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   <div className="market-info">
                     <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
                       {market.resolved ? 'Resolved' : 'Active'}
+                    </span>
+                    <span className="market-participants">
+                      {market.participants || 0} {market.participants === 1 ? 'trader' : 'traders'}
                     </span>
                     <span className="market-expiry">
                       {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
