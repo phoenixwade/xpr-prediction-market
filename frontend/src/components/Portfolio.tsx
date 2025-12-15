@@ -391,8 +391,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             permission: session.auth.permission,
           }],
           data: {
-            order_id: orderId,
+            account: session.auth.actor,
             market_id: marketId,
+            order_id: orderId,
           },
         }],
       });
@@ -421,8 +422,9 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           permission: session.auth.permission,
         }],
         data: {
-          order_id: order.order_id,
+          account: session.auth.actor,
           market_id: order.market_id,
+          order_id: order.order_id,
         },
       }));
 
