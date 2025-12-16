@@ -73,3 +73,11 @@ class Logger {
         self::log('error', $message, $context);
     }
 }
+
+/**
+ * Helper function for logging API requests
+ * Used by various API endpoints for consistent logging
+ */
+function logApiRequest($endpoint, $method, $context = []) {
+    Logger::info("API Request: $endpoint ($method)", $context);
+}

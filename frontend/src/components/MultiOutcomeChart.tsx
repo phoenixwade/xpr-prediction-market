@@ -59,10 +59,22 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
           ))
         );
 
-        const data = await Promise.all(responses.map(r => r.ok ? r.json() : { prices: [] }));
+        const data = await Promise.all(responses.map(async r => {
+          if (!r.ok) return { prices: [] };
+          try {
+            const text = await r.text();
+            // Check if response looks like JSON before parsing
+            if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+              return JSON.parse(text);
+            }
+            return { prices: [] };
+          } catch {
+            return { prices: [] };
+          }
+        }));
         const byOutcome: OutcomeHistoryMap = {};
         limited.forEach((o, idx) => {
-          byOutcome[o.outcome_id] = data[idx].prices || [];
+          byOutcome[o.outcome_id] = data[idx]?.prices || [];
         });
 
         if (!cancelled) setPriceHistoryByOutcome(byOutcome);
