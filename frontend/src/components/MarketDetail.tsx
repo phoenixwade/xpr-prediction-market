@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 import OutcomeRow from './OutcomeRow';
+import PriceChart from './PriceChart';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
@@ -1099,6 +1100,22 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             <button className="trading-guide-dismiss" onClick={dismissTradingGuide}>
               Got it
             </button>
+          </div>
+        )}
+
+        {outcomes.length > 0 && (
+          <div className="price-chart-section">
+            <h3>Price History</h3>
+            <div className="price-chart-container">
+              {outcomes.slice(0, 2).map(outcome => (
+                <PriceChart
+                  key={outcome.outcome_id}
+                  marketId={marketId}
+                  outcomeId={outcome.outcome_id}
+                  outcomeName={outcome.name}
+                />
+              ))}
+            </div>
           </div>
         )}
 
