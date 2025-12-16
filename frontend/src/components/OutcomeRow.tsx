@@ -31,11 +31,6 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
   onClickNo,
 }) => {
   const yesPrice = stats.bestAsk ?? stats.bestBid ?? 0.5;
-  const noPrice = stats.bestBid ?? stats.bestAsk ?? 0.5;
-  
-  const formatPrice = (price: number) => {
-    return (price * 100).toFixed(0) + '\u00A2';
-  };
 
   const formatVolume = (vol?: number) => {
     if (!vol) return '';
@@ -70,14 +65,14 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
           onClick={onClickYes}
           disabled={disabled}
         >
-          Buy Yes {formatPrice(yesPrice)}
+          Buy Yes
         </button>
         <button
           className="outcome-btn no-btn"
           onClick={onClickNo}
           disabled={disabled}
         >
-          Buy No {formatPrice(noPrice)}
+          Buy No
         </button>
       </div>
     </div>

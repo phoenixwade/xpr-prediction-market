@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
-import AdvancedTrading from './AdvancedTrading';
 import OutcomeRow from './OutcomeRow';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
@@ -58,7 +57,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [market, setMarket] = useState<any>(null);
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy');
+  const [orderType] = useState<'buy' | 'sell'>('buy');
   const [selectedOutcomeId, setSelectedOutcomeId] = useState<number>(0);
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -74,10 +73,14 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [activityFilter, setActivityFilter] = useState<string>('');
         const [activityUserFilter, setActivityUserFilter] = useState<string>('');
         const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-        const [showAdvancedTrading, setShowAdvancedTrading] = useState(false);
+        // Advanced trading removed - using modal instead
         const [showTradingGuide, setShowTradingGuide] = useState(() => {
           return localStorage.getItem('xpr-trading-guide-dismissed') !== 'true';
         });
+        const [showBuyModal, setShowBuyModal] = useState(false);
+        const [buyModalOutcome, setBuyModalOutcome] = useState<Outcome | null>(null);
+        const [buyModalSide, setBuyModalSide] = useState<'yes' | 'no'>('yes');
+        const [buyQuantity, setBuyQuantity] = useState('');
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -596,24 +599,105 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   }, [outcomes, orders]);
 
   const handleOutcomeButtonClick = (outcomeId: number, side: 'yes' | 'no') => {
-    const stats = outcomeStats[outcomeId];
-    setSelectedOutcomeId(outcomeId);
-    setOrderType(side === 'yes' ? 'buy' : 'sell');
+    const outcome = outcomes.find(o => o.outcome_id === outcomeId);
+    if (!outcome) return;
     
-    let suggestedPrice: number | undefined;
-    if (side === 'yes') {
-      suggestedPrice = stats?.bestAsk ?? stats?.bestBid ?? 0.5;
-    } else {
-      suggestedPrice = stats?.bestBid ?? stats?.bestAsk ?? 0.5;
+    setBuyModalOutcome(outcome);
+    setBuyModalSide(side);
+    setBuyQuantity('');
+    setShowBuyModal(true);
+  };
+
+  const handleModalBuy = async () => {
+    if (!session || !buyModalOutcome || !buyQuantity) {
+      return;
     }
-    
-    if (suggestedPrice != null) {
-      setPrice(suggestedPrice.toFixed(4));
+
+    const quantityInt = parseInt(buyQuantity);
+    if (isNaN(quantityInt) || quantityInt <= 0) {
+      showToast('Please enter a valid quantity', 'error');
+      return;
     }
-    
-    setTimeout(() => {
-      document.querySelector('.trade-form')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+
+    setLoading(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
+      // For buying, we use a default price of 1 TESTIES per share (market order style)
+      const priceAmount = 1;
+      const isBid = buyModalSide === 'yes';
+
+      // Calculate required amount
+      const requiredAmount = priceAmount * quantityInt;
+
+      // Fetch user's internal balance
+      const balanceResult = await rpc.get_table_rows({
+        code: contractName,
+        scope: contractName,
+        table: 'balances',
+        lower_bound: session.auth.actor.toString(),
+        upper_bound: session.auth.actor.toString(),
+        limit: 1,
+      });
+
+      let internalBalance = 0;
+      if (balanceResult.rows.length > 0) {
+        const funds = balanceResult.rows[0].funds;
+        const parts = funds.split(' ');
+        internalBalance = Math.floor(parseFloat(parts[0]) || 0);
+      }
+
+      const actions: any[] = [];
+
+      // Auto-deposit if internal balance is insufficient
+      const depositNeeded = Math.max(0, Math.floor(requiredAmount) - internalBalance);
+      if (depositNeeded > 0) {
+        actions.push({
+          account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
+          name: 'transfer',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            from: session.auth.actor,
+            to: contractName,
+            quantity: `${depositNeeded} TESTIES`,
+            memo: `Deposit for order ${marketId}`,
+          },
+        });
+      }
+
+      actions.push({
+        account: contractName,
+        name: 'placeorder',
+        authorization: [{
+          actor: session.auth.actor,
+          permission: session.auth.permission,
+        }],
+        data: {
+          account: session.auth.actor,
+          market_id: marketId,
+          outcome_id: buyModalOutcome.outcome_id,
+          bid: isBid,
+          price: `${priceAmount} TESTIES`,
+          quantity: quantityInt,
+        },
+      });
+
+      await session.transact({ actions });
+
+      showToast(`Order placed: ${buyModalSide.toUpperCase()} ${quantityInt} shares of "${buyModalOutcome.name}"`, 'success');
+      setShowBuyModal(false);
+      setBuyQuantity('');
+      fetchMarketData();
+    } catch (error) {
+      console.error('Error placing order:', error);
+      showToast('Failed to place order: ' + error, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!market) {
@@ -669,6 +753,60 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           <button className="toast-close" onClick={() => setToast(null)}>×</button>
         </div>
       )}
+
+      {showBuyModal && buyModalOutcome && (
+        <div className="buy-modal-overlay" onClick={() => setShowBuyModal(false)}>
+          <div className="buy-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="buy-modal-header">
+              <h3>Buy {buyModalSide === 'yes' ? 'Yes' : 'No'} - {buyModalOutcome.name}</h3>
+              <button className="buy-modal-close" onClick={() => setShowBuyModal(false)}>×</button>
+            </div>
+            <div className="buy-modal-content">
+              <p className="buy-modal-description">
+                You are buying <strong>{buyModalSide === 'yes' ? 'YES' : 'NO'}</strong> shares for "{buyModalOutcome.name}".
+                {buyModalSide === 'yes' 
+                  ? ' If this outcome wins, each share pays 1 TESTIES.'
+                  : ' If this outcome loses, each share pays 1 TESTIES.'}
+              </p>
+              <div className="buy-modal-form">
+                <label>
+                  Quantity (TESTIES to spend)
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={buyQuantity}
+                    onChange={(e) => setBuyQuantity(e.target.value)}
+                    placeholder="Enter amount in TESTIES"
+                    autoFocus
+                  />
+                </label>
+                {buyQuantity && parseInt(buyQuantity) > 0 && (
+                  <p className="buy-modal-summary">
+                    You will receive approximately <strong>{parseInt(buyQuantity)}</strong> shares for <strong>{parseInt(buyQuantity)} TESTIES</strong>.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="buy-modal-actions">
+              <button 
+                className="buy-modal-cancel" 
+                onClick={() => setShowBuyModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={`buy-modal-confirm ${buyModalSide === 'yes' ? 'yes-btn' : 'no-btn'}`}
+                onClick={handleModalBuy}
+                disabled={loading || !buyQuantity || parseInt(buyQuantity) <= 0}
+              >
+                {loading ? 'Placing Order...' : `Buy ${buyModalSide === 'yes' ? 'Yes' : 'No'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <button onClick={onBack} className="back-button">← Back to Markets</button>
       
       <div className="market-header">
@@ -936,120 +1074,6 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
         </div>
 
-        <div className="trade-form">
-          <h3>
-            Place Order
-            <Tooltip text="Fill out the form to place an order. TESTIES will be automatically transferred from your wallet when you submit." position="left">
-              <span className="tooltip-icon">ℹ</span>
-            </Tooltip>
-          </h3>
-          {!session ? (
-            <p>Connect your wallet to trade</p>
-          ) : market.resolved ? (
-            <p>This market is resolved and no longer accepting orders</p>
-          ) : (
-            <div className="form-content">
-              <div className="form-group">
-                <label>
-                  Order Type
-                  <Tooltip text="Buy to purchase shares, Sell to sell shares you own or short sell." position="right">
-                    <span className="tooltip-icon">ℹ</span>
-                  </Tooltip>
-                </label>
-                <div className="button-group">
-                  <button
-                    className={orderType === 'buy' ? 'active' : ''}
-                    onClick={() => setOrderType('buy')}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    className={orderType === 'sell' ? 'active' : ''}
-                    onClick={() => setOrderType('sell')}
-                  >
-                    Sell
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Outcome
-                  <Tooltip text="Select which outcome you want to trade." position="right">
-                    <span className="tooltip-icon">ℹ</span>
-                  </Tooltip>
-                </label>
-                <div className={`button-group ${outcomes.length > 2 ? 'multi-outcome' : ''}`}>
-                  {outcomes.map((outcome) => (
-                    <button
-                      key={outcome.outcome_id}
-                      className={selectedOutcomeId === outcome.outcome_id ? 'active' : ''}
-                      onClick={() => setSelectedOutcomeId(outcome.outcome_id)}
-                    >
-                      {outcome.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Price (TESTIES per share)
-                  <Tooltip text="Price per share in TESTIES (0.0001 to 0.9999). Winning shares pay 1 TESTIES each." position="right">
-                    <span className="tooltip-icon">ℹ</span>
-                  </Tooltip>
-                </label>
-                <input
-                  type="number"
-                  step="0.0001"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.5000"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Quantity (shares)
-                  <Tooltip text="Number of shares to trade. Total cost = price × quantity." position="right">
-                    <span className="tooltip-icon">ℹ</span>
-                  </Tooltip>
-                </label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  placeholder="100"
-                />
-              </div>
-
-                      <button
-                        onClick={handlePlaceOrder}
-                        disabled={loading || !price || !quantity}
-                        className="submit-button"
-                      >
-                        {loading ? 'Placing Order...' : 'Place Order'}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="toggle-advanced-btn"
-                        onClick={() => setShowAdvancedTrading(!showAdvancedTrading)}
-                      >
-                        {showAdvancedTrading ? 'Hide Advanced Trading' : 'Show Advanced Trading'}
-                      </button>
-                    </div>
-                  )}
-
-                  {showAdvancedTrading && session && !market.resolved && (
-                    <AdvancedTrading
-                      marketId={marketId}
-                      outcomeId={selectedOutcomeId}
-                      side={orderType}
-                      onTrade={handleAdvancedTrade}
-                    />
-                  )}
-                </div>
                   </>
                 ) : (
           <div className="comments-section">
