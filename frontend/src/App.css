@@ -734,6 +734,181 @@ body {
   color: #94a3b8;
 }
 
+/* Vertical Outcome List - Phase 1 Redesign */
+.outcomes-list {
+  background: rgba(26, 31, 58, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.outcomes-header {
+  display: grid;
+  grid-template-columns: 1fr 120px 220px;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: rgba(10, 14, 39, 0.4);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.outcomes-header .header-outcome {
+  text-align: left;
+}
+
+.outcomes-header .header-chance {
+  text-align: center;
+}
+
+.outcomes-header .header-actions {
+  text-align: center;
+}
+
+.outcome-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 220px;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+  transition: background 0.2s ease;
+}
+
+.outcome-row:last-child {
+  border-bottom: none;
+}
+
+.outcome-row:hover {
+  background: rgba(124, 58, 237, 0.1);
+}
+
+.outcome-row.selected {
+  background: rgba(124, 58, 237, 0.15);
+  border-left: 3px solid #7c3aed;
+}
+
+.outcome-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.outcome-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.outcome-volume {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.outcome-chance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.chance-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.chance-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chance-change.up {
+  color: #22c55e;
+}
+
+.chance-change.down {
+  color: #ef4444;
+}
+
+.outcome-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.outcome-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  min-width: 100px;
+}
+
+.outcome-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.outcome-btn.yes-btn {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: white;
+}
+
+.outcome-btn.yes-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  transform: translateY(-1px);
+}
+
+.outcome-btn.no-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.outcome-btn.no-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+}
+
+/* Mobile responsive for outcome list */
+@media (max-width: 768px) {
+  .outcomes-header {
+    display: none;
+  }
+  
+  .outcome-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .outcome-info {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .outcome-chance {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  
+  .outcome-actions {
+    width: 100%;
+  }
+  
+  .outcome-btn {
+    flex: 1;
+  }
+}
+
 .trade-form {
   background: rgba(26, 31, 58, 0.6);
   backdrop-filter: blur(10px);

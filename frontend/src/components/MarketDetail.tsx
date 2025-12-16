@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 import AdvancedTrading from './AdvancedTrading';
+import OutcomeRow from './OutcomeRow';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
@@ -566,6 +567,47 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   };
 
+  const outcomeStats = useMemo(() => {
+    const stats: Record<number, { bestBid?: number; bestAsk?: number; volume?: number }> = {};
+    
+    outcomes.forEach(outcome => {
+      const outcomeOrders = orders.filter(o => o.outcome_id === outcome.outcome_id);
+      const outcomeBids = outcomeOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
+      const outcomeAsks = outcomeOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
+      
+      const totalVolume = outcomeOrders.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+      
+      stats[outcome.outcome_id] = {
+        bestBid: outcomeBids.length > 0 ? outcomeBids[0].price : undefined,
+        bestAsk: outcomeAsks.length > 0 ? outcomeAsks[0].price : undefined,
+        volume: totalVolume,
+      };
+    });
+    
+    return stats;
+  }, [outcomes, orders]);
+
+  const handleOutcomeButtonClick = (outcomeId: number, side: 'yes' | 'no') => {
+    const stats = outcomeStats[outcomeId];
+    setSelectedOutcomeId(outcomeId);
+    setOrderType(side === 'yes' ? 'buy' : 'sell');
+    
+    let suggestedPrice: number | undefined;
+    if (side === 'yes') {
+      suggestedPrice = stats?.bestAsk ?? stats?.bestBid ?? 0.5;
+    } else {
+      suggestedPrice = stats?.bestBid ?? stats?.bestAsk ?? 0.5;
+    }
+    
+    if (suggestedPrice != null) {
+      setPrice(suggestedPrice.toFixed(4));
+    }
+    
+    setTimeout(() => {
+      document.querySelector('.trade-form')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   if (!market) {
     return <div className="loading">Loading market...</div>;
   }
@@ -761,6 +803,27 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
         ) : activeTab === 'trade' ? (
           <>
+        <div className="outcomes-list">
+          <div className="outcomes-header">
+            <span className="header-outcome">Outcome</span>
+            <span className="header-chance">% Chance</span>
+            <span className="header-actions">Trade</span>
+          </div>
+          {outcomes
+            .sort((a, b) => a.display_order - b.display_order)
+            .map(outcome => (
+              <OutcomeRow
+                key={outcome.outcome_id}
+                outcome={outcome}
+                stats={outcomeStats[outcome.outcome_id] || {}}
+                selected={selectedOutcomeId === outcome.outcome_id}
+                disabled={!session || market.resolved}
+                onClickYes={() => handleOutcomeButtonClick(outcome.outcome_id, 'yes')}
+                onClickNo={() => handleOutcomeButtonClick(outcome.outcome_id, 'no')}
+              />
+            ))}
+        </div>
+
         {session && myOrders.length > 0 && (
           <div className="my-orders">
             <h3>
