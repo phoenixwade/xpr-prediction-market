@@ -15,6 +15,7 @@ interface Market {
   outcomes_count: number;
   outcomes?: Outcome[];
   participants?: number;
+  totalInvested?: number;
 }
 
 interface Outcome {
@@ -85,6 +86,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           category: row.category || 'General',
           expireSec: normalizeTimestamp(row.expire),
           outcomes_count: row.outcomes_count || 2,
+          resolved: !!row.resolved,
         };
 
         if (market.outcomes_count > 0) {
@@ -111,7 +113,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           }
         }
 
-        // Fetch orders to count unique participants
+        // Fetch orders to count unique participants and calculate total invested
         try {
           const ordersResult = await rpc.get_table_rows({
             code: contractName,
@@ -123,9 +125,22 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           // Count unique accounts from orders
           const uniqueAccounts = new Set(ordersResult.rows.map((order: any) => order.account));
           market.participants = uniqueAccounts.size;
+          
+          // Calculate total invested (sum of price * quantity for all bid orders)
+          let totalInvested = 0;
+          ordersResult.rows.forEach((order: any) => {
+            if (order.isBid) {
+              // Price is stored as integer TESTIES
+              const price = typeof order.price === 'number' ? order.price : parseFloat(order.price) || 0;
+              const quantity = order.quantity || 0;
+              totalInvested += price * quantity;
+            }
+          });
+          market.totalInvested = totalInvested;
         } catch (error) {
           console.error(`Error fetching orders for market ${row.id}:`, error);
           market.participants = 0;
+          market.totalInvested = 0;
         }
 
         return market;
@@ -358,6 +373,9 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                     </span>
                     <span className="market-participants">
                       {market.participants || 0} {market.participants === 1 ? 'trader' : 'traders'}
+                    </span>
+                    <span className="market-total-invested">
+                      {market.totalInvested || 0} TESTIES
                     </span>
                     <span className="market-expiry">
                       {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
