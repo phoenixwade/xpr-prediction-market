@@ -350,12 +350,17 @@ body {
 
 .market-info {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.market-info-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .market-status {
@@ -517,13 +522,26 @@ body {
   color: #ffffff;
 }
 
-.market-share-buttons {
+.market-share-section {
   position: absolute;
   right: 1.5rem;
   bottom: 1.5rem;
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 0.5rem;
   z-index: 10;
+}
+
+.market-share-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.market-share-section .market-expiry {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  text-align: right;
 }
 
 .share-button {

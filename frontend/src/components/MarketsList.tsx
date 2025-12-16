@@ -368,18 +368,17 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   )}
                   
                   <div className="market-info">
-                    <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
-                      {market.resolved ? 'Resolved' : 'Active'}
-                    </span>
-                    <span className="market-participants">
-                      {market.participants || 0} {market.participants === 1 ? 'trader' : 'traders'}
-                    </span>
-                    <span className="market-total-invested">
-                      {market.totalInvested || 0} TESTIES
-                    </span>
-                    <span className="market-expiry">
-                      {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
-                    </span>
+                    <div className="market-info-row">
+                      <span className={`market-status ${market.resolved ? 'resolved' : 'active'}`}>
+                        {market.resolved ? 'Resolved' : 'Active'}
+                      </span>
+                      <span className="market-participants">
+                        {market.participants || 0} {market.participants === 1 ? 'trader' : 'traders'}
+                      </span>
+                    </div>
+                    <div className="market-total-invested">
+                      Total Invested: {market.totalInvested || 0} TESTIES
+                    </div>
                   </div>
                   {market.resolved && market.outcomes && (
                     <div className="market-outcome">
@@ -388,59 +387,64 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   )}
                 </div>
               </div>
-              <div className="market-share-buttons">
-                <button
-                  className={`share-button watchlist-button ${watchlist.includes(market.id) ? 'active' : ''}`}
-                  onClick={(e) => toggleWatchlist(market.id, e)}
-                  title={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
-                  aria-label={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
-                >
-                  {watchlist.includes(market.id) ? (
+              <div className="market-share-section">
+                <div className="market-share-buttons">
+                  <button
+                    className={`share-button watchlist-button ${watchlist.includes(market.id) ? 'active' : ''}`}
+                    onClick={(e) => toggleWatchlist(market.id, e)}
+                    title={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                    aria-label={watchlist.includes(market.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                  >
+                    {watchlist.includes(market.id) ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    className="share-button share-twitter"
+                    onClick={(e) => handleShare(market.id, 'twitter', e)}
+                    title="Share on X/Twitter"
+                    aria-label="Share on X/Twitter"
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                     </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                  )}
-                </button>
-                <button
-                  className="share-button share-twitter"
-                  onClick={(e) => handleShare(market.id, 'twitter', e)}
-                  title="Share on X/Twitter"
-                  aria-label="Share on X/Twitter"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                </button>
-                <button
-                  className="share-button share-facebook"
-                  onClick={(e) => handleShare(market.id, 'facebook', e)}
-                  title="Share on Facebook"
-                  aria-label="Share on Facebook"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
-                </button>
-                <button
-                  className={`share-button share-copy ${copiedMarketId === market.id ? 'copied' : ''}`}
-                  onClick={(e) => handleShare(market.id, 'copy', e)}
-                  title={copiedMarketId === market.id ? 'Copied!' : 'Copy Link'}
-                  aria-label="Copy Link"
-                >
-                  {copiedMarketId === market.id ? (
+                  </button>
+                  <button
+                    className="share-button share-facebook"
+                    onClick={(e) => handleShare(market.id, 'facebook', e)}
+                    title="Share on Facebook"
+                    aria-label="Share on Facebook"
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
                     </svg>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                    </svg>
-                  )}
-                </button>
+                  </button>
+                  <button
+                    className={`share-button share-copy ${copiedMarketId === market.id ? 'copied' : ''}`}
+                    onClick={(e) => handleShare(market.id, 'copy', e)}
+                    title={copiedMarketId === market.id ? 'Copied!' : 'Copy Link'}
+                    aria-label="Copy Link"
+                  >
+                    {copiedMarketId === market.id ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <div className="market-expiry">
+                  {getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec)}
+                </div>
               </div>
             </div>
           ))
