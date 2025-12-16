@@ -72,9 +72,17 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const [activities, setActivities] = useState<Activity[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityFilter, setActivityFilter] = useState<string>('');
-    const [activityUserFilter, setActivityUserFilter] = useState<string>('');
-    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-    const [showAdvancedTrading, setShowAdvancedTrading] = useState(false);
+        const [activityUserFilter, setActivityUserFilter] = useState<string>('');
+        const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+        const [showAdvancedTrading, setShowAdvancedTrading] = useState(false);
+        const [showTradingGuide, setShowTradingGuide] = useState(() => {
+          return localStorage.getItem('xpr-trading-guide-dismissed') !== 'true';
+        });
+
+      const dismissTradingGuide = () => {
+        setShowTradingGuide(false);
+        localStorage.setItem('xpr-trading-guide-dismissed', 'true');
+      };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -803,6 +811,19 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
         ) : activeTab === 'trade' ? (
           <>
+        {showTradingGuide && (
+          <div className="trading-guide-banner">
+            <div className="trading-guide-content">
+              <h4>How Trading Works</h4>
+              <p>Buy <strong>YES</strong> or <strong>NO</strong> shares depending on your prediction. Buying shares is like betting on the outcome. Odds shift in real time as other traders bet.</p>
+              <p>Sell your shares at any time, or wait until the market ends to redeem winning shares for 1 TESTIES each.</p>
+            </div>
+            <button className="trading-guide-dismiss" onClick={dismissTradingGuide}>
+              Got it
+            </button>
+          </div>
+        )}
+
         <div className="outcomes-list">
           <div className="outcomes-header">
             <span className="header-outcome">Outcome</span>
@@ -822,6 +843,10 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 onClickNo={() => handleOutcomeButtonClick(outcome.outcome_id, 'no')}
               />
             ))}
+          <div className="outcomes-helper-text">
+            <p><strong>Buy</strong> - Buy YES or NO shares. Odds shift in real time as live bets are made.</p>
+            <p><strong>Sell</strong> - You can sell at any time if you own shares, or wait until the market resolves.</p>
+          </div>
         </div>
 
         {session && myOrders.length > 0 && (
