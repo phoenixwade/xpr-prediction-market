@@ -81,6 +81,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [buyModalOutcome, setBuyModalOutcome] = useState<Outcome | null>(null);
         const [buyModalSide, setBuyModalSide] = useState<'yes' | 'no'>('yes');
         const [buyQuantity, setBuyQuantity] = useState('');
+        const [showSellModal, setShowSellModal] = useState(false);
+        const [sellModalOrder, setSellModalOrder] = useState<Order | null>(null);
+        const [sellQuantity, setSellQuantity] = useState('');
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -700,6 +703,73 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   };
 
+  const handleOpenSellModal = (order: Order) => {
+    setSellModalOrder(order);
+    setSellQuantity(order.quantity.toString());
+    setShowSellModal(true);
+  };
+
+  const handleSellPercentage = (percentage: number) => {
+    if (!sellModalOrder) return;
+    const amount = Math.floor(sellModalOrder.quantity * (percentage / 100));
+    setSellQuantity(amount > 0 ? amount.toString() : '1');
+  };
+
+  const handleModalSell = async () => {
+    if (!session || !sellModalOrder || !sellQuantity) {
+      return;
+    }
+
+    const quantityInt = parseInt(sellQuantity);
+    if (isNaN(quantityInt) || quantityInt <= 0) {
+      showToast('Please enter a valid quantity', 'error');
+      return;
+    }
+
+    if (quantityInt > sellModalOrder.quantity) {
+      showToast(`Cannot sell more than ${sellModalOrder.quantity} shares`, 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+
+      const actions: any[] = [];
+
+      actions.push({
+        account: contractName,
+        name: 'placeorder',
+        authorization: [{
+          actor: session.auth.actor,
+          permission: session.auth.permission,
+        }],
+        data: {
+          account: session.auth.actor,
+          market_id: marketId,
+          outcome_id: sellModalOrder.outcome_id,
+          bid: false,
+          price: `${sellModalOrder.price} TESTIES`,
+          quantity: quantityInt,
+        },
+      });
+
+      await session.transact({ actions });
+
+      const outcomeName = outcomes.find(o => o.outcome_id === sellModalOrder.outcome_id)?.name || `Outcome ${sellModalOrder.outcome_id}`;
+      showToast(`Sell order placed: ${quantityInt} shares of "${outcomeName}" at ${sellModalOrder.price} TESTIES`, 'success');
+      setShowSellModal(false);
+      setSellQuantity('');
+      setSellModalOrder(null);
+      fetchMarketData();
+    } catch (error) {
+      console.error('Error placing sell order:', error);
+      showToast('Failed to place sell order: ' + error, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!market) {
     return <div className="loading">Loading market...</div>;
   }
@@ -801,6 +871,76 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 disabled={loading || !buyQuantity || parseInt(buyQuantity) <= 0}
               >
                 {loading ? 'Placing Order...' : `Buy ${buyModalSide === 'yes' ? 'Yes' : 'No'}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSellModal && sellModalOrder && (
+        <div className="sell-modal-overlay" onClick={() => setShowSellModal(false)}>
+          <div className="sell-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sell-modal-header">
+              <h3>Sell Position</h3>
+              <button className="sell-modal-close" onClick={() => setShowSellModal(false)}>×</button>
+            </div>
+            <div className="sell-modal-content">
+              <div className="sell-modal-info">
+                <div className="sell-info-row">
+                  <span className="sell-info-label">Outcome:</span>
+                  <span className="sell-info-value">{outcomes.find(o => o.outcome_id === sellModalOrder.outcome_id)?.name || `Outcome ${sellModalOrder.outcome_id}`}</span>
+                </div>
+                <div className="sell-info-row">
+                  <span className="sell-info-label">Current Price:</span>
+                  <span className="sell-info-value">{sellModalOrder.price} TESTIES</span>
+                </div>
+                <div className="sell-info-row">
+                  <span className="sell-info-label">Available to Sell:</span>
+                  <span className="sell-info-value">{sellModalOrder.quantity} shares</span>
+                </div>
+              </div>
+              <div className="sell-modal-form">
+                <label>
+                  Quantity to Sell
+                  <input
+                    type="number"
+                    min="1"
+                    max={sellModalOrder.quantity}
+                    step="1"
+                    value={sellQuantity}
+                    onChange={(e) => setSellQuantity(e.target.value)}
+                    placeholder="Enter quantity"
+                    autoFocus
+                  />
+                </label>
+                <div className="sell-percentage-buttons">
+                  <button type="button" onClick={() => handleSellPercentage(25)}>25%</button>
+                  <button type="button" onClick={() => handleSellPercentage(50)}>50%</button>
+                  <button type="button" onClick={() => handleSellPercentage(75)}>75%</button>
+                  <button type="button" onClick={() => handleSellPercentage(100)}>100%</button>
+                </div>
+                {sellQuantity && parseInt(sellQuantity) > 0 && (
+                  <p className="sell-modal-summary">
+                    You will sell <strong>{parseInt(sellQuantity)}</strong> shares at <strong>{sellModalOrder.price} TESTIES</strong> each.
+                    <br />
+                    Total: <strong>{parseInt(sellQuantity) * sellModalOrder.price} TESTIES</strong>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="sell-modal-actions">
+              <button 
+                className="sell-modal-cancel" 
+                onClick={() => setShowSellModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="sell-modal-confirm"
+                onClick={handleModalSell}
+                disabled={loading || !sellQuantity || parseInt(sellQuantity) <= 0 || parseInt(sellQuantity) > sellModalOrder.quantity}
+              >
+                {loading ? 'Placing Order...' : 'Sell'}
               </button>
             </div>
           </div>
@@ -1008,12 +1148,22 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         </span>
                         <span className="order-price">{order.price} TESTIES</span>
                         <span className="order-quantity">×{order.quantity}</span>
-                        <button 
-                          onClick={() => handleCancelOrder(order.order_id)}
-                          className="cancel-button"
-                        >
-                          Cancel
-                        </button>
+                        <div className="order-actions">
+                          {order.isBid && (
+                            <button 
+                              onClick={() => handleOpenSellModal(order)}
+                              className="sell-button"
+                            >
+                              Sell
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleCancelOrder(order.order_id)}
+                            className="cancel-button"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
