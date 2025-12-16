@@ -310,7 +310,7 @@ body {
   border: 1px solid rgba(124, 58, 237, 0.2);
   border-radius: 16px;
   padding: 1.5rem;
-  padding-bottom: 4rem;
+  padding-bottom: 6rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   transition: all 0.3s ease;
@@ -354,6 +354,7 @@ body {
   gap: 0.5rem;
   margin-top: 1rem;
   padding-top: 1rem;
+  padding-right: 220px;
   border-top: 1px solid rgba(124, 58, 237, 0.2);
 }
 
