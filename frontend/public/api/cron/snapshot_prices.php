@@ -106,12 +106,13 @@ function calculate_mid_price($orders) {
     
     foreach ($orders as $order) {
         $isBid = isset($order['isBid']) ? $order['isBid'] : (isset($order['is_bid']) ? $order['is_bid'] : false);
-        $price = 0;
+        $price = 0.0;
         
         if (isset($order['price'])) {
             if (is_string($order['price']) && strpos($order['price'], ' ') !== false) {
+                // Parse "1 TESTIES" format - store as direct float value
                 $parts = explode(' ', $order['price']);
-                $price = floatval($parts[0]) * 1000000;
+                $price = floatval($parts[0]);
             } else {
                 $price = floatval($order['price']);
             }
@@ -135,7 +136,7 @@ function calculate_mid_price($orders) {
         return $asks[0];
     }
     
-    return 0;
+    return 0.0;
 }
 
 function calculate_volume($orders) {
@@ -174,7 +175,7 @@ try {
     $db->exec('CREATE INDEX IF NOT EXISTS idx_market_outcome ON price_snapshots(market_id, outcome_id)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_timestamp ON price_snapshots(timestamp)');
     
-    $markets = fetch_table_rows($rpcEndpoint, $contractAccount, $contractAccount, 'markets', 100);
+    $markets = fetch_table_rows($rpcEndpoint, $contractAccount, $contractAccount, 'markets2', 100);
     log_message("Found " . count($markets) . " markets");
     
     $activeMarkets = array_filter($markets, function($m) {

@@ -132,14 +132,22 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
       return padding.top + innerHeight - (price / maxPrice) * innerHeight;
     };
 
-    const yAxisLabels = [0, 25, 50, 75, 100].filter(v => v <= maxPrice * 100 + 10);
+    // Generate y-axis labels based on max price (in TESTIES)
+    const yAxisStep = maxPrice > 10 ? Math.ceil(maxPrice / 4) : (maxPrice > 2 ? 1 : 0.5);
+    const yAxisLabels: number[] = [];
+    for (let v = 0; v <= maxPrice; v += yAxisStep) {
+      yAxisLabels.push(v);
+    }
+    if (yAxisLabels[yAxisLabels.length - 1] < maxPrice) {
+      yAxisLabels.push(Math.ceil(maxPrice));
+    }
 
     return (
       <svg className="multi-outcome-chart-svg" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet">
-        {yAxisLabels.map(pct => {
-          const y = getY(pct / 100);
+        {yAxisLabels.map(val => {
+          const y = getY(val);
           return (
-            <g key={pct}>
+            <g key={val}>
               <line
                 x1={padding.left}
                 y1={y}
@@ -154,7 +162,7 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
                 fill="#9ca3af"
                 fontSize="12"
               >
-                {pct}%
+                {val}
               </text>
             </g>
           );
@@ -212,12 +220,11 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
         {sortedOutcomes.map(outcome => {
           const color = outcomeColors[outcome.outcome_id];
           const currentPrice = getCurrentPrice(outcome.outcome_id);
-          const percentage = (currentPrice * 100).toFixed(1);
           return (
             <div key={outcome.outcome_id} className="legend-item">
               <span className="legend-dot" style={{ backgroundColor: color }}></span>
               <span className="legend-name">{outcome.name}</span>
-              <span className="legend-value">{percentage}%</span>
+              <span className="legend-value">{currentPrice > 0 ? `${currentPrice.toFixed(0)} TESTIES` : '--'}</span>
             </div>
           );
         })}
