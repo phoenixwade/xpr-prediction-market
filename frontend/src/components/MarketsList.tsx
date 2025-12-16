@@ -85,6 +85,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           category: row.category || 'General',
           expireSec: normalizeTimestamp(row.expire),
           outcomes_count: row.outcomes_count || 2,
+          resolved: !!row.resolved,
         };
 
         if (market.outcomes_count > 0) {
