@@ -350,8 +350,9 @@ body {
 
 .market-info {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.75rem;
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(124, 58, 237, 0.2);
@@ -380,6 +381,12 @@ body {
   font-size: 0.875rem;
   color: #a78bfa;
   font-weight: 500;
+}
+
+.market-total-invested {
+  font-size: 0.875rem;
+  color: #e5e7eb;
+  font-weight: 600;
 }
 
 .market-expiry {
