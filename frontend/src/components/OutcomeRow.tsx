@@ -30,7 +30,7 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
   onClickYes,
   onClickNo,
 }) => {
-  const yesPrice = stats.bestAsk ?? stats.bestBid ?? 0.5;
+  const yesPrice = stats.bestAsk ?? stats.bestBid ?? 0;
 
   const formatVolume = (vol?: number) => {
     if (!vol) return '';
@@ -39,7 +39,8 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
     return `$${vol.toFixed(0)} Vol.`;
   };
 
-  const probability = Math.round(yesPrice * 100);
+  // Display price in TESTIES instead of misleading percentage
+  const priceDisplay = yesPrice > 0 ? `${Math.round(yesPrice)} TESTIES` : '--';
 
   return (
     <div className={`outcome-row ${selected ? 'selected' : ''}`}>
@@ -51,7 +52,7 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
       </div>
       
       <div className="outcome-chance">
-        <span className="chance-value">{probability}%</span>
+        <span className="chance-value">{priceDisplay}</span>
         {stats.changePct !== undefined && stats.changePct !== 0 && (
           <span className={`chance-change ${stats.changePct > 0 ? 'up' : 'down'}`}>
             {stats.changePct > 0 ? '+' : ''}{stats.changePct}%
