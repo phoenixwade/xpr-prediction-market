@@ -545,14 +545,15 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
             <div className="positions-list">
             {marketPositions.map(mp => {
               const market = mp.market;
-              const hasWinningPosition = market.resolved && mp.positions.some(p => p.outcome_id === market.outcome && p.shares > 0);
+              const isResolved = Boolean(market.resolved);
+              const hasWinningPosition = isResolved && mp.positions.some(p => p.outcome_id === market.outcome && p.shares > 0);
 
               return (
                 <div key={mp.market_id} className="position-card">
                   <div className="position-header">
                     <h4>{market.question}</h4>
-                    <span className={`status ${market.resolved ? 'resolved' : 'active'}`}>
-                      {market.resolved ? 'Resolved' : 'Active'}
+                    <span className={`status ${isResolved ? 'resolved' : 'active'}`}>
+                      {isResolved ? 'Resolved' : 'Active'}
                     </span>
                   </div>
                   <div className="position-shares">
@@ -575,7 +576,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                       </Tooltip>
                     </div>
                   )}
-                  {market.resolved && (
+                  {isResolved && (
                     <div className="outcome-info">
                       Outcome: {mp.positions.find(p => p.outcome_id === market.outcome)?.outcome_name || 'Unknown'}
                     </div>
