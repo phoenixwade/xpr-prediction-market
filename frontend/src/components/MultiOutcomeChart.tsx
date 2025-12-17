@@ -144,7 +144,7 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
       return padding.top + innerHeight - (price / maxPrice) * innerHeight;
     };
 
-    // Generate y-axis labels based on max price (in TESTIES)
+    // Generate y-axis labels based on max price (in USDTEST)
     const yAxisStep = maxPrice > 10 ? Math.ceil(maxPrice / 4) : (maxPrice > 2 ? 1 : 0.5);
     const yAxisLabels: number[] = [];
     for (let v = 0; v <= maxPrice; v += yAxisStep) {
@@ -236,7 +236,7 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
             <div key={outcome.outcome_id} className="legend-item">
               <span className="legend-dot" style={{ backgroundColor: color }}></span>
               <span className="legend-name">{outcome.name}</span>
-              <span className="legend-value">{currentPrice > 0 ? `${currentPrice.toFixed(0)} TESTIES` : '--'}</span>
+              <span className="legend-value">{currentPrice > 0 ? `${currentPrice.toFixed(0)} USDTEST` : '--'}</span>
             </div>
           );
         })}

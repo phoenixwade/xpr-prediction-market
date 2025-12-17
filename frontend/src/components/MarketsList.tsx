@@ -130,7 +130,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           let totalInvested = 0;
           ordersResult.rows.forEach((order: any) => {
             if (order.isBid) {
-              // Price is stored as integer TESTIES
+              // Price is stored as integer USDTEST
               const price = typeof order.price === 'number' ? order.price : parseFloat(order.price) || 0;
               const quantity = order.quantity || 0;
               totalInvested += price * quantity;
@@ -377,7 +377,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                       </span>
                     </div>
                     <div className="market-total-invested">
-                      Total Invested: {market.totalInvested || 0} TESTIES
+                      Total Invested: {market.totalInvested || 0} USDTEST
                     </div>
                   </div>
                   {market.resolved && market.outcomes && (

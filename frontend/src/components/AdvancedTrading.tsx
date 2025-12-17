@@ -49,7 +49,7 @@ const AdvancedTrading: React.FC<AdvancedTradingProps> = ({ marketId, outcomeId, 
   const estimateSlippage = () => {
     if (orderType === 'market' && quantity) {
       const estimatedSlippage = (parseInt(quantity) * 0.001).toFixed(4);
-      return `Estimated slippage: ${estimatedSlippage} TESTIES`;
+      return `Estimated slippage: ${estimatedSlippage} USDTEST`;
     }
     return '';
   };
@@ -89,7 +89,7 @@ const AdvancedTrading: React.FC<AdvancedTradingProps> = ({ marketId, outcomeId, 
 
         {orderType === 'limit' && (
           <div className="form-group">
-            <label>Price (TESTIES)</label>
+            <label>Price (USDTEST)</label>
             <input
               type="number"
               step="0.0001"
@@ -179,7 +179,7 @@ const AdvancedTrading: React.FC<AdvancedTradingProps> = ({ marketId, outcomeId, 
           {orderType === 'limit' && price && (
             <div className="summary-row">
               <span>Price:</span>
-              <span>{price} TESTIES</span>
+              <span>{price} USDTEST</span>
             </div>
           )}
           {quantity && (
@@ -191,7 +191,7 @@ const AdvancedTrading: React.FC<AdvancedTradingProps> = ({ marketId, outcomeId, 
           {orderType === 'limit' && price && quantity && (
             <div className="summary-row total">
               <span>Total:</span>
-              <span>{(parseFloat(price) * parseInt(quantity)).toFixed(4)} TESTIES</span>
+              <span>{(parseFloat(price) * parseInt(quantity)).toFixed(4)} USDTEST</span>
             </div>
           )}
         </div>

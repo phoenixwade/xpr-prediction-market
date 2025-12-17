@@ -163,8 +163,9 @@ try {
     // This would require an RPC call to the XPR Network
     // For now, we'll use the defaults which represent a fresh market
     
-    // Convert spend amount to micro-TESTIES
-    // TESTIES has 0 decimals, so 1 TESTIES = 1,000,000 micro-TESTIES
+    // Convert spend amount to internal fixed-point units
+    // USDTEST has 6 decimals, so spend_amount is already in USDTEST units
+    // We multiply by SCALE for internal fixed-point representation
     $budget_micro = intval($spend_amount * SCALE);
     
     // Compute shares

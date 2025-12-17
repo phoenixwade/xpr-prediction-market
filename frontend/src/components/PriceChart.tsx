@@ -94,7 +94,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ marketId, outcomeId, outcomeNam
         <div className="chart-title">
           <h4>{outcomeName}</h4>
           <div className="current-price">
-            <span className="price">{currentPrice} TESTIES</span>
+            <span className="price">{currentPrice} USDTEST</span>
             <span className={`change ${priceChange >= 0 ? 'positive' : 'negative'}`}>
               {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
             </span>

@@ -22,9 +22,9 @@ export class Market2Table extends Table {
     public fee_bps: u16 = 100,        // Fee in basis points (100 = 1%)
     public q_yes: i64 = 0,            // YES shares outstanding (fixed-point, scaled by SCALE)
     public q_no: i64 = 0,             // NO shares outstanding (fixed-point, scaled by SCALE)
-    public collected_fees: i64 = 0,   // Accumulated fees in micro-TESTIES
-    public total_collateral_in: i64 = 0,  // Total collateral deposited (micro-TESTIES)
-    public total_collateral_out: i64 = 0  // Total collateral withdrawn (micro-TESTIES)
+    public collected_fees: i64 = 0,   // Accumulated fees in internal fixed-point units
+    public total_collateral_in: i64 = 0,  // Total collateral deposited (internal units)
+    public total_collateral_out: i64 = 0  // Total collateral withdrawn (internal units)
   ) {
     super();
   }

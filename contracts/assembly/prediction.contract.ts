@@ -24,8 +24,8 @@ import {
   DEFAULT_FEE_BPS
 } from "./lmsr";
 
-const TESTIES_SYMBOL = new Symbol("TESTIES", 0);
-const ONE_TESTIES: i64 = 1;
+const USDTEST_SYMBOL = new Symbol("USDTEST", 6);
+const ONE_USDTEST: i64 = 1000000; // 1 USDTEST = 1,000,000 base units (6 decimals)
 
 @packer
 class Transfer {
@@ -57,8 +57,8 @@ export class PredictionMarketContract extends Contract {
     if (to != this.receiver) return;
     
     check(
-      quantity.symbol.code == TESTIES_SYMBOL.code && quantity.symbol.precision == TESTIES_SYMBOL.precision,
-      "Only TESTIES token deposits allowed"
+      quantity.symbol.code == USDTEST_SYMBOL.code && quantity.symbol.precision == USDTEST_SYMBOL.precision,
+      "Only USDTEST token deposits allowed"
     );
     check(quantity.amount > 0, "Deposit amount must be positive");
 
@@ -114,8 +114,8 @@ export class PredictionMarketContract extends Contract {
     const now = currentTimeSec();
     check(i32(now) < market!.expire.secSinceEpoch(), "Market has expired");
     
-    // Convert TESTIES to micro-TESTIES (fixed-point)
-    // TESTIES has 0 decimals, so 1 TESTIES = 1_000_000 micro-TESTIES
+    // Convert USDTEST to internal fixed-point representation
+    // USDTEST has 6 decimals, so quantity.amount is already in base units (1 USDTEST = 1,000,000 base units)
     const budget_micro: i64 = quantity.amount * SCALE;
     
     // Compute shares using binary search
@@ -138,9 +138,9 @@ export class PredictionMarketContract extends Contract {
     
     // Refund excess if any
     const refund_micro = budget_micro - total_charge;
-    if (refund_micro > SCALE) { // Only refund if more than 1 TESTIES worth
+    if (refund_micro > SCALE) { // Only refund if more than 1 USDTEST worth
       const refund_tokens = refund_micro / SCALE;
-      const refundAsset = new Asset(refund_tokens, TESTIES_SYMBOL);
+      const refundAsset = new Asset(refund_tokens, USDTEST_SYMBOL);
       
       // Send refund
       const transferAction = new InlineAction<Transfer>("transfer");
@@ -301,7 +301,7 @@ export class PredictionMarketContract extends Contract {
       } else {
         const heldShares = pos != null ? pos.shares : 0;
         const shortedShares = quantity - heldShares;
-        cost = ONE_TESTIES * shortedShares;
+        cost = ONE_USDTEST * shortedShares;
         
         let bal = this.balancesTable.get(account.N);
         check(bal != null && bal.funds.amount >= cost, "Insufficient balance for short sell collateral");
@@ -347,7 +347,7 @@ export class PredictionMarketContract extends Contract {
       const refundAmount = order!.price * order!.quantity;
       let bal = this.balancesTable.get(account.N);
       if (bal == null) {
-        bal = new BalanceTable(account, new Asset(refundAmount, TESTIES_SYMBOL));
+        bal = new BalanceTable(account, new Asset(refundAmount, USDTEST_SYMBOL));
         this.balancesTable.set(bal, account);
       } else {
         bal.funds = new Asset(bal.funds.amount + refundAmount, bal.funds.symbol);
@@ -361,13 +361,13 @@ export class PredictionMarketContract extends Contract {
       if (pos != null && pos.shares < 0) {
         const shortedShares = 0 - pos.shares;
         if (shortedShares >= i64(order!.quantity)) {
-          const refund = ONE_TESTIES * i64(order!.quantity);
+          const refund = ONE_USDTEST * i64(order!.quantity);
           pos.shares += i64(order!.quantity);
           positionsV2Table.update(pos, this.receiver);
           
           let bal = this.balancesTable.get(account.N);
           if (bal == null) {
-            bal = new BalanceTable(account, new Asset(refund, TESTIES_SYMBOL));
+            bal = new BalanceTable(account, new Asset(refund, USDTEST_SYMBOL));
             this.balancesTable.set(bal, account);
           } else {
             bal.funds = new Asset(bal.funds.amount + refund, bal.funds.symbol);
@@ -422,8 +422,8 @@ export class PredictionMarketContract extends Contract {
       
       check(winning_shares > 0, "No winning position for user in this market");
       
-      // Payout: 1 share = 1 collateral unit (in micro-TESTIES)
-      // Convert from micro-TESTIES to TESTIES (integer division, floor)
+      // Payout: 1 share = 1 collateral unit (in internal fixed-point)
+      // Convert from internal units to USDTEST base units (integer division, floor)
       payout = winning_shares / SCALE;
       
       // Zero out the winning shares
@@ -445,7 +445,7 @@ export class PredictionMarketContract extends Contract {
       
       check(pos != null && pos.shares > 0, "No winning position for user in this market");
 
-      payout = ONE_TESTIES * pos!.shares;
+      payout = ONE_USDTEST * pos!.shares;
       pos!.shares = 0;
       positionsV2Table.update(pos!, this.receiver);
     }
@@ -453,7 +453,7 @@ export class PredictionMarketContract extends Contract {
     // Transfer payout to user's balance
     let bal = this.balancesTable.get(user.N);
     if (bal == null) {
-      bal = new BalanceTable(user, new Asset(payout, TESTIES_SYMBOL));
+      bal = new BalanceTable(user, new Asset(payout, USDTEST_SYMBOL));
       this.balancesTable.set(bal, user);
     } else {
       bal.funds = new Asset(bal.funds.amount + payout, bal.funds.symbol);
@@ -470,7 +470,7 @@ export class PredictionMarketContract extends Contract {
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal != null && feeBal.funds.amount > 0) {
       const amount = feeBal.funds;
-      feeBal.funds = new Asset(0, TESTIES_SYMBOL);
+      feeBal.funds = new Asset(0, USDTEST_SYMBOL);
       this.balancesTable.update(feeBal, this.receiver);
 
       const transferAction = new InlineAction<Transfer>("transfer");
@@ -615,7 +615,7 @@ export class PredictionMarketContract extends Contract {
 
     let sellerBal = this.balancesTable.get(seller.N);
     if (sellerBal == null) {
-      sellerBal = new BalanceTable(seller, new Asset(payout, TESTIES_SYMBOL));
+      sellerBal = new BalanceTable(seller, new Asset(payout, USDTEST_SYMBOL));
       this.balancesTable.set(sellerBal, seller);
     } else {
       sellerBal.funds = new Asset(sellerBal.funds.amount + payout, sellerBal.funds.symbol);
@@ -624,7 +624,7 @@ export class PredictionMarketContract extends Contract {
 
     let feeBal = this.balancesTable.get(this.receiver.N);
     if (feeBal == null) {
-      feeBal = new BalanceTable(this.receiver, new Asset(fee, TESTIES_SYMBOL));
+      feeBal = new BalanceTable(this.receiver, new Asset(fee, USDTEST_SYMBOL));
       this.balancesTable.set(feeBal, this.receiver);
     } else {
       feeBal.funds = new Asset(feeBal.funds.amount + fee, feeBal.funds.symbol);

@@ -65,7 +65,7 @@ const OrderBookDepth: React.FC<OrderBookDepthProps> = ({ bids, asks, outcomeName
       <div className="spread-indicator">
         {bids.length > 0 && asks.length > 0 && (
           <div className="spread">
-            Spread: {asks[0].price - bids[0].price} TESTIES
+            Spread: {asks[0].price - bids[0].price} USDTEST
           </div>
         )}
       </div>
