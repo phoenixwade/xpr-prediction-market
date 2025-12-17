@@ -26,6 +26,7 @@ interface MarketPositions {
   market_id: number;
   market: any;
   positions: Position[];
+  outcomes: Outcome[];
 }
 
 interface Order {
@@ -153,6 +154,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
               market_id: market.id,
               market: market,
               positions: positions,
+              outcomes: outcomes,
             });
           }
         }
@@ -578,7 +580,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
                   )}
                   {isResolved && (
                     <div className="outcome-info">
-                      Outcome: {mp.positions.find(p => p.outcome_id === market.outcome)?.outcome_name || 'Unknown'}
+                      Outcome: {mp.outcomes.find(o => o.outcome_id === market.outcome)?.name || 'Unknown'}
                     </div>
                   )}
                 </div>
