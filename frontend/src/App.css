@@ -5232,6 +5232,58 @@ body {
   color: #a78bfa;
 }
 
+.buy-modal-loading {
+  color: #9ca3af;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.buy-modal-quote {
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.buy-modal-quote .quote-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.buy-modal-quote .quote-row:last-of-type {
+  border-bottom: none;
+}
+
+.buy-modal-quote .quote-row span {
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.buy-modal-quote .quote-row strong {
+  color: #a78bfa;
+  font-size: 0.9rem;
+}
+
+.buy-modal-quote .quote-row.odds-change strong {
+  color: #10b981;
+}
+
+.buy-modal-payout {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(124, 58, 237, 0.2);
+  color: #d1d5db;
+  font-size: 0.9rem;
+}
+
+.buy-modal-payout strong {
+  color: #10b981;
+}
+
 .buy-modal-actions {
   display: flex;
   gap: 1rem;

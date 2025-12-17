@@ -3,6 +3,7 @@ export { Market2Table } from "./market2.table";
 export { OrderTable } from "./order.table";
 export { PositionTable } from "./position.table";
 export { PositionV2Table } from "./positionv2.table";
+export { PositionLmsrTable } from "./positionlmsr.table";
 export { OutcomeTable } from "./outcome.table";
 export { BalanceTable } from "./balance.table";
 export { ConfigTable } from "./config.table";
