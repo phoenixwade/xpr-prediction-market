@@ -85,6 +85,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [showSellModal, setShowSellModal] = useState(false);
         const [sellModalOrder, setSellModalOrder] = useState<Order | null>(null);
         const [sellQuantity, setSellQuantity] = useState('');
+        const [relatedMarkets, setRelatedMarkets] = useState<any[]>([]);
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -193,6 +194,29 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   }, [marketId, activityFilter, activityUserFilter]);
 
+  const fetchRelatedMarkets = useCallback(async (category: string) => {
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
+      const result = await rpc.get_table_rows({
+        code: contractName,
+        scope: contractName,
+        table: 'markets2',
+        limit: 100,
+      });
+      
+      if (result.rows.length > 0) {
+        const related = result.rows
+          .filter((m: any) => m.market_id !== marketId && m.category === category && !m.resolved)
+          .slice(0, 4);
+        setRelatedMarkets(related);
+      }
+    } catch (error) {
+      console.error('Error fetching related markets:', error);
+    }
+  }, [marketId]);
+
   useEffect(() => {
     fetchMarketData();
     fetchComments();
@@ -204,6 +228,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       clearInterval(activityInterval);
     };
   }, [fetchMarketData, fetchComments, fetchActivity]);
+
+  useEffect(() => {
+    if (market?.category) {
+      fetchRelatedMarkets(market.category);
+    }
+  }, [market?.category, fetchRelatedMarkets]);
 
   const handlePlaceOrder = async () => {
     if (!session || !price || !quantity) {
@@ -1113,7 +1143,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         <div className="outcomes-list">
           <div className="outcomes-header">
             <span className="header-outcome">Outcome</span>
-            <span className="header-chance">% Chance</span>
+            <span className="header-chance">Price</span>
             <span className="header-actions">Trade</span>
           </div>
           {outcomes
@@ -1200,12 +1230,19 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 {bids.length === 0 ? (
                   <div className="no-orders">No bids</div>
                 ) : (
-                  bids.map(order => (
-                    <div key={order.order_id} className="order-row">
-                      <span className="price">{order.price} TESTIES</span>
-                      <span className="quantity">{order.quantity}</span>
-                    </div>
-                  ))
+                  (() => {
+                    const maxQty = Math.max(...bids.map(o => o.quantity));
+                    return bids.map(order => (
+                      <div 
+                        key={order.order_id} 
+                        className="order-row"
+                        style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
+                      >
+                        <span className="price">{order.price} TESTIES</span>
+                        <span className="quantity">{order.quantity}</span>
+                      </div>
+                    ));
+                  })()
                 )}
               </div>
             </div>
@@ -1220,17 +1257,45 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 {asks.length === 0 ? (
                   <div className="no-orders">No asks</div>
                 ) : (
-                  asks.map(order => (
-                    <div key={order.order_id} className="order-row">
-                      <span className="price">{order.price} TESTIES</span>
-                      <span className="quantity">{order.quantity}</span>
-                    </div>
-                  ))
+                  (() => {
+                    const maxQty = Math.max(...asks.map(o => o.quantity));
+                    return asks.map(order => (
+                      <div 
+                        key={order.order_id} 
+                        className="order-row"
+                        style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
+                      >
+                        <span className="price">{order.price} TESTIES</span>
+                        <span className="quantity">{order.quantity}</span>
+                      </div>
+                    ));
+                  })()
                 )}
               </div>
             </div>
           </div>
         </div>
+
+        {relatedMarkets.length > 0 && (
+          <div className="related-markets">
+            <h3>Related Markets</h3>
+            <div className="related-markets-grid">
+              {relatedMarkets.map((rm: any) => (
+                <div 
+                  key={rm.market_id} 
+                  className="related-market-card"
+                  onClick={() => window.location.href = `/market/${rm.market_id}`}
+                >
+                  <div className="related-market-category">{rm.category}</div>
+                  <div className="related-market-question">{rm.question}</div>
+                  <div className="related-market-expiry">
+                    Expires: {formatDate(normalizeTimestamp(rm.expire))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
                   </>
                 ) : (
