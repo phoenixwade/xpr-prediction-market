@@ -311,7 +311,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           data: {
             from: session.auth.actor,
             to: contractName,
-            quantity: `${depositNeeded} TESTIES`,
+            quantity: `${depositNeeded} USDTEST`,
             memo: `Deposit for order ${marketId}`,
           },
         });
@@ -329,7 +329,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           market_id: marketId,
           outcome_id: selectedOutcomeId,
           bid: orderType === 'buy',
-          price: `${priceAmount.toFixed(0)} TESTIES`,
+          price: `${priceAmount.toFixed(0)} USDTEST`,
           quantity: quantityInt,
         },
       });
@@ -417,7 +417,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             data: {
               from: session.auth.actor,
               to: contractName,
-              quantity: `${depositNeeded} TESTIES`,
+              quantity: `${depositNeeded} USDTEST`,
               memo: `Deposit for order ${marketId}`,
             },
           });
@@ -435,7 +435,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             market_id: marketId,
             outcome_id: selectedOutcomeId,
             bid: isBid,
-            price: `${priceAmount.toFixed(0)} TESTIES`,
+            price: `${priceAmount.toFixed(0)} USDTEST`,
             quantity: quantityInt,
           },
         });
@@ -689,7 +689,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
       const actions: any[] = [];
 
-      // LMSR buy: Transfer TESTIES directly to the contract with the buy memo
+      // LMSR buy: Transfer USDTEST directly to the contract with the buy memo
       actions.push({
         account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
         name: 'transfer',
@@ -700,7 +700,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         data: {
           from: session.auth.actor,
           to: contractName,
-          quantity: `${spendAmount} TESTIES`,
+          quantity: `${spendAmount} USDTEST`,
           memo: memo,
         },
       });
@@ -708,7 +708,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       await session.transact({ actions });
 
       const estimatedShares = lmsrQuote?.estimated_shares?.toFixed(2) || spendAmount;
-      showToast(`Bought ~${estimatedShares} ${buyModalSide.toUpperCase()} shares of "${buyModalOutcome.name}" for ${spendAmount} TESTIES`, 'success');
+      showToast(`Bought ~${estimatedShares} ${buyModalSide.toUpperCase()} shares of "${buyModalOutcome.name}" for ${spendAmount} USDTEST`, 'success');
       setShowBuyModal(false);
       setBuyQuantity('');
       setLmsrQuote(null);
@@ -767,7 +767,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           market_id: marketId,
           outcome_id: sellModalOrder.outcome_id,
           bid: false,
-          price: `${sellModalOrder.price} TESTIES`,
+          price: `${sellModalOrder.price} USDTEST`,
           quantity: quantityInt,
         },
       });
@@ -775,7 +775,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       await session.transact({ actions });
 
       const outcomeName = outcomes.find(o => o.outcome_id === sellModalOrder.outcome_id)?.name || `Outcome ${sellModalOrder.outcome_id}`;
-      showToast(`Sell order placed: ${quantityInt} shares of "${outcomeName}" at ${sellModalOrder.price} TESTIES`, 'success');
+      showToast(`Sell order placed: ${quantityInt} shares of "${outcomeName}" at ${sellModalOrder.price} USDTEST`, 'success');
       setShowSellModal(false);
       setSellQuantity('');
       setSellModalOrder(null);
@@ -853,12 +853,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               <p className="buy-modal-description">
                 You are buying <strong>{buyModalSide === 'yes' ? 'YES' : 'NO'}</strong> shares for "{buyModalOutcome.name}".
                 {buyModalSide === 'yes' 
-                  ? ' If this outcome wins, each share pays 1 TESTIES.'
-                  : ' If this outcome loses, each share pays 1 TESTIES.'}
+                  ? ' If this outcome wins, each share pays 1 USDTEST.'
+                  : ' If this outcome loses, each share pays 1 USDTEST.'}
               </p>
               <div className="buy-modal-form">
                 <label>
-                  Amount (TESTIES to spend)
+                  Amount (USDTEST to spend)
                   <input
                     type="number"
                     min="1"
@@ -873,7 +873,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         setLmsrQuote(null);
                       }
                     }}
-                    placeholder="Enter amount in TESTIES"
+                    placeholder="Enter amount in USDTEST"
                     autoFocus
                   />
                 </label>
@@ -888,18 +888,18 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                     </div>
                     <div className="quote-row">
                       <span>Fee (1%):</span>
-                      <strong>{lmsrQuote.fee?.toFixed(4)} TESTIES</strong>
+                      <strong>{lmsrQuote.fee?.toFixed(4)} USDTEST</strong>
                     </div>
                     <div className="quote-row">
                       <span>Avg Price/Share:</span>
-                      <strong>{lmsrQuote.avg_price_per_share?.toFixed(4)} TESTIES</strong>
+                      <strong>{lmsrQuote.avg_price_per_share?.toFixed(4)} USDTEST</strong>
                     </div>
                     <div className="quote-row odds-change">
                       <span>New Odds (after buy):</span>
                       <strong>Yes: {lmsrQuote.new_odds_after_purchase?.yes?.toFixed(1)}% / No: {lmsrQuote.new_odds_after_purchase?.no?.toFixed(1)}%</strong>
                     </div>
                     <p className="buy-modal-payout">
-                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, you receive <strong>{lmsrQuote.estimated_shares?.toFixed(2)} TESTIES</strong>.
+                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, you receive <strong>{lmsrQuote.estimated_shares?.toFixed(2)} USDTEST</strong>.
                     </p>
                   </div>
                 )}
@@ -944,7 +944,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 </div>
                 <div className="sell-info-row">
                   <span className="sell-info-label">Current Price:</span>
-                  <span className="sell-info-value">{sellModalOrder.price} TESTIES</span>
+                  <span className="sell-info-value">{sellModalOrder.price} USDTEST</span>
                 </div>
                 <div className="sell-info-row">
                   <span className="sell-info-label">Available to Sell:</span>
@@ -973,9 +973,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 </div>
                 {sellQuantity && parseInt(sellQuantity) > 0 && (
                   <p className="sell-modal-summary">
-                    You will sell <strong>{parseInt(sellQuantity)}</strong> shares at <strong>{sellModalOrder.price} TESTIES</strong> each.
+                    You will sell <strong>{parseInt(sellQuantity)}</strong> shares at <strong>{sellModalOrder.price} USDTEST</strong> each.
                     <br />
-                    Total: <strong>{parseInt(sellQuantity) * sellModalOrder.price} TESTIES</strong>
+                    Total: <strong>{parseInt(sellQuantity) * sellModalOrder.price} USDTEST</strong>
                   </p>
                 )}
               </div>
@@ -1102,7 +1102,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                       case 'placeorder':
                         const outcomeName = outcomes.find(o => o.outcome_id === activity.outcome_id)?.name || `Outcome ${activity.outcome_id}`;
                         const priceValue = activity.price ? parseFloat(activity.price.split(' ')[0]) : 0;
-                        activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue} TESTIES`;
+                        activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue} USDTEST`;
                         activityClass = activity.side === 'buy' ? 'activity-buy' : 'activity-sell';
                         break;
                       case 'resolve':
@@ -1146,7 +1146,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             <div className="trading-guide-content">
               <h4>How Trading Works</h4>
               <p>Buy <strong>YES</strong> or <strong>NO</strong> shares depending on your prediction. Buying shares is like betting on the outcome. Odds shift in real time as other traders bet.</p>
-              <p>Sell your shares at any time, or wait until the market ends to redeem winning shares for 1 TESTIES each.</p>
+              <p>Sell your shares at any time, or wait until the market ends to redeem winning shares for 1 USDTEST each.</p>
             </div>
             <button className="trading-guide-dismiss" onClick={dismissTradingGuide}>
               Got it
@@ -1205,7 +1205,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         <span className={`order-side ${order.isBid ? 'bid' : 'ask'}`}>
                           {order.isBid ? 'BUY' : 'SELL'}
                         </span>
-                        <span className="order-price">{order.price} TESTIES</span>
+                        <span className="order-price">{order.price} USDTEST</span>
                         <span className="order-quantity">×{order.quantity}</span>
                         <div className="order-actions">
                           {order.isBid && (
@@ -1259,7 +1259,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         className="order-row"
                         style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
                       >
-                        <span className="price">{order.price} TESTIES</span>
+                        <span className="price">{order.price} USDTEST</span>
                         <span className="quantity">{order.quantity}</span>
                       </div>
                     ));
@@ -1286,7 +1286,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         className="order-row"
                         style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
                       >
-                        <span className="price">{order.price} TESTIES</span>
+                        <span className="price">{order.price} USDTEST</span>
                         <span className="quantity">{order.quantity}</span>
                       </div>
                     ));

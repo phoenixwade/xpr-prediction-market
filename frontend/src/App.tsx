@@ -291,7 +291,7 @@ function App() {
         )}
         <div className="header-actions">
           {!session ? (
-            <Tooltip text="Connect your XPR wallet to start trading. You'll need TESTIES tokens to place orders." position="bottom">
+            <Tooltip text="Connect your XPR wallet to start trading. You'll need USDTEST tokens to place orders." position="bottom">
               <button onClick={handleLogin} className="connect-button">
                 Connect Wallet
               </button>

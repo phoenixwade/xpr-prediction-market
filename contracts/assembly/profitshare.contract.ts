@@ -13,7 +13,7 @@ import {
 } from "proton-tsc";
 import { UnclaimedTable, ProfitRoundTable } from "./tables";
 
-const TESTIES_SYMBOL = new Symbol("TESTIES", 2);
+const USDTEST_SYMBOL = new Symbol("USDTEST", 6);
 
 @packer
 class Transfer {
@@ -52,17 +52,17 @@ export class ProfitShareContract extends Contract {
 
       let unclaimed = this.unclaimedTable.get(user.N);
       if (unclaimed == null) {
-        unclaimed = new UnclaimedTable(user, new Asset(amount, TESTIES_SYMBOL));
+        unclaimed = new UnclaimedTable(user, new Asset(amount, USDTEST_SYMBOL));
         this.unclaimedTable.set(unclaimed, this.receiver);
       } else {
-        unclaimed.balance = new Asset(unclaimed.balance.amount + amount, TESTIES_SYMBOL);
+        unclaimed.balance = new Asset(unclaimed.balance.amount + amount, USDTEST_SYMBOL);
         this.unclaimedTable.update(unclaimed, this.receiver);
       }
       
       totalDistributed += amount;
     }
 
-    const round = new ProfitRoundTable(round_id, 0, new Asset(totalDistributed, TESTIES_SYMBOL));
+    const round = new ProfitRoundTable(round_id, 0, new Asset(totalDistributed, USDTEST_SYMBOL));
     this.profitRoundsTable.set(round, this.receiver);
 
     print(`Distributed ${totalDistributed} to ${users.length} users for round ${round_id}`);

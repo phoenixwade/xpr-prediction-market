@@ -104,7 +104,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ timeframe }) => {
                 <a href={`/profile/${entry.account}`}>{entry.account}</a>
               </div>
               <div className="col-volume">
-                {entry.totalVolume} TESTIES
+                {entry.totalVolume} USDTEST
               </div>
               <div className="col-trades">{entry.totalTrades}</div>
               <div className="col-winrate">
@@ -112,7 +112,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ timeframe }) => {
               </div>
               <div className={`col-pl ${entry.profitLoss >= 0 ? 'positive' : 'negative'}`}>
                 {entry.profitLoss >= 0 ? '+' : ''}
-                {entry.profitLoss} TESTIES
+                {entry.profitLoss} USDTEST
               </div>
             </div>
           ))

@@ -9,7 +9,7 @@ const HowToUse: React.FC = () => {
         <div className="how-to-use-intro">
           <p>
             Welcome to the prediction market! This platform allows you to trade shares on the outcome of future events.
-            You can buy "Yes" or "No" shares for any market, and if your prediction is correct, each share pays out 1 TESTIES.
+            You can buy "Yes" or "No" shares for any market, and if your prediction is correct, each share pays out 1 USDTEST.
           </p>
         </div>
 
@@ -25,7 +25,7 @@ const HowToUse: React.FC = () => {
             <ul>
               <li>Your wallet connection persists across page refreshes</li>
               <li>You can disconnect at any time by clicking "Disconnect"</li>
-              <li>Your wallet holds your TESTIES tokens used for trading</li>
+              <li>Your wallet holds your USDTEST tokens used for trading</li>
             </ul>
           </div>
 
@@ -56,7 +56,7 @@ const HowToUse: React.FC = () => {
             </ul>
             <p>
               Prices are shown as decimals (e.g., 0.65 means 65¢ per share). If you buy a "Yes" share at 0.65 and the outcome is "Yes", 
-              you'll receive 1 TESTIES, making a profit of 0.35 TESTIES per share.
+              you'll receive 1 USDTEST, making a profit of 0.35 USDTEST per share.
             </p>
           </div>
         </div>
@@ -77,12 +77,12 @@ const HowToUse: React.FC = () => {
               <li><strong>Click "Place Order":</strong> Confirm the transaction in your wallet</li>
             </ol>
             <p>
-              <strong>Important:</strong> When you place an order, the required TESTIES is automatically transferred from your wallet.
+              <strong>Important:</strong> When you place an order, the required USDTEST is automatically transferred from your wallet.
               You don't need to deposit funds separately!
             </p>
             <ul>
-              <li><strong>Buy Orders:</strong> You'll transfer (price × quantity) TESTIES</li>
-              <li><strong>Sell Orders:</strong> If you don't own shares, you'll transfer 1 TESTIES per share as collateral</li>
+              <li><strong>Buy Orders:</strong> You'll transfer (price × quantity) USDTEST</li>
+              <li><strong>Sell Orders:</strong> If you don't own shares, you'll transfer 1 USDTEST per share as collateral</li>
             </ul>
           </div>
 
@@ -130,7 +130,7 @@ const HowToUse: React.FC = () => {
               Click on "Portfolio" in the navigation to view:
             </p>
             <ul>
-              <li><strong>Available Balance:</strong> TESTIES available for trading (from deposits, cancelled orders, and trade profits)</li>
+              <li><strong>Available Balance:</strong> USDTEST available for trading (from deposits, cancelled orders, and trade profits)</li>
               <li><strong>Your Positions:</strong> Shares you own in each market</li>
             </ul>
             <p>
@@ -147,7 +147,7 @@ const HowToUse: React.FC = () => {
           <div className="how-to-use-step">
             <h3>Step 8: Withdrawing Funds</h3>
             <p>
-              To withdraw TESTIES back to your wallet:
+              To withdraw USDTEST back to your wallet:
             </p>
             <ol>
               <li>Go to your Portfolio</li>
@@ -172,7 +172,7 @@ const HowToUse: React.FC = () => {
             </p>
             <ul>
               <li>No more trading is allowed</li>
-              <li>Winning shares can be claimed for 1 TESTIES each</li>
+              <li>Winning shares can be claimed for 1 USDTEST each</li>
               <li>Losing shares become worthless</li>
             </ul>
           </div>
@@ -188,7 +188,7 @@ const HowToUse: React.FC = () => {
               <li>Confirm the transaction in your wallet</li>
             </ol>
             <p>
-              Your winnings (1 TESTIES per winning share) will be added to your internal balance.
+              Your winnings (1 USDTEST per winning share) will be added to your internal balance.
               You can then withdraw them to your wallet or use them to trade in other markets.
             </p>
           </div>
@@ -219,9 +219,9 @@ const HowToUse: React.FC = () => {
               For example:
             </p>
             <ul>
-              <li>Buyer pays 0.6500 TESTIES for 1 share</li>
-              <li>Seller receives 0.6499 TESTIES (0.6500 - 0.01% fee)</li>
-              <li>Platform collects 0.0001 TESTIES as fee</li>
+              <li>Buyer pays 0.6500 USDTEST for 1 share</li>
+              <li>Seller receives 0.6499 USDTEST (0.6500 - 0.01% fee)</li>
+              <li>Platform collects 0.0001 USDTEST as fee</li>
             </ul>
           </div>
         </div>
@@ -236,7 +236,7 @@ const HowToUse: React.FC = () => {
             <ul>
               <li>Hover over elements with tooltips (ℹ️) for quick help</li>
               <li>Check your wallet connection if transactions fail</li>
-              <li>Make sure you have enough TESTIES in your wallet for trading</li>
+              <li>Make sure you have enough USDTEST in your wallet for trading</li>
               <li>Contact support through our social channels (links in footer)</li>
             </ul>
           </div>
