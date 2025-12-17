@@ -49,6 +49,60 @@ echo -e "${YELLOW}Navigating to frontend directory...${NC}"
 cd "$FRONTEND_DIR"
 log "Changed to frontend directory: $FRONTEND_DIR"
 
+echo -e "${YELLOW}========================================${NC}"
+echo -e "${YELLOW}Verifying Admin Resolve Files${NC}"
+echo -e "${YELLOW}========================================${NC}"
+
+ADMIN_RESOLVE_FILE="src/components/AdminResolve.tsx"
+ADMIN_PANEL_FILE="src/components/AdminPanel.tsx"
+
+if [ -f "$ADMIN_RESOLVE_FILE" ]; then
+    ADMIN_RESOLVE_SIZE=$(wc -c < "$ADMIN_RESOLVE_FILE")
+    ADMIN_RESOLVE_LINES=$(wc -l < "$ADMIN_RESOLVE_FILE")
+    ADMIN_RESOLVE_MOD=$(stat -c %y "$ADMIN_RESOLVE_FILE" 2>/dev/null || stat -f %Sm "$ADMIN_RESOLVE_FILE" 2>/dev/null)
+    log "AdminResolve.tsx: EXISTS ($ADMIN_RESOLVE_LINES lines, $ADMIN_RESOLVE_SIZE bytes, modified: $ADMIN_RESOLVE_MOD)"
+    echo -e "${GREEN}AdminResolve.tsx: EXISTS${NC}"
+    echo -e "  Lines: ${YELLOW}$ADMIN_RESOLVE_LINES${NC}"
+    echo -e "  Size: ${YELLOW}$ADMIN_RESOLVE_SIZE bytes${NC}"
+    echo -e "  Modified: ${YELLOW}$ADMIN_RESOLVE_MOD${NC}"
+    if grep -q "isAdminUser" "$ADMIN_RESOLVE_FILE"; then
+        echo -e "  ${GREEN}Contains isAdminUser function${NC}"
+    else
+        echo -e "  ${RED}WARNING: Missing isAdminUser function${NC}"
+    fi
+else
+    log "ERROR: AdminResolve.tsx NOT FOUND at $FRONTEND_DIR/$ADMIN_RESOLVE_FILE"
+    echo -e "${RED}AdminResolve.tsx: NOT FOUND${NC}"
+    echo -e "${RED}Expected at: $FRONTEND_DIR/$ADMIN_RESOLVE_FILE${NC}"
+    echo -e "${YELLOW}Please upload AdminResolve.tsx to frontend/src/components/${NC}"
+fi
+
+if [ -f "$ADMIN_PANEL_FILE" ]; then
+    ADMIN_PANEL_SIZE=$(wc -c < "$ADMIN_PANEL_FILE")
+    ADMIN_PANEL_LINES=$(wc -l < "$ADMIN_PANEL_FILE")
+    ADMIN_PANEL_MOD=$(stat -c %y "$ADMIN_PANEL_FILE" 2>/dev/null || stat -f %Sm "$ADMIN_PANEL_FILE" 2>/dev/null)
+    log "AdminPanel.tsx: EXISTS ($ADMIN_PANEL_LINES lines, $ADMIN_PANEL_SIZE bytes, modified: $ADMIN_PANEL_MOD)"
+    echo -e "${GREEN}AdminPanel.tsx: EXISTS${NC}"
+    echo -e "  Lines: ${YELLOW}$ADMIN_PANEL_LINES${NC}"
+    echo -e "  Size: ${YELLOW}$ADMIN_PANEL_SIZE bytes${NC}"
+    echo -e "  Modified: ${YELLOW}$ADMIN_PANEL_MOD${NC}"
+    if grep -q "forceresolve" "$ADMIN_PANEL_FILE"; then
+        echo -e "  ${GREEN}Contains forceresolve tab code${NC}"
+    else
+        echo -e "  ${RED}WARNING: Missing forceresolve tab code - file may be outdated${NC}"
+    fi
+    if grep -q "AdminResolve" "$ADMIN_PANEL_FILE"; then
+        echo -e "  ${GREEN}Contains AdminResolve import${NC}"
+    else
+        echo -e "  ${RED}WARNING: Missing AdminResolve import - file may be outdated${NC}"
+    fi
+else
+    log "ERROR: AdminPanel.tsx NOT FOUND at $FRONTEND_DIR/$ADMIN_PANEL_FILE"
+    echo -e "${RED}AdminPanel.tsx: NOT FOUND${NC}"
+fi
+
+echo ""
+
 if ! command -v node &> /dev/null; then
     log "ERROR: Node.js is not installed or not in PATH"
     echo -e "${RED}Error: Node.js is not installed or not in PATH${NC}"
@@ -102,6 +156,17 @@ EOF
     
     grep -E '^[[:space:]]*REACT_APP_' ../.env | sed -E 's/^[[:space:]]*//' >> .env
     echo -e "${GREEN}Frontend .env generated successfully!${NC}"
+    
+    echo -e "${YELLOW}Verifying REACT_APP_ADMIN_USERS...${NC}"
+    ADMIN_USERS_VALUE=$(grep -E '^REACT_APP_ADMIN_USERS=' .env | sed 's/REACT_APP_ADMIN_USERS=//')
+    if [ -n "$ADMIN_USERS_VALUE" ]; then
+        log "REACT_APP_ADMIN_USERS: $ADMIN_USERS_VALUE"
+        echo -e "${GREEN}REACT_APP_ADMIN_USERS: ${YELLOW}$ADMIN_USERS_VALUE${NC}"
+    else
+        log "WARNING: REACT_APP_ADMIN_USERS not set in .env"
+        echo -e "${RED}WARNING: REACT_APP_ADMIN_USERS not set!${NC}"
+        echo -e "${YELLOW}Add to root .env: REACT_APP_ADMIN_USERS=jimtacy|homebloks|phoenixwade${NC}"
+    fi
     echo ""
 else
     log "WARNING: Root .env file not found, using defaults"
