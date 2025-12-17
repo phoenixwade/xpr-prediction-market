@@ -15,7 +15,16 @@ export class Market2Table extends Table {
     public status: u8 = 1,
     public suggested_by: Name = EMPTY_NAME,
     public approved_by: Name = EMPTY_NAME,
-    public created_at: u32 = 0
+    public created_at: u32 = 0,
+    // LMSR AMM fields (version 2+)
+    public version: u8 = 2,           // 1 = legacy order-book, 2 = LMSR AMM
+    public b: i64 = 500000000,        // Liquidity parameter (500 * SCALE, where SCALE = 1_000_000)
+    public fee_bps: u16 = 100,        // Fee in basis points (100 = 1%)
+    public q_yes: i64 = 0,            // YES shares outstanding (fixed-point, scaled by SCALE)
+    public q_no: i64 = 0,             // NO shares outstanding (fixed-point, scaled by SCALE)
+    public collected_fees: i64 = 0,   // Accumulated fees in micro-TESTIES
+    public total_collateral_in: i64 = 0,  // Total collateral deposited (micro-TESTIES)
+    public total_collateral_out: i64 = 0  // Total collateral withdrawn (micro-TESTIES)
   ) {
     super();
   }

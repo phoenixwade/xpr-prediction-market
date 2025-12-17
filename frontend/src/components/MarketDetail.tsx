@@ -86,6 +86,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [sellModalOrder, setSellModalOrder] = useState<Order | null>(null);
         const [sellQuantity, setSellQuantity] = useState('');
         const [relatedMarkets, setRelatedMarkets] = useState<any[]>([]);
+        const [lmsrQuote, setLmsrQuote] = useState<any>(null);
+        const [lmsrQuoteLoading, setLmsrQuoteLoading] = useState(false);
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -639,96 +641,81 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     setBuyModalOutcome(outcome);
     setBuyModalSide(side);
     setBuyQuantity('');
+    setLmsrQuote(null);
     setShowBuyModal(true);
   };
+
+  const fetchLmsrQuote = useCallback(async (spendAmount: number, outcome: string) => {
+    if (spendAmount <= 0) {
+      setLmsrQuote(null);
+      return;
+    }
+    
+    setLmsrQuoteLoading(true);
+    try {
+      const response = await fetch(`/api/lmsr_quote.php?market_id=${marketId}&outcome=${outcome}&spend_amount=${spendAmount}`);
+      const data = await response.json();
+      if (!data.error) {
+        setLmsrQuote(data);
+      }
+    } catch (error) {
+      console.error('Error fetching LMSR quote:', error);
+    } finally {
+      setLmsrQuoteLoading(false);
+    }
+  }, [marketId]);
 
   const handleModalBuy = async () => {
     if (!session || !buyModalOutcome || !buyQuantity) {
       return;
     }
 
-    const quantityInt = parseInt(buyQuantity);
-    if (isNaN(quantityInt) || quantityInt <= 0) {
-      showToast('Please enter a valid quantity', 'error');
+    const spendAmount = parseInt(buyQuantity);
+    if (isNaN(spendAmount) || spendAmount <= 0) {
+      showToast('Please enter a valid amount', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
-      // For buying, we use a default price of 1 TESTIES per share (market order style)
-      const priceAmount = 1;
-      const isBid = buyModalSide === 'yes';
-
-      // Calculate required amount
-      const requiredAmount = priceAmount * quantityInt;
-
-      // Fetch user's internal balance
-      const balanceResult = await rpc.get_table_rows({
-        code: contractName,
-        scope: contractName,
-        table: 'balances',
-        lower_bound: session.auth.actor.toString(),
-        upper_bound: session.auth.actor.toString(),
-        limit: 1,
-      });
-
-      let internalBalance = 0;
-      if (balanceResult.rows.length > 0) {
-        const funds = balanceResult.rows[0].funds;
-        const parts = funds.split(' ');
-        internalBalance = Math.floor(parseFloat(parts[0]) || 0);
-      }
+      // For LMSR, we use a transfer with memo format: "buy:<market_id>:<outcome>:<min_shares>"
+      // The outcome is the outcome_id for the selected outcome
+      // min_shares is for slippage protection (use 0 for no protection, or calculate from quote)
+      const outcomeStr = buyModalSide === 'yes' ? buyModalOutcome.outcome_id.toString() : buyModalOutcome.outcome_id.toString();
+      const minShares = lmsrQuote?.min_shares_for_slippage || 0;
+      const memo = `buy:${marketId}:${outcomeStr}:${minShares}`;
 
       const actions: any[] = [];
 
-      // Auto-deposit if internal balance is insufficient
-      const depositNeeded = Math.max(0, Math.floor(requiredAmount) - internalBalance);
-      if (depositNeeded > 0) {
-        actions.push({
-          account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
-          name: 'transfer',
-          authorization: [{
-            actor: session.auth.actor,
-            permission: session.auth.permission,
-          }],
-          data: {
-            from: session.auth.actor,
-            to: contractName,
-            quantity: `${depositNeeded} TESTIES`,
-            memo: `Deposit for order ${marketId}`,
-          },
-        });
-      }
-
+      // LMSR buy: Transfer TESTIES directly to the contract with the buy memo
       actions.push({
-        account: contractName,
-        name: 'placeorder',
+        account: process.env.REACT_APP_TOKEN_CONTRACT || 'tokencreate',
+        name: 'transfer',
         authorization: [{
           actor: session.auth.actor,
           permission: session.auth.permission,
         }],
         data: {
-          account: session.auth.actor,
-          market_id: marketId,
-          outcome_id: buyModalOutcome.outcome_id,
-          bid: isBid,
-          price: `${priceAmount} TESTIES`,
-          quantity: quantityInt,
+          from: session.auth.actor,
+          to: contractName,
+          quantity: `${spendAmount} TESTIES`,
+          memo: memo,
         },
       });
 
       await session.transact({ actions });
 
-      showToast(`Order placed: ${buyModalSide.toUpperCase()} ${quantityInt} shares of "${buyModalOutcome.name}"`, 'success');
+      const estimatedShares = lmsrQuote?.estimated_shares?.toFixed(2) || spendAmount;
+      showToast(`Bought ~${estimatedShares} ${buyModalSide.toUpperCase()} shares of "${buyModalOutcome.name}" for ${spendAmount} TESTIES`, 'success');
       setShowBuyModal(false);
       setBuyQuantity('');
+      setLmsrQuote(null);
       fetchMarketData();
     } catch (error) {
-      console.error('Error placing order:', error);
-      showToast('Failed to place order: ' + error, 'error');
+      console.error('Error placing LMSR buy:', error);
+      showToast('Failed to buy shares: ' + error, 'error');
     } finally {
       setLoading(false);
     }
@@ -871,20 +858,54 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </p>
               <div className="buy-modal-form">
                 <label>
-                  Quantity (TESTIES to spend)
+                  Amount (TESTIES to spend)
                   <input
                     type="number"
                     min="1"
                     step="1"
                     value={buyQuantity}
-                    onChange={(e) => setBuyQuantity(e.target.value)}
+                    onChange={(e) => {
+                      setBuyQuantity(e.target.value);
+                      const amount = parseInt(e.target.value);
+                      if (amount > 0) {
+                        fetchLmsrQuote(amount, buyModalSide);
+                      } else {
+                        setLmsrQuote(null);
+                      }
+                    }}
                     placeholder="Enter amount in TESTIES"
                     autoFocus
                   />
                 </label>
-                {buyQuantity && parseInt(buyQuantity) > 0 && (
+                {lmsrQuoteLoading && (
+                  <p className="buy-modal-loading">Calculating...</p>
+                )}
+                {lmsrQuote && !lmsrQuoteLoading && (
+                  <div className="buy-modal-quote">
+                    <div className="quote-row">
+                      <span>Estimated Shares:</span>
+                      <strong>{lmsrQuote.estimated_shares?.toFixed(4)}</strong>
+                    </div>
+                    <div className="quote-row">
+                      <span>Fee (1%):</span>
+                      <strong>{lmsrQuote.fee?.toFixed(4)} TESTIES</strong>
+                    </div>
+                    <div className="quote-row">
+                      <span>Avg Price/Share:</span>
+                      <strong>{lmsrQuote.avg_price_per_share?.toFixed(4)} TESTIES</strong>
+                    </div>
+                    <div className="quote-row odds-change">
+                      <span>New Odds (after buy):</span>
+                      <strong>Yes: {lmsrQuote.new_odds_after_purchase?.yes?.toFixed(1)}% / No: {lmsrQuote.new_odds_after_purchase?.no?.toFixed(1)}%</strong>
+                    </div>
+                    <p className="buy-modal-payout">
+                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, you receive <strong>{lmsrQuote.estimated_shares?.toFixed(2)} TESTIES</strong>.
+                    </p>
+                  </div>
+                )}
+                {!lmsrQuote && !lmsrQuoteLoading && buyQuantity && parseInt(buyQuantity) > 0 && (
                   <p className="buy-modal-summary">
-                    You will receive approximately <strong>{parseInt(buyQuantity)}</strong> shares for <strong>{parseInt(buyQuantity)} TESTIES</strong>.
+                    Enter an amount to see estimated shares.
                   </p>
                 )}
               </div>

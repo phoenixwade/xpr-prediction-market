@@ -12,8 +12,17 @@ import {
   InlineAction,
   PermissionLevel
 } from "proton-tsc";
-import { Market2Table, OrderTable, PositionTable, PositionV2Table, OutcomeTable, BalanceTable, Config2Table, ResolverTable } from "./tables";
+import { Market2Table, OrderTable, PositionTable, PositionV2Table, PositionLmsrTable, OutcomeTable, BalanceTable, Config2Table, ResolverTable } from "./tables";
 import { currentTimeSec } from "proton-tsc";
+import {
+  SCALE,
+  lmsr_compute_shares_from_budget,
+  lmsr_buy_cost,
+  lmsr_fee,
+  lmsr_probability_yes,
+  DEFAULT_B,
+  DEFAULT_FEE_BPS
+} from "./lmsr";
 
 const TESTIES_SYMBOL = new Symbol("TESTIES", 0);
 const ONE_TESTIES: i64 = 1;
@@ -53,6 +62,16 @@ export class PredictionMarketContract extends Contract {
     );
     check(quantity.amount > 0, "Deposit amount must be positive");
 
+    // Check if this is an LMSR buy transaction
+    // Memo format: "buy:<market_id>:<outcome>:<min_shares>"
+    // outcome: "yes" or "no" (or 0/1)
+    // min_shares: minimum shares expected (for slippage protection), in whole units
+    if (memo.startsWith("buy:")) {
+      this.handleLmsrBuy(from, quantity, memo);
+      return;
+    }
+
+    // Regular deposit to balance
     let bal = this.balancesTable.get(from.N);
     if (bal == null) {
       bal = new BalanceTable(from, quantity);
@@ -62,6 +81,105 @@ export class PredictionMarketContract extends Contract {
     this.balancesTable.set(bal, this.receiver);
     
     print(`Deposited ${quantity.toString()} for ${from.toString()}`);
+  }
+
+  // Handle LMSR buy transaction from transfer memo
+  private handleLmsrBuy(from: Name, quantity: Asset, memo: string): void {
+    // Parse memo: "buy:<market_id>:<outcome>:<min_shares>"
+    const parts = memo.split(":");
+    check(parts.length >= 3, "Invalid buy memo format. Use: buy:<market_id>:<outcome>:<min_shares>");
+    
+    const market_id = U64.parseInt(parts[1]);
+    const outcome_str = parts[2].toLowerCase();
+    const min_shares_str = parts.length >= 4 ? parts[3] : "0";
+    const min_shares = I64.parseInt(min_shares_str) * SCALE; // Convert to fixed-point
+    
+    // Determine outcome (YES = true, NO = false)
+    let outcome_is_yes: boolean;
+    if (outcome_str == "yes" || outcome_str == "0") {
+      outcome_is_yes = true;
+    } else if (outcome_str == "no" || outcome_str == "1") {
+      outcome_is_yes = false;
+    } else {
+      check(false, "Invalid outcome. Use 'yes', 'no', '0', or '1'");
+      return;
+    }
+    
+    // Load market
+    const market = this.markets2Table.get(market_id);
+    check(market != null, "Market not found");
+    check(!market!.resolved, "Market is already resolved");
+    check(market!.version >= 2, "Market does not support LMSR trading");
+    
+    const now = currentTimeSec();
+    check(i32(now) < market!.expire.secSinceEpoch(), "Market has expired");
+    
+    // Convert TESTIES to micro-TESTIES (fixed-point)
+    // TESTIES has 0 decimals, so 1 TESTIES = 1_000_000 micro-TESTIES
+    const budget_micro: i64 = quantity.amount * SCALE;
+    
+    // Compute shares using binary search
+    const delta_q = lmsr_compute_shares_from_budget(
+      market!.q_yes,
+      market!.q_no,
+      market!.b,
+      outcome_is_yes,
+      budget_micro,
+      market!.fee_bps
+    );
+    
+    // Slippage protection
+    check(delta_q >= min_shares, "Slippage too high: shares received less than minimum");
+    
+    // Compute actual cost and fee
+    const raw_cost = lmsr_buy_cost(market!.q_yes, market!.q_no, market!.b, outcome_is_yes, delta_q);
+    const fee = lmsr_fee(market!.q_yes, market!.q_no, market!.b, outcome_is_yes, delta_q, market!.fee_bps);
+    const total_charge = raw_cost + fee;
+    
+    // Refund excess if any
+    const refund_micro = budget_micro - total_charge;
+    if (refund_micro > SCALE) { // Only refund if more than 1 TESTIES worth
+      const refund_tokens = refund_micro / SCALE;
+      const refundAsset = new Asset(refund_tokens, TESTIES_SYMBOL);
+      
+      // Send refund
+      const transferAction = new InlineAction<Transfer>("transfer");
+      const action = transferAction.act(Name.fromString("tokencreate"), new PermissionLevel(this.receiver));
+      const transferParams = new Transfer(this.receiver, from, refundAsset, "LMSR buy refund");
+      action.send(transferParams);
+    }
+    
+    // Update market state
+    if (outcome_is_yes) {
+      market!.q_yes += delta_q;
+    } else {
+      market!.q_no += delta_q;
+    }
+    market!.collected_fees += fee;
+    market!.total_collateral_in += total_charge;
+    this.markets2Table.update(market!, this.receiver);
+    
+    // Update user position
+    const positionsLmsrTable = new TableStore<PositionLmsrTable>(this.receiver, Name.fromU64(market_id));
+    let pos = positionsLmsrTable.get(from.N);
+    
+    if (pos == null) {
+      pos = new PositionLmsrTable(from, 0, 0, 0, new TimePointSec(now));
+    }
+    
+    if (outcome_is_yes) {
+      pos.shares_yes += delta_q;
+    } else {
+      pos.shares_no += delta_q;
+    }
+    pos.collateral_spent += total_charge;
+    pos.updated_at = new TimePointSec(now);
+    positionsLmsrTable.set(pos, this.receiver);
+    
+    // Log the purchase
+    const shares_display = delta_q / SCALE;
+    const outcome_name = outcome_is_yes ? "YES" : "NO";
+    print(`LMSR Buy: ${from.toString()} bought ${shares_display} ${outcome_name} shares in market ${market_id}`);
   }
 
   @action("withdraw")
@@ -109,6 +227,8 @@ export class PredictionMarketContract extends Contract {
       outcomeNames = ["Yes", "No"];
     }
     
+    // Create market with LMSR fields initialized
+    // For LMSR v2 markets: version=2, b=DEFAULT_B, fee_bps=DEFAULT_FEE_BPS, q_yes=0, q_no=0
     const market = new Market2Table(
       newId,
       question,
@@ -118,7 +238,19 @@ export class PredictionMarketContract extends Contract {
       255, // unresolved
       image_url,
       outcomesCount,
-      new TimePointSec(0)
+      new TimePointSec(0),
+      1, // status = OPEN
+      EMPTY_NAME, // suggested_by
+      EMPTY_NAME, // approved_by
+      now, // created_at
+      2, // version = 2 (LMSR)
+      DEFAULT_B, // b = 500 * SCALE
+      DEFAULT_FEE_BPS, // fee_bps = 100 (1%)
+      0, // q_yes = 0
+      0, // q_no = 0
+      0, // collected_fees = 0
+      0, // total_collateral_in = 0
+      0  // total_collateral_out = 0
     );
     this.markets2Table.set(market, this.receiver);
     
@@ -268,17 +400,57 @@ export class PredictionMarketContract extends Contract {
     check(market != null && market!.resolved, "Market not resolved yet");
     check(market!.outcome < 255, "Market outcome not set");
 
-    const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
     const winning_outcome_id = market!.outcome;
-    const compositeKey = (user.N << 8) | winning_outcome_id;
-    let pos = positionsV2Table.get(compositeKey);
-    
-    check(pos != null && pos.shares > 0, "No winning position for user in this market");
+    let payout: i64 = 0;
 
-    const payout = ONE_TESTIES * pos!.shares;
-    pos!.shares = 0;
-    positionsV2Table.update(pos!, this.receiver);
+    // Check if this is an LMSR market (version >= 2)
+    if (market!.version >= 2) {
+      // LMSR claim logic
+      const positionsLmsrTable = new TableStore<PositionLmsrTable>(this.receiver, Name.fromU64(market_id));
+      let pos = positionsLmsrTable.get(user.N);
+      
+      check(pos != null, "No position found for user in this market");
+      
+      // Determine winning shares based on outcome
+      // outcome 0 = YES wins, outcome 1 = NO wins
+      let winning_shares: i64 = 0;
+      if (winning_outcome_id == 0) {
+        winning_shares = pos!.shares_yes;
+      } else {
+        winning_shares = pos!.shares_no;
+      }
+      
+      check(winning_shares > 0, "No winning position for user in this market");
+      
+      // Payout: 1 share = 1 collateral unit (in micro-TESTIES)
+      // Convert from micro-TESTIES to TESTIES (integer division, floor)
+      payout = winning_shares / SCALE;
+      
+      // Zero out the winning shares
+      if (winning_outcome_id == 0) {
+        pos!.shares_yes = 0;
+      } else {
+        pos!.shares_no = 0;
+      }
+      positionsLmsrTable.update(pos!, this.receiver);
+      
+      // Update market total_collateral_out
+      market!.total_collateral_out += winning_shares;
+      this.markets2Table.update(market!, this.receiver);
+    } else {
+      // Legacy order-book claim logic
+      const positionsV2Table = new TableStore<PositionV2Table>(this.receiver, Name.fromU64(market_id));
+      const compositeKey = (user.N << 8) | winning_outcome_id;
+      let pos = positionsV2Table.get(compositeKey);
+      
+      check(pos != null && pos.shares > 0, "No winning position for user in this market");
 
+      payout = ONE_TESTIES * pos!.shares;
+      pos!.shares = 0;
+      positionsV2Table.update(pos!, this.receiver);
+    }
+
+    // Transfer payout to user's balance
     let bal = this.balancesTable.get(user.N);
     if (bal == null) {
       bal = new BalanceTable(user, new Asset(payout, TESTIES_SYMBOL));
