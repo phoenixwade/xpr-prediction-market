@@ -1317,8 +1317,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
       {/* Toast notification */}
       {toast && (
-        <div className={`toast ${toast.type}`}>
-          <span>{toast.message}</span>
+        <div className={`toast-notification ${toast.type}`}>
+          <span className="toast-message">{toast.message}</span>
           <button className="toast-close" onClick={() => setToast(null)}>×</button>
         </div>
       )}
