@@ -1,6 +1,6 @@
 import { Table, EMPTY_NAME, Name, TimePointSec } from "proton-tsc";
 
-@table("markets2")
+@table("markets3")
 export class Market2Table extends Table {
   constructor(
     public id: u64 = 0,

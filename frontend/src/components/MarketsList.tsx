@@ -74,7 +74,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
       const result = await rpc.get_table_rows({
         code: contractName,
         scope: contractName,
-        table: 'markets2',
+        table: 'markets3',
         lower_bound: '0',
         limit: 200,
         reverse: true,

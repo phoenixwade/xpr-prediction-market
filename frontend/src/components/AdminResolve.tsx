@@ -44,7 +44,7 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
       const result = await rpc.get_table_rows({
         code: contractName,
         scope: contractName,
-        table: 'markets2',
+        table: 'markets3',
         limit: 100,
         reverse: true
       });
