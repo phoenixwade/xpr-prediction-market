@@ -68,6 +68,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [profitRounds, setProfitRounds] = useState<ProfitRound[]>([]);
     const [loadingRounds, setLoadingRounds] = useState(false);
 
+    // Toast notification state
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+      setToast({ message, type });
+      setTimeout(() => setToast(null), 3000);
+    };
+
     // Edit market state
     const [editMarketId, setEditMarketId] = useState('');
     const [editQuestion, setEditQuestion] = useState('');
@@ -87,12 +95,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Only JPG, PNG, and WebP images are allowed');
+      showToast('Only JPG, PNG, and WebP images are allowed', 'error');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Image must be less than 2MB');
+      showToast('Image must be less than 2MB', 'error');
       return;
     }
 
@@ -119,10 +127,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
       const data = await response.json();
       setImageUrl(data.url);
-      alert('Image uploaded successfully!');
+      showToast('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image: ' + error);
+      showToast('Failed to upload image: ' + error, 'error');
     } finally {
       setUploadingImage(false);
     }
@@ -130,7 +138,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
   const handleAddOutcome = () => {
     if (outcomes.length >= 30) {
-      alert('Maximum 30 outcomes allowed');
+      showToast('Maximum 30 outcomes allowed', 'error');
       return;
     }
     setOutcomes([...outcomes, '']);
@@ -138,7 +146,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
   const handleRemoveOutcome = (index: number) => {
     if (outcomes.length <= 2) {
-      alert('Minimum 2 outcomes required');
+      showToast('Minimum 2 outcomes required', 'error');
       return;
     }
     setOutcomes(outcomes.filter((_, i) => i !== index));
@@ -199,7 +207,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     resolutionSource?: string;
   }) => {
     if (!session) {
-      alert('Please connect your wallet first');
+      showToast('Please connect your wallet first', 'error');
       return;
     }
 
@@ -230,10 +238,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         throw new Error(data.error || 'Failed to schedule market');
       }
 
-      alert('Market scheduled successfully! You will be notified when it\'s ready to be created.');
+      showToast('Market scheduled successfully! You will be notified when it\'s ready to be created.');
     } catch (error) {
       console.error('Error scheduling market:', error);
-      alert('Failed to schedule market: ' + error);
+      showToast('Failed to schedule market: ' + error, 'error');
     } finally {
       setScheduleLoading(false);
     }
@@ -242,13 +250,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const handleCreateMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !question || !category || !expireDate) {
-      alert('Please fill in all fields');
+      showToast('Please fill in all fields', 'error');
       return;
     }
 
     const validOutcomes = outcomes.filter(o => o.trim() !== '');
     if (validOutcomes.length < 2) {
-      alert('At least 2 outcomes are required');
+      showToast('At least 2 outcomes are required', 'error');
       return;
     }
 
@@ -276,7 +284,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
-      alert('Market created successfully!');
+      showToast('Market created successfully!');
       setQuestion('');
       setCategory('');
       setExpireDate('');
@@ -287,7 +295,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       setOutcomes(['Yes', 'No']);
     } catch (error) {
       console.error('Error creating market:', error);
-      alert('Failed to create market: ' + error);
+      showToast('Failed to create market: ' + error, 'error');
     } finally {
       setCreateLoading(false);
     }
@@ -455,7 +463,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const handleResolveMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !resolveMarketId) {
-      alert('Please select a market');
+      showToast('Please select a market', 'error');
       return;
     }
 
@@ -477,13 +485,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
-      alert('Market resolved successfully!');
+      showToast('Market resolved successfully!');
       setResolveMarketId('');
       setMarketOutcomes([]);
       fetchMarkets();
     } catch (error) {
       console.error('Error resolving market:', error);
-      alert('Failed to resolve market: ' + error);
+      showToast('Failed to resolve market: ' + error, 'error');
     } finally {
       setResolveLoading(false);
     }
@@ -509,11 +517,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }]
       });
 
-      alert('Market approved successfully!');
+      showToast('Market approved successfully!');
       fetchPendingMarkets();
     } catch (error) {
       console.error('Error approving market:', error);
-      alert('Failed to approve market: ' + error);
+      showToast('Failed to approve market: ' + error, 'error');
     } finally {
       setApproveLoading(false);
     }
@@ -539,11 +547,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }]
       });
 
-      alert('Market rejected successfully!');
+      showToast('Market rejected successfully!');
       fetchPendingMarkets();
     } catch (error) {
       console.error('Error rejecting market:', error);
-      alert('Failed to reject market: ' + error);
+      showToast('Failed to reject market: ' + error, 'error');
     } finally {
       setApproveLoading(false);
     }
@@ -616,12 +624,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     if (!file) return;
 
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('Only JPG, PNG, and WebP images are allowed');
+      showToast('Only JPG, PNG, and WebP images are allowed', 'error');
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Image must be less than 2MB');
+      showToast('Image must be less than 2MB', 'error');
       return;
     }
 
@@ -648,10 +656,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
       const data = await response.json();
       setEditImageUrl(data.url);
-      alert('Image uploaded successfully!');
+      showToast('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
-      alert('Failed to upload image: ' + error);
+      showToast('Failed to upload image: ' + error, 'error');
     } finally {
       setEditUploadingImage(false);
     }
@@ -660,7 +668,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const handleEditMarket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session || !editMarketId || !editQuestion || !editCategory) {
-      alert('Please fill in all required fields');
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
@@ -684,7 +692,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
-      alert('Market updated successfully!');
+      showToast('Market updated successfully!');
       // Refresh the markets list
       fetchAllMarketsForEdit();
       // Reset form
@@ -754,11 +762,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
-      alert('Income claimed successfully!');
+      showToast('Income claimed successfully!');
       fetchUnclaimedIncome();
     } catch (error) {
       console.error('Error claiming income:', error);
-      alert('Failed to claim income: ' + error);
+      showToast('Failed to claim income: ' + error, 'error');
     } finally {
       setClaimLoading(false);
     }
@@ -1273,6 +1281,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
             session={session} 
             contractName={process.env.REACT_APP_CONTRACT_NAME || 'prediction'} 
           />
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`toast ${toast.type}`}>
+          <span>{toast.message}</span>
+          <button className="toast-close" onClick={() => setToast(null)}>×</button>
         </div>
       )}
     </div>
