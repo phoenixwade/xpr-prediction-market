@@ -682,9 +682,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       
       // For LMSR, we use a transfer with memo format: "buy:<market_id>:<outcome>:<min_shares>"
       // The outcome is the outcome_id for the selected outcome
-      // min_shares is for slippage protection (use 0 for no protection, or calculate from quote)
+      // min_shares is for slippage protection (use 0 for no protection)
+      // NOTE: Slippage protection disabled (min_shares=0) because the PHP quote API uses
+      // hardcoded market state instead of fetching real q_yes/q_no from the blockchain.
+      // This causes the quote's estimated shares to differ from the contract's calculation.
       const outcomeStr = buyModalSide === 'yes' ? buyModalOutcome.outcome_id.toString() : buyModalOutcome.outcome_id.toString();
-      const minShares = lmsrQuote?.min_shares_for_slippage || 0;
+      const minShares = 0; // Disabled until PHP API fetches real market state
       const memo = `buy:${marketId}:${outcomeStr}:${minShares}`;
 
       const actions: any[] = [];
