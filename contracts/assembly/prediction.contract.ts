@@ -260,10 +260,35 @@ export class PredictionMarketContract extends Contract {
       outcomesTable.set(outcome, this.receiver);
     }
     
-    print(`Created market ${newId} with ${outcomesCount} outcomes: ${question}`);
-  }
+      print(`Created market ${newId} with ${outcomesCount} outcomes: ${question}`);
+    }
 
-  @action("placeorder")
+    @action("editmarket")
+    editMarket(admin: Name, market_id: u64, question: string, category: string, image_url: string): void {
+      requireAuth(admin);
+      // Only contract owner can edit markets
+      check(admin == this.receiver, "Only contract owner can edit markets");
+    
+      const market = this.markets2Table.get(market_id);
+      check(market != null, "Market not found");
+      check(!market!.resolved, "Cannot edit resolved market");
+    
+      // Validate inputs
+      check(question.length > 0, "Question cannot be empty");
+      check(category.length > 0, "Category cannot be empty");
+      check(image_url.length <= 512, "Image URL too long (max 512 characters)");
+    
+      // Update market fields
+      market!.question = question;
+      market!.category = category;
+      market!.image_url = image_url;
+    
+      this.markets2Table.update(market!, this.receiver);
+    
+      print(`Updated market ${market_id}: ${question}`);
+    }
+
+    @action("placeorder")
   placeOrder(
     account: Name,
     market_id: u64,
