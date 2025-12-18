@@ -646,22 +646,50 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const outcomeStats = useMemo(() => {
     const stats: Record<number, { bestBid?: number; bestAsk?: number; volume?: number }> = {};
     
-    outcomes.forEach(outcome => {
-      const outcomeOrders = orders.filter(o => o.outcome_id === outcome.outcome_id);
-      const outcomeBids = outcomeOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
-      const outcomeAsks = outcomeOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
+    // For LMSR markets (version >= 2), calculate prices from q_yes, q_no, and b
+    if (market && market.version >= 2 && market.b && market.b > 0) {
+      const SCALE = 1_000_000;
+      const b = market.b / SCALE;
+      const qYes = (market.q_yes || 0) / SCALE;
+      const qNo = (market.q_no || 0) / SCALE;
       
-      const totalVolume = outcomeOrders.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+      // LMSR probability: P(yes) = e^(q_yes/b) / (e^(q_yes/b) + e^(q_no/b))
+      const expYes = Math.exp(qYes / b);
+      const expNo = Math.exp(qNo / b);
+      const total = expYes + expNo;
       
-      stats[outcome.outcome_id] = {
-        bestBid: outcomeBids.length > 0 ? outcomeBids[0].price : undefined,
-        bestAsk: outcomeAsks.length > 0 ? outcomeAsks[0].price : undefined,
-        volume: totalVolume,
-      };
-    });
+      const pYes = expYes / total;
+      const pNo = expNo / total;
+      
+      // For binary markets, set prices based on LMSR probabilities
+      // Price is in USDTEST (1 USDTEST = 100% probability)
+      outcomes.forEach(outcome => {
+        const price = outcome.outcome_id === 0 ? pYes : pNo;
+        stats[outcome.outcome_id] = {
+          bestBid: price,
+          bestAsk: price,
+          volume: market.total_collateral_in ? market.total_collateral_in / SCALE : 0,
+        };
+      });
+    } else {
+      // Legacy order book markets
+      outcomes.forEach(outcome => {
+        const outcomeOrders = orders.filter(o => o.outcome_id === outcome.outcome_id);
+        const outcomeBids = outcomeOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
+        const outcomeAsks = outcomeOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
+        
+        const totalVolume = outcomeOrders.reduce((sum, o) => sum + (o.price * o.quantity), 0);
+        
+        stats[outcome.outcome_id] = {
+          bestBid: outcomeBids.length > 0 ? outcomeBids[0].price : undefined,
+          bestAsk: outcomeAsks.length > 0 ? outcomeAsks[0].price : undefined,
+          volume: totalVolume,
+        };
+      });
+    }
     
     return stats;
-  }, [outcomes, orders]);
+  }, [outcomes, orders, market]);
 
   const handleOutcomeButtonClick = (outcomeId: number, side: 'yes' | 'no') => {
     const outcome = outcomes.find(o => o.outcome_id === outcomeId);
@@ -1196,7 +1224,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         {outcomes.length > 0 && (
           <div className="price-chart-section">
             <h3>Price History</h3>
-            <MultiOutcomeChart marketId={marketId} outcomes={outcomes} />
+            <MultiOutcomeChart marketId={marketId} outcomes={outcomes} market={market} />
           </div>
         )}
 
@@ -1246,6 +1274,27 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                   <span className="position-shares">{lmsrPosition.sharesNo.toFixed(2)} shares</span>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {relatedMarkets.length > 0 && (
+          <div className="related-markets">
+            <h3>Related Markets</h3>
+            <div className="related-markets-grid">
+              {relatedMarkets.map((rm: any) => (
+                <div 
+                  key={rm.market_id} 
+                  className="related-market-card"
+                  onClick={() => window.location.href = `/market/${rm.market_id}`}
+                >
+                  <div className="related-market-category">{rm.category}</div>
+                  <div className="related-market-question">{rm.question}</div>
+                  <div className="related-market-expiry">
+                    Expires: {formatDate(normalizeTimestamp(rm.expire))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1360,27 +1409,6 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             </div>
           </div>
         </div>
-
-        {relatedMarkets.length > 0 && (
-          <div className="related-markets">
-            <h3>Related Markets</h3>
-            <div className="related-markets-grid">
-              {relatedMarkets.map((rm: any) => (
-                <div 
-                  key={rm.market_id} 
-                  className="related-market-card"
-                  onClick={() => window.location.href = `/market/${rm.market_id}`}
-                >
-                  <div className="related-market-category">{rm.category}</div>
-                  <div className="related-market-question">{rm.question}</div>
-                  <div className="related-market-expiry">
-                    Expires: {formatDate(normalizeTimestamp(rm.expire))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
                   </>
                 ) : (

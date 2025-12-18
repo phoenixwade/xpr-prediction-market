@@ -148,6 +148,35 @@ function calculate_volume($orders) {
     return $volume;
 }
 
+function calculate_lmsr_prices($market) {
+    // For LMSR markets (version >= 2), calculate prices from q_yes, q_no, and b
+    $version = isset($market['version']) ? intval($market['version']) : 1;
+    $b = isset($market['b']) ? floatval($market['b']) : 0;
+    
+    if ($version < 2 || $b <= 0) {
+        return null;
+    }
+    
+    $SCALE = 1000000.0;
+    $b_scaled = $b / $SCALE;
+    $q_yes = (isset($market['q_yes']) ? floatval($market['q_yes']) : 0) / $SCALE;
+    $q_no = (isset($market['q_no']) ? floatval($market['q_no']) : 0) / $SCALE;
+    
+    // LMSR probability: P(yes) = e^(q_yes/b) / (e^(q_yes/b) + e^(q_no/b))
+    $exp_yes = exp($q_yes / $b_scaled);
+    $exp_no = exp($q_no / $b_scaled);
+    $total = $exp_yes + $exp_no;
+    
+    $p_yes = $exp_yes / $total;
+    $p_no = $exp_no / $total;
+    
+    // Return prices as probabilities (0-1)
+    return [
+        0 => $p_yes,  // outcome_id 0 = Yes
+        1 => $p_no    // outcome_id 1 = No
+    ];
+}
+
 try {
     log_message("=== Starting price snapshot ===");
     log_message("RPC Endpoint: " . $rpcEndpoint);
@@ -196,17 +225,31 @@ try {
         try {
             $outcomes = fetch_table_rows($rpcEndpoint, $contractAccount, strval($marketId), 'outcomes', 20);
             
+            // Check if this is an LMSR market (version >= 2)
+            $lmsrPrices = calculate_lmsr_prices($market);
+            $totalCollateral = isset($market['total_collateral_in']) ? floatval($market['total_collateral_in']) / 1000000.0 : 0;
+            
             foreach ($outcomes as $outcome) {
                 $outcomeId = $outcome['outcome_id'] ?? $outcome['id'] ?? 0;
                 
-                $orders = fetch_table_rows($rpcEndpoint, $contractAccount, strval($marketId), 'orders', 100);
+                $price = 0.0;
+                $volume = 0;
                 
-                $outcomeOrders = array_filter($orders, function($o) use ($outcomeId) {
-                    return (isset($o['outcome_id']) ? $o['outcome_id'] : 0) == $outcomeId;
-                });
-                
-                $price = calculate_mid_price($outcomeOrders);
-                $volume = calculate_volume($outcomeOrders);
+                if ($lmsrPrices !== null && isset($lmsrPrices[$outcomeId])) {
+                    // Use LMSR calculated price for version >= 2 markets
+                    $price = $lmsrPrices[$outcomeId];
+                    $volume = intval($totalCollateral);
+                } else {
+                    // Fall back to order book for legacy markets
+                    $orders = fetch_table_rows($rpcEndpoint, $contractAccount, strval($marketId), 'orders', 100);
+                    
+                    $outcomeOrders = array_filter($orders, function($o) use ($outcomeId) {
+                        return (isset($o['outcome_id']) ? $o['outcome_id'] : 0) == $outcomeId;
+                    });
+                    
+                    $price = calculate_mid_price($outcomeOrders);
+                    $volume = calculate_volume($outcomeOrders);
+                }
                 
                 if ($price > 0) {
                     $stmt = $db->prepare('

@@ -39,8 +39,11 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
     return `$${vol.toFixed(0)} Vol.`;
   };
 
-  // Display price in USDTEST instead of misleading percentage
-  const priceDisplay = yesPrice > 0 ? `${Math.round(yesPrice)} USDTEST` : '--';
+  // Display price - for LMSR markets, prices are probabilities (0-1), show as percentage
+  // For order book markets, prices are in USDTEST
+  const priceDisplay = yesPrice > 0 
+    ? (yesPrice <= 1 ? `${Math.round(yesPrice * 100)}%` : `${Math.round(yesPrice)} USDTEST`)
+    : '--';
 
   return (
     <div className={`outcome-row ${selected ? 'selected' : ''}`}>
