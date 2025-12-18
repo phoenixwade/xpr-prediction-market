@@ -59,7 +59,7 @@ if (!isset($mimeMap[$mime]) || !isset($exifMap[$imgType]) || $mimeMap[$mime] !==
 $ext = $mimeMap[$mime];
 $filename = bin2hex(random_bytes(16)) . '.' . $ext;
 
-$uploadDir = __DIR__ . '/../../images/';
+$uploadDir = __DIR__ . '/../images/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
