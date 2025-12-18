@@ -113,49 +113,108 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
       const marketPositionsMap = new Map<number, MarketPositions>();
 
       for (const market of marketsResult.rows) {
-        const positionsResult = await rpc.get_table_rows({
+        // Fetch outcomes for this market
+        const outcomesResult = await rpc.get_table_rows({
           code: contractName,
           scope: market.id.toString(),
-          table: 'positionsv2',
-          index_position: 2,
-          key_type: 'i64',
-          lower_bound: session.auth.actor,
-          upper_bound: session.auth.actor,
+          table: 'outcomes',
           limit: 100,
         });
 
-        if (positionsResult.rows.length > 0) {
-          const outcomesResult = await rpc.get_table_rows({
+        const outcomes: Outcome[] = outcomesResult.rows.map((row: any) => ({
+          outcome_id: row.outcome_id,
+          name: row.name,
+          display_order: row.display_order,
+        }));
+
+        // Check if this is an LMSR market (version >= 2)
+        if (market.version >= 2) {
+          // LMSR market: query poslmsr table
+          const lmsrPosResult = await rpc.get_table_rows({
             code: contractName,
             scope: market.id.toString(),
-            table: 'outcomes',
+            table: 'poslmsr',
             limit: 100,
           });
 
-          const outcomes: Outcome[] = outcomesResult.rows.map((row: any) => ({
-            outcome_id: row.outcome_id,
-            name: row.name,
-            display_order: row.display_order,
-          }));
+          // Find user's position in the LMSR table
+          const myLmsrPos = lmsrPosResult.rows.find(
+            (row: any) => row.user === session.auth.actor.toString()
+          );
 
-          const positions: Position[] = positionsResult.rows
-            .filter((pos: any) => pos.shares !== 0)
-            .map((pos: any) => {
-              const outcome = outcomes.find(o => o.outcome_id === pos.outcome_id);
-              return {
-                ...pos,
+          if (myLmsrPos) {
+            const sharesYes = myLmsrPos.shares_yes / 1_000_000;
+            const sharesNo = myLmsrPos.shares_no / 1_000_000;
+            const positions: Position[] = [];
+
+            // Add YES position if user has YES shares
+            if (sharesYes > 0) {
+              const yesOutcome = outcomes.find(o => o.outcome_id === 0) || outcomes[0];
+              positions.push({
+                composite_key: 0,
+                account: session.auth.actor.toString(),
+                outcome_id: 0,
+                shares: sharesYes,
                 market_id: market.id,
-                outcome_name: outcome?.name || `Outcome ${pos.outcome_id}`,
-              };
-            });
+                outcome_name: yesOutcome?.name || 'Yes',
+              });
+            }
 
-          if (positions.length > 0) {
-            marketPositionsMap.set(market.id, {
-              market_id: market.id,
-              market: market,
-              positions: positions,
-              outcomes: outcomes,
-            });
+            // Add NO position if user has NO shares
+            if (sharesNo > 0) {
+              const noOutcome = outcomes.find(o => o.outcome_id === 1) || outcomes[1];
+              positions.push({
+                composite_key: 1,
+                account: session.auth.actor.toString(),
+                outcome_id: 1,
+                shares: sharesNo,
+                market_id: market.id,
+                outcome_name: noOutcome?.name || 'No',
+              });
+            }
+
+            if (positions.length > 0) {
+              marketPositionsMap.set(market.id, {
+                market_id: market.id,
+                market: market,
+                positions: positions,
+                outcomes: outcomes,
+              });
+            }
+          }
+        } else {
+          // Legacy order-book market: query positionsv2 table
+          const positionsResult = await rpc.get_table_rows({
+            code: contractName,
+            scope: market.id.toString(),
+            table: 'positionsv2',
+            index_position: 2,
+            key_type: 'i64',
+            lower_bound: session.auth.actor,
+            upper_bound: session.auth.actor,
+            limit: 100,
+          });
+
+          if (positionsResult.rows.length > 0) {
+            const positions: Position[] = positionsResult.rows
+              .filter((pos: any) => pos.shares !== 0)
+              .map((pos: any) => {
+                const outcome = outcomes.find(o => o.outcome_id === pos.outcome_id);
+                return {
+                  ...pos,
+                  market_id: market.id,
+                  outcome_name: outcome?.name || `Outcome ${pos.outcome_id}`,
+                };
+              });
+
+            if (positions.length > 0) {
+              marketPositionsMap.set(market.id, {
+                market_id: market.id,
+                market: market,
+                positions: positions,
+                outcomes: outcomes,
+              });
+            }
           }
         }
       }
