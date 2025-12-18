@@ -175,7 +175,7 @@ try {
     $db->exec('CREATE INDEX IF NOT EXISTS idx_market_outcome ON price_snapshots(market_id, outcome_id)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_timestamp ON price_snapshots(timestamp)');
     
-    $markets = fetch_table_rows($rpcEndpoint, $contractAccount, $contractAccount, 'markets2', 100);
+    $markets = fetch_table_rows($rpcEndpoint, $contractAccount, $contractAccount, 'markets3', 100);
     log_message("Found " . count($markets) . " markets");
     
     $activeMarkets = array_filter($markets, function($m) {

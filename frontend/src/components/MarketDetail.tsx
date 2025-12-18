@@ -107,7 +107,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const marketResult = await rpc.get_table_rows({
         code: contractName,
         scope: contractName,
-        table: 'markets2',
+        table: 'markets3',
         lower_bound: marketId,
         upper_bound: marketId,
         limit: 1,
@@ -204,7 +204,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const result = await rpc.get_table_rows({
         code: contractName,
         scope: contractName,
-        table: 'markets2',
+        table: 'markets3',
         limit: 100,
       });
       
