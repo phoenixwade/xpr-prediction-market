@@ -674,6 +674,37 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
 
     setEditLoading(true);
     try {
+      // Auto-upload image if a file was selected
+      let finalImageUrl = editImageUrl;
+      if (editImageFile) {
+        setEditUploadingImage(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', editImageFile);
+
+          const response = await fetch('/api/upload.php', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+
+          const data = await response.json();
+          finalImageUrl = data.url;
+          setEditImageUrl(data.url);
+        } catch (uploadError) {
+          console.error('Error uploading image:', uploadError);
+          showToast('Failed to upload image: ' + uploadError, 'error');
+          setEditLoading(false);
+          setEditUploadingImage(false);
+          return;
+        } finally {
+          setEditUploadingImage(false);
+        }
+      }
+
       await session.transact({
         actions: [{
           account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
@@ -687,7 +718,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
             market_id: parseInt(editMarketId),
             question: editQuestion,
             category: editCategory,
-            image_url: editImageUrl,
+            image_url: finalImageUrl,
           },
         }],
       });
