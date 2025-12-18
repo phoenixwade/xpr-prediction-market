@@ -121,7 +121,7 @@ function App() {
           },
           selectorOptions: {
             appName: process.env.REACT_APP_NAME || 'XPR Prediction Market',
-            appLogo: 'https://protonchain.com/logo.png',
+            appLogo: window.location.origin + '/xpr_logo.png',
           },
         });
         if (restoredSession) {
@@ -147,7 +147,7 @@ function App() {
         },
         selectorOptions: {
           appName: process.env.REACT_APP_NAME || 'XPR Prediction Market',
-          appLogo: 'https://protonchain.com/logo.png',
+          appLogo: window.location.origin + '/xpr_logo.png',
         },
       });
       setSession(session);
