@@ -12,9 +12,18 @@ interface Outcome {
   display_order: number;
 }
 
+interface Market {
+  version?: number;
+  q_yes?: number;
+  q_no?: number;
+  b?: number;
+  total_collateral_in?: number;
+}
+
 interface MultiOutcomeChartProps {
   marketId: number;
   outcomes: Outcome[];
+  market?: Market;
 }
 
 type OutcomeHistoryMap = Record<number, PricePoint[]>;
@@ -30,7 +39,7 @@ const OUTCOME_COLORS = [
   '#06b6d4', // cyan
 ];
 
-const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcomes }) => {
+const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcomes, market }) => {
   const [priceHistoryByOutcome, setPriceHistoryByOutcome] = useState<OutcomeHistoryMap>({});
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'all'>('all');
   const [loading, setLoading] = useState(true);
@@ -117,7 +126,26 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
 
   const getCurrentPrice = (outcomeId: number): number => {
     const points = priceHistoryByOutcome[outcomeId] || [];
-    return points.length > 0 ? points[points.length - 1].price : 0;
+    if (points.length > 0) {
+      return points[points.length - 1].price;
+    }
+    
+    // Fall back to LMSR calculated price if no history data
+    if (market && market.version && market.version >= 2 && market.b && market.b > 0) {
+      const SCALE = 1_000_000;
+      const b = market.b / SCALE;
+      const qYes = (market.q_yes || 0) / SCALE;
+      const qNo = (market.q_no || 0) / SCALE;
+      
+      const expYes = Math.exp(qYes / b);
+      const expNo = Math.exp(qNo / b);
+      const total = expYes + expNo;
+      
+      // Return probability for the requested outcome
+      return outcomeId === 0 ? expYes / total : expNo / total;
+    }
+    
+    return 0;
   };
 
   const renderChart = () => {
@@ -236,7 +264,7 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
             <div key={outcome.outcome_id} className="legend-item">
               <span className="legend-dot" style={{ backgroundColor: color }}></span>
               <span className="legend-name">{outcome.name}</span>
-              <span className="legend-value">{currentPrice > 0 ? `${currentPrice.toFixed(0)} USDTEST` : '--'}</span>
+              <span className="legend-value">{currentPrice > 0 ? (currentPrice <= 1 ? `${Math.round(currentPrice * 100)}%` : `${currentPrice.toFixed(0)} USDTEST`) : '--'}</span>
             </div>
           );
         })}
