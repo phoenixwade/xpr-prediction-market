@@ -114,9 +114,9 @@ export class PredictionMarketContract extends Contract {
     const now = currentTimeSec();
     check(i32(now) < market!.expire.secSinceEpoch(), "Market has expired");
     
-    // Convert USDTEST to internal fixed-point representation
-    // USDTEST has 6 decimals, so quantity.amount is already in base units (1 USDTEST = 1,000,000 base units)
-    const budget_micro: i64 = quantity.amount * SCALE;
+    // USDTEST has 6 decimals, so quantity.amount is already in SCALE units (1 USDTEST = 1,000,000 base units = SCALE)
+    // No need to multiply by SCALE again - they are equivalent
+    const budget_micro: i64 = quantity.amount;
     
     // Compute shares using binary search
     const delta_q = lmsr_compute_shares_from_budget(
@@ -137,10 +137,10 @@ export class PredictionMarketContract extends Contract {
     const total_charge = raw_cost + fee;
     
     // Refund excess if any
+    // refund_micro is already in USDTEST base units (same as SCALE), so use directly
     const refund_micro = budget_micro - total_charge;
-    if (refund_micro > SCALE) { // Only refund if more than 1 USDTEST worth
-      const refund_tokens = refund_micro / SCALE;
-      const refundAsset = new Asset(refund_tokens, USDTEST_SYMBOL);
+    if (refund_micro > SCALE) { // Only refund if more than 1 USDTEST worth (1,000,000 base units)
+      const refundAsset = new Asset(refund_micro, USDTEST_SYMBOL);
       
       // Send refund
       const transferAction = new InlineAction<Transfer>("transfer");
@@ -422,9 +422,9 @@ export class PredictionMarketContract extends Contract {
       
       check(winning_shares > 0, "No winning position for user in this market");
       
-      // Payout: 1 share = 1 collateral unit (in internal fixed-point)
-      // Convert from internal units to USDTEST base units (integer division, floor)
-      payout = winning_shares / SCALE;
+      // Payout: 1 share = 1 USDTEST
+      // winning_shares is already in SCALE units (same as USDTEST base units), so use directly
+      payout = winning_shares;
       
       // Zero out the winning shares
       if (winning_outcome_id == 0) {
