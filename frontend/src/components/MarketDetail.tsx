@@ -311,7 +311,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           data: {
             from: session.auth.actor,
             to: contractName,
-            quantity: `${depositNeeded} USDTEST`,
+            quantity: `${depositNeeded.toFixed(6)} USDTEST`,
             memo: `Deposit for order ${marketId}`,
           },
         });
@@ -417,7 +417,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             data: {
               from: session.auth.actor,
               to: contractName,
-              quantity: `${depositNeeded} USDTEST`,
+              quantity: `${depositNeeded.toFixed(6)} USDTEST`,
               memo: `Deposit for order ${marketId}`,
             },
           });
@@ -700,7 +700,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         data: {
           from: session.auth.actor,
           to: contractName,
-          quantity: `${spendAmount} USDTEST`,
+          quantity: `${spendAmount.toFixed(6)} USDTEST`,
           memo: memo,
         },
       });

@@ -330,7 +330,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           data: {
             from: session.auth.actor,
             to: contractName,
-            quantity: `${Math.floor(depositAmount)} USDTEST`,
+            quantity: `${depositAmount.toFixed(6)} USDTEST`,
             memo: 'deposit',
           },
         }],
@@ -367,7 +367,7 @@ const Portfolio: React.FC<PortfolioProps> = ({ session }) => {
           }],
           data: {
             to: session.auth.actor,
-            quantity: `${Math.floor(withdrawAmount)} USDTEST`,
+            quantity: `${withdrawAmount.toFixed(6)} USDTEST`,
           },
         }],
       });
