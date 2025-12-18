@@ -696,7 +696,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       setEditImagePreview('');
     } catch (error) {
       console.error('Error updating market:', error);
-      alert('Failed to update market: ' + error);
+      // Error is already shown by the wallet popup, no need for duplicate alert
     } finally {
       setEditLoading(false);
     }

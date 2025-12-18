@@ -266,8 +266,8 @@ export class PredictionMarketContract extends Contract {
     @action("editmarket")
     editMarket(admin: Name, market_id: u64, question: string, category: string, image_url: string): void {
       requireAuth(admin);
-      // Only contract owner can edit markets
-      check(admin == this.receiver, "Only contract owner can edit markets");
+      // Allow contract owner or resolvers to edit markets
+      check(this.isAdmin(admin), "Only admin users can edit markets");
     
       const market = this.markets2Table.get(market_id);
       check(market != null, "Market not found");
@@ -655,6 +655,15 @@ export class PredictionMarketContract extends Contract {
       feeBal.funds = new Asset(feeBal.funds.amount + fee, feeBal.funds.symbol);
       this.balancesTable.update(feeBal, this.receiver);
     }
+  }
+
+  private isAdmin(account: Name): bool {
+    // Contract owner is always an admin
+    if (account == this.receiver) return true;
+    
+    // Check if account is in the resolvers table
+    const resolver = this.resolversTable.get(account.N);
+    return resolver != null;
   }
 
   private getConfig(): Config2Table {
