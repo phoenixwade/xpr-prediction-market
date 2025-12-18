@@ -16,6 +16,13 @@ interface Market {
   outcomes?: Outcome[];
   participants?: number;
   totalInvested?: number;
+  // LMSR fields
+  version?: number;
+  q_yes?: number;
+  q_no?: number;
+  b?: number;
+  yesOdds?: number;
+  noOdds?: number;
 }
 
 interface Outcome {
@@ -80,14 +87,38 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
         reverse: true,
       });
       
-      const normalizedMarkets = await Promise.all(result.rows.map(async (row: any) => {
-        const market = {
-          ...row,
-          category: row.category || 'General',
-          expireSec: normalizeTimestamp(row.expire),
-          outcomes_count: row.outcomes_count || 2,
-          resolved: !!row.resolved,
-        };
+            const normalizedMarkets = await Promise.all(result.rows.map(async (row: any) => {
+              const market: Market = {
+                ...row,
+                category: row.category || 'General',
+                expireSec: normalizeTimestamp(row.expire),
+                outcomes_count: row.outcomes_count || 2,
+                resolved: !!row.resolved,
+                version: row.version || 0,
+                q_yes: row.q_yes || 0,
+                q_no: row.q_no || 0,
+                b: row.b || 500_000_000, // Default b = 500 * SCALE
+              };
+
+              // Calculate LMSR odds for version >= 2 markets
+              if (market.version && market.version >= 2 && market.b && market.b > 0) {
+                const SCALE = 1_000_000;
+                const b = market.b / SCALE; // Convert from scaled to actual
+                const qYes = (market.q_yes || 0) / SCALE;
+                const qNo = (market.q_no || 0) / SCALE;
+          
+                // LMSR probability: P(yes) = e^(q_yes/b) / (e^(q_yes/b) + e^(q_no/b))
+                const expYes = Math.exp(qYes / b);
+                const expNo = Math.exp(qNo / b);
+                const total = expYes + expNo;
+          
+                market.yesOdds = Math.round((expYes / total) * 100);
+                market.noOdds = Math.round((expNo / total) * 100);
+              } else {
+                // Default to 50/50 for non-LMSR markets or markets with no activity
+                market.yesOdds = 50;
+                market.noOdds = 50;
+              }
 
         if (market.outcomes_count > 0) {
           try {
@@ -349,27 +380,32 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                   <div className="market-category">{market.category}</div>
                   <h3 className="market-question">{market.question}</h3>
               
-                  {/* Only show outcome options for active markets (without percentages) */}
-                  {!market.resolved && market.outcomes && market.outcomes.length > 0 && (
-                    <div className={`market-probabilities ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
-                      {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => {
-                        const isBinaryMarket = market.outcomes_count === 2;
-                        const optionClass = isBinaryMarket 
-                          ? (outcome.outcome_id === 0 ? 'yes-option' : 'no-option')
-                          : 'other-option';
-                        return (
-                          <div key={outcome.outcome_id} className={`probability-option ${optionClass}`}>
-                            <div className="probability-label">{outcome.name}</div>
-                          </div>
-                        );
-                      })}
-                      {market.outcomes.length > 3 && (
-                        <div className="probability-option other-option">
-                          <div className="probability-label">+{market.outcomes.length - 3} more</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                                    {/* Show outcome options with odds for active markets */}
+                                    {!market.resolved && market.outcomes && market.outcomes.length > 0 && (
+                                      <div className={`market-probabilities ${market.outcomes.length > 2 ? 'multi-outcome' : ''}`}>
+                                        {market.outcomes.slice(0, market.outcomes.length > 2 ? 3 : 2).map((outcome) => {
+                                          const isBinaryMarket = market.outcomes_count === 2;
+                                          const optionClass = isBinaryMarket 
+                                            ? (outcome.outcome_id === 0 ? 'yes-option' : 'no-option')
+                                            : 'other-option';
+                                          // Get odds for this outcome
+                                          const odds = isBinaryMarket 
+                                            ? (outcome.outcome_id === 0 ? market.yesOdds : market.noOdds)
+                                            : Math.round(100 / market.outcomes_count);
+                                          return (
+                                            <div key={outcome.outcome_id} className={`probability-option ${optionClass}`}>
+                                              <div className="probability-label">{outcome.name}</div>
+                                              <div className="probability-value">{odds}%</div>
+                                            </div>
+                                          );
+                                        })}
+                                        {market.outcomes.length > 3 && (
+                                          <div className="probability-option other-option">
+                                            <div className="probability-label">+{market.outcomes.length - 3} more</div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
                   
                   {/* Show percentages only for resolved markets */}
                   {market.resolved && market.outcomes && market.outcomes.length > 0 && (
