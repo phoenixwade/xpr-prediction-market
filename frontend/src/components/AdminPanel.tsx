@@ -33,7 +33,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) => {
-  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'resolve' | 'approve' | 'schedule' | 'forceresolve'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'edit' | 'resolve' | 'approve' | 'schedule' | 'forceresolve'>('income');
   
   // Check if current user is an admin
   const currentUser = session?.auth?.actor?.toString() || '';
@@ -66,9 +66,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [loadingIncome, setLoadingIncome] = useState(false);
   const [claimLoading, setClaimLoading] = useState(false);
   const [profitRounds, setProfitRounds] = useState<ProfitRound[]>([]);
-  const [loadingRounds, setLoadingRounds] = useState(false);
+    const [loadingRounds, setLoadingRounds] = useState(false);
 
-  const createFormRef = useRef<HTMLFormElement>(null);
+    // Edit market state
+    const [editMarketId, setEditMarketId] = useState('');
+    const [editQuestion, setEditQuestion] = useState('');
+    const [editCategory, setEditCategory] = useState('');
+    const [editImageUrl, setEditImageUrl] = useState('');
+    const [editImageFile, setEditImageFile] = useState<File | null>(null);
+    const [editImagePreview, setEditImagePreview] = useState('');
+    const [editUploadingImage, setEditUploadingImage] = useState(false);
+    const [editLoading, setEditLoading] = useState(false);
+    const [allMarkets, setAllMarkets] = useState<Array<{id: number; question: string; category: string; image_url: string; resolved: boolean}>>([]);
+    const [loadingAllMarkets, setLoadingAllMarkets] = useState(false);
+
+    const createFormRef = useRef<HTMLFormElement>(null);
 
   const handleImageFileChange= async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -387,13 +399,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   }, [session]);
 
-  useEffect(() => {
-    if (session && activeTab === 'resolve') {
-      fetchMarkets();
-    } else if (session && activeTab === 'approve') {
-      fetchPendingMarkets();
-    }
-  }, [session, activeTab, fetchMarkets, fetchPendingMarkets]);
+      useEffect(() => {
+        if (session && activeTab === 'resolve') {
+          fetchMarkets();
+        } else if (session && activeTab === 'approve') {
+          fetchPendingMarkets();
+        }
+      }, [session, activeTab, fetchMarkets, fetchPendingMarkets]);
 
   const fetchMarketOutcomes = async (marketId: string) => {
     if (!marketId) return;
@@ -537,6 +549,159 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
+  // Fetch all markets for editing
+  const fetchAllMarketsForEdit = useCallback(async () => {
+    if (!session) return;
+    
+    setLoadingAllMarkets(true);
+    try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: contractName,
+        scope: contractName,
+        table: 'markets3',
+        limit: 1000,
+      });
+
+      const markets = result.rows
+        .filter((row: any) => !row.resolved) // Only show unresolved markets
+        .map((row: any) => ({
+          id: row.id,
+          question: row.question,
+          category: row.category,
+          image_url: row.image_url || '',
+          resolved: row.resolved || false,
+        }));
+
+      setAllMarkets(markets);
+    } catch (error) {
+      console.error('Error fetching markets for edit:', error);
+    } finally {
+      setLoadingAllMarkets(false);
+    }
+    }, [session]);
+
+    // Fetch markets for edit tab when it becomes active
+    useEffect(() => {
+      if (session && activeTab === 'edit') {
+        fetchAllMarketsForEdit();
+      }
+    }, [session, activeTab, fetchAllMarketsForEdit]);
+
+    const handleEditMarketSelect = (marketId: string) => {
+    setEditMarketId(marketId);
+    if (marketId) {
+      const market = allMarkets.find(m => m.id === parseInt(marketId));
+      if (market) {
+        setEditQuestion(market.question);
+        setEditCategory(market.category);
+        setEditImageUrl(market.image_url);
+        setEditImagePreview('');
+        setEditImageFile(null);
+      }
+    } else {
+      setEditQuestion('');
+      setEditCategory('');
+      setEditImageUrl('');
+      setEditImagePreview('');
+      setEditImageFile(null);
+    }
+  };
+
+  const handleEditImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Only JPG, PNG, and WebP images are allowed');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be less than 2MB');
+      return;
+    }
+
+    setEditImageFile(file);
+    setEditImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleEditUploadImage = async () => {
+    if (!editImageFile) return;
+
+    setEditUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', editImageFile);
+
+      const response = await fetch('/api/upload.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setEditImageUrl(data.url);
+      alert('Image uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image: ' + error);
+    } finally {
+      setEditUploadingImage(false);
+    }
+  };
+
+  const handleEditMarket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!session || !editMarketId || !editQuestion || !editCategory) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      await session.transact({
+        actions: [{
+          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          name: 'editmarket',
+          authorization: [{
+            actor: session.auth.actor,
+            permission: session.auth.permission,
+          }],
+          data: {
+            admin: session.auth.actor,
+            market_id: parseInt(editMarketId),
+            question: editQuestion,
+            category: editCategory,
+            image_url: editImageUrl,
+          },
+        }],
+      });
+
+      alert('Market updated successfully!');
+      // Refresh the markets list
+      fetchAllMarketsForEdit();
+      // Reset form
+      setEditMarketId('');
+      setEditQuestion('');
+      setEditCategory('');
+      setEditImageUrl('');
+      setEditImageFile(null);
+      setEditImagePreview('');
+    } catch (error) {
+      console.error('Error updating market:', error);
+      alert('Failed to update market: ' + error);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const fetchUnclaimedIncome = useCallback(async () => {
     if (!session) return;
     
@@ -653,14 +818,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         >
           Claim Income
         </button>
-        <button
-          className={activeTab === 'create' ? 'active' : ''}
-          onClick={() => setActiveTab('create')}
-        >
-          Create Market
-        </button>
-        <button
-          className={activeTab === 'resolve' ? 'active' : ''}
+                <button
+                  className={activeTab === 'create' ? 'active' : ''}
+                  onClick={() => setActiveTab('create')}
+                >
+                  Create Market
+                </button>
+                <button
+                  className={activeTab === 'edit' ? 'active' : ''}
+                  onClick={() => setActiveTab('edit')}
+                >
+                  Edit Market
+                </button>
+                <button
+                  className={activeTab === 'resolve' ? 'active' : ''}
           onClick={() => setActiveTab('resolve')}
         >
           Resolve Market
@@ -912,13 +1083,130 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
               disabled={createLoading}
               className="submit-button"
             >
-              {createLoading ? 'Creating...' : 'Create Market'}
-            </button>
-          </form>
-        </div>
-      )}
+                    {createLoading ? 'Creating...' : 'Create Market'}
+                  </button>
+                </form>
+              </div>
+            )}
 
-            {activeTab === 'resolve' && (
+            {activeTab === 'edit' && (
+              <div className="admin-section">
+                <h3>Edit Market</h3>
+                <p className="section-description">
+                  Update the question, category, or image for an existing market. Only unresolved markets can be edited.
+                </p>
+          
+                {loadingAllMarkets ? (
+                  <p className="loading-message">Loading markets...</p>
+                ) : allMarkets.length === 0 ? (
+                  <p className="empty-state">No markets available to edit</p>
+                ) : (
+                  <form onSubmit={handleEditMarket} className="admin-form">
+                    <div className="form-group">
+                      <label>Select Market</label>
+                      <select
+                        value={editMarketId}
+                        onChange={(e) => handleEditMarketSelect(e.target.value)}
+                        required
+                      >
+                        <option value="">Select a market to edit</option>
+                        {allMarkets.map((market) => (
+                          <option key={market.id} value={market.id}>
+                            #{market.id}: {market.question.substring(0, 60)}{market.question.length > 60 ? '...' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {editMarketId && (
+                      <>
+                        <div className="form-group">
+                          <label>Question</label>
+                          <input
+                            type="text"
+                            value={editQuestion}
+                            onChange={(e) => setEditQuestion(e.target.value)}
+                            placeholder="Market question"
+                            required
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Category</label>
+                          <select
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            required
+                          >
+                            <option value="">Select category</option>
+                            <option value="Crypto">Crypto</option>
+                            <option value="Politics">Politics</option>
+                            <option value="Sports">Sports</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Market Image</label>
+                          <div className="image-upload-section">
+                            <input
+                              type="text"
+                              value={editImageUrl}
+                              onChange={(e) => setEditImageUrl(e.target.value)}
+                              placeholder="Paste image URL or upload below"
+                            />
+                            <div className="upload-controls">
+                              <input
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp"
+                                onChange={handleEditImageFileChange}
+                                id="edit-image-upload"
+                                style={{ display: 'none' }}
+                              />
+                              <label htmlFor="edit-image-upload" className="upload-button">
+                                Choose File
+                              </label>
+                              {editImageFile && (
+                                <button
+                                  type="button"
+                                  onClick={handleEditUploadImage}
+                                  disabled={editUploadingImage}
+                                  className="upload-submit-button"
+                                >
+                                  {editUploadingImage ? 'Uploading...' : 'Upload'}
+                                </button>
+                              )}
+                            </div>
+                            {editImagePreview && (
+                              <div className="image-preview">
+                                <img src={editImagePreview} alt="Preview" />
+                              </div>
+                            )}
+                            {editImageUrl && !editImagePreview && (
+                              <div className="image-preview">
+                                <img src={editImageUrl} alt="Market" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={editLoading}
+                          className="submit-button"
+                        >
+                          {editLoading ? 'Updating...' : 'Update Market'}
+                        </button>
+                      </>
+                    )}
+                  </form>
+                )}
+              </div>
+            )}
+
+                  {activeTab === 'resolve' && (
               <div className="admin-section">
                 <ResolutionTools 
                   session={session} 
