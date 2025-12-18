@@ -113,34 +113,55 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
           }
         }
 
-        // Fetch orders to count unique participants and calculate total invested
-        try {
-          const ordersResult = await rpc.get_table_rows({
-            code: contractName,
-            scope: row.id.toString(),
-            table: 'orders',
-            limit: 1000,
-          });
+        // For LMSR markets (version >= 2), use total_collateral_in from market data
+        // For legacy markets, calculate from orders
+        if (row.version >= 2) {
+          // LMSR market: use total_collateral_in (in SCALE units, divide by 1,000,000)
+          market.totalInvested = Math.floor((row.total_collateral_in || 0) / 1_000_000);
           
-          // Count unique accounts from orders
-          const uniqueAccounts = new Set(ordersResult.rows.map((order: any) => order.account));
-          market.participants = uniqueAccounts.size;
-          
-          // Calculate total invested (sum of price * quantity for all bid orders)
-          let totalInvested = 0;
-          ordersResult.rows.forEach((order: any) => {
-            if (order.isBid) {
-              // Price is stored as integer USDTEST
-              const price = typeof order.price === 'number' ? order.price : parseFloat(order.price) || 0;
-              const quantity = order.quantity || 0;
-              totalInvested += price * quantity;
-            }
-          });
-          market.totalInvested = totalInvested;
-        } catch (error) {
-          console.error(`Error fetching orders for market ${row.id}:`, error);
-          market.participants = 0;
-          market.totalInvested = 0;
+          // Count unique participants from poslmsr table
+          try {
+            const lmsrPosResult = await rpc.get_table_rows({
+              code: contractName,
+              scope: row.id.toString(),
+              table: 'poslmsr',
+              limit: 100,
+            });
+            market.participants = lmsrPosResult.rows.length;
+          } catch (error) {
+            console.error(`Error fetching LMSR positions for market ${row.id}:`, error);
+            market.participants = 0;
+          }
+        } else {
+          // Legacy order-book market: calculate from orders
+          try {
+            const ordersResult = await rpc.get_table_rows({
+              code: contractName,
+              scope: row.id.toString(),
+              table: 'orders',
+              limit: 1000,
+            });
+            
+            // Count unique accounts from orders
+            const uniqueAccounts = new Set(ordersResult.rows.map((order: any) => order.account));
+            market.participants = uniqueAccounts.size;
+            
+            // Calculate total invested (sum of price * quantity for all bid orders)
+            let totalInvested = 0;
+            ordersResult.rows.forEach((order: any) => {
+              if (order.isBid) {
+                // Price is stored as integer USDTEST
+                const price = typeof order.price === 'number' ? order.price : parseFloat(order.price) || 0;
+                const quantity = order.quantity || 0;
+                totalInvested += price * quantity;
+              }
+            });
+            market.totalInvested = totalInvested;
+          } catch (error) {
+            console.error(`Error fetching orders for market ${row.id}:`, error);
+            market.participants = 0;
+            market.totalInvested = 0;
+          }
         }
 
         return market;
@@ -314,7 +335,14 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
               <div className="market-card-content">
                 {market.image_url && (
                   <div className="market-thumbnail">
-                    <img src={market.image_url} alt={market.question} />
+                    <img 
+                      src={market.image_url} 
+                      alt={market.question}
+                      onError={(e) => {
+                        // Hide the thumbnail if image fails to load
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
                   </div>
                 )}
                 <div className="market-text-content">

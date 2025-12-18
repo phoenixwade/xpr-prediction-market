@@ -88,6 +88,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [relatedMarkets, setRelatedMarkets] = useState<any[]>([]);
         const [lmsrQuote, setLmsrQuote] = useState<any>(null);
         const [lmsrQuoteLoading, setLmsrQuoteLoading] = useState(false);
+        const [lmsrPosition, setLmsrPosition] = useState<{sharesYes: number, sharesNo: number} | null>(null);
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -150,10 +151,38 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       });
       
       setOrders(ordersResult.rows);
+
+      // Fetch LMSR position for the current user if logged in and market is LMSR (version >= 2)
+      if (session && marketResult.rows.length > 0 && marketResult.rows[0].version >= 2) {
+        try {
+          const lmsrPosResult = await rpc.get_table_rows({
+            code: contractName,
+            scope: marketId.toString(),
+            table: 'poslmsr',
+            limit: 100,
+          });
+          
+          const myLmsrPos = lmsrPosResult.rows.find(
+            (row: any) => row.user === session.auth.actor.toString()
+          );
+          
+          if (myLmsrPos) {
+            setLmsrPosition({
+              sharesYes: myLmsrPos.shares_yes / 1_000_000,
+              sharesNo: myLmsrPos.shares_no / 1_000_000,
+            });
+          } else {
+            setLmsrPosition(null);
+          }
+        } catch (error) {
+          console.error('Error fetching LMSR position:', error);
+          setLmsrPosition(null);
+        }
+      }
     } catch (error) {
       console.error('Error fetching market data:', error);
     }
-  }, [marketId, selectedOutcomeId]);
+  }, [marketId, selectedOutcomeId, session]);
 
   const fetchComments = useCallback(async () => {
     try {
@@ -1007,7 +1036,14 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       <div className="market-header">
         {market.image_url && (
           <div className="market-header-image">
-            <img src={market.image_url} alt={market.question} />
+            <img 
+              src={market.image_url} 
+              alt={market.question}
+              onError={(e) => {
+                // Hide the image if it fails to load
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
           </div>
         )}
         <h2>{market.question}</h2>
@@ -1188,6 +1224,31 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             <p><strong>Sell</strong> - You can sell at any time if you own shares, or wait until the market resolves.</p>
           </div>
         </div>
+
+        {session && lmsrPosition && (lmsrPosition.sharesYes > 0 || lmsrPosition.sharesNo > 0) && (
+          <div className="my-position">
+            <h3>
+              My Position
+              <Tooltip text="Your current share holdings in this market. Winning shares can be redeemed for 1 USDTEST each when the market resolves." position="right">
+                <span className="tooltip-icon">ℹ</span>
+              </Tooltip>
+            </h3>
+            <div className="position-details">
+              {lmsrPosition.sharesYes > 0 && (
+                <div className="position-row yes">
+                  <span className="position-outcome">{outcomes.find(o => o.outcome_id === 0)?.name || 'Yes'}</span>
+                  <span className="position-shares">{lmsrPosition.sharesYes.toFixed(2)} shares</span>
+                </div>
+              )}
+              {lmsrPosition.sharesNo > 0 && (
+                <div className="position-row no">
+                  <span className="position-outcome">{outcomes.find(o => o.outcome_id === 1)?.name || 'No'}</span>
+                  <span className="position-shares">{lmsrPosition.sharesNo.toFixed(2)} shares</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {session && myOrders.length > 0 && (
           <div className="my-orders">
