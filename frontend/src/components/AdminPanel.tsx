@@ -286,6 +286,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
+      // After market creation, fetch the latest market ID and save metadata
+      if (description || resolutionCriteria) {
+        try {
+          const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+          const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+          
+          // Fetch the latest market to get its ID
+          const result = await rpc.get_table_rows({
+            json: true,
+            code: contractName,
+            scope: contractName,
+            table: 'markets3',
+            limit: 1,
+            reverse: true,
+          });
+          
+          if (result.rows.length > 0) {
+            const latestMarketId = result.rows[0].id;
+            
+            // Save the metadata
+            await fetch('/api/market_meta.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                market_id: latestMarketId,
+                description: description,
+                resolution_criteria: resolutionCriteria,
+              }),
+            });
+          }
+        } catch (metaError) {
+          console.error('Error saving market metadata:', metaError);
+          // Don't fail the whole operation if metadata save fails
+        }
+      }
+
       showToast('Market created successfully!');
       setQuestion('');
       setCategory('');
