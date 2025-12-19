@@ -1074,14 +1074,30 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             />
           </div>
         )}
-        <h2>{market.question}</h2>
-        <div className="market-meta">
-          <span className="category">{market.category}</span>
-          <span className={`status ${market.resolved ? 'resolved' : 'active'}`}>
-            {market.resolved ? 'Resolved' : 'Active'}
-          </span>
+        <div className="market-header-body">
+          <h2>{market.question}</h2>
+          <div className="market-meta">
+            <span className="category">{market.category}</span>
+            <span className={`status ${market.resolved ? 'resolved' : 'active'}`}>
+              {market.resolved ? 'Resolved' : 'Active'}
+            </span>
+          </div>
+          <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
+          
+          <div className="market-description-section">
+            <h3>Description</h3>
+            <p className="market-description-text">
+              {market.question}
+            </p>
+          </div>
+          
+          <div className="market-resolution-section">
+            <h3>How this market will be resolved</h3>
+            <p className="market-resolution-text placeholder">
+              Resolution criteria will be provided by the market creator.
+            </p>
+          </div>
         </div>
-        <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
       </div>
 
       <div className="market-detail-tabs">
