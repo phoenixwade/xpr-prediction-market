@@ -41,7 +41,7 @@ const OUTCOME_COLORS = [
 
 const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcomes, market }) => {
   const [priceHistoryByOutcome, setPriceHistoryByOutcome] = useState<OutcomeHistoryMap>({});
-  const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'all'>('all');
+  const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'all'>('24h');
   const [loading, setLoading] = useState(true);
 
   const outcomeColors = useMemo(() => {
@@ -151,6 +151,10 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
   const renderChart = () => {
     const hasData = Object.values(priceHistoryByOutcome).some(points => points.length > 0);
     
+    if (loading && !hasData) {
+      return <div className="chart-loading-inner">Loading price history...</div>;
+    }
+    
     if (!hasData) {
       return <div className="no-data">No price history available</div>;
     }
@@ -247,10 +251,6 @@ const MultiOutcomeChart: React.FC<MultiOutcomeChartProps> = ({ marketId, outcome
       </svg>
     );
   };
-
-  if (loading && Object.keys(priceHistoryByOutcome).length === 0) {
-    return <div className="chart-loading">Loading chart...</div>;
-  }
 
   const sortedOutcomes = [...outcomes].sort((a, b) => a.display_order - b.display_order).slice(0, 6);
 

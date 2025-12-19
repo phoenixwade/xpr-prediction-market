@@ -5944,7 +5944,8 @@ body {
   color: #a78bfa;
 }
 
-.multi-outcome-chart .no-data {
+.multi-outcome-chart .no-data,
+.multi-outcome-chart .chart-loading-inner {
   display: flex;
   align-items: center;
   justify-content: center;
