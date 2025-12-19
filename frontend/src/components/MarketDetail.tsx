@@ -645,10 +645,13 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
 
   const outcomeStats = useMemo(() => {
     const stats: Record<number, { bestBid?: number; bestAsk?: number; volume?: number }> = {};
+    const SCALE = 1_000_000;
     
-    // For LMSR markets (version >= 2), calculate prices from q_yes, q_no, and b
-    if (market && market.version >= 2 && market.b && market.b > 0) {
-      const SCALE = 1_000_000;
+    // Check if this is a binary market (exactly 2 outcomes)
+    const isBinaryMarket = outcomes.length === 2 || market?.outcomes_count === 2;
+    
+    // For LMSR binary markets (version >= 2), calculate prices from q_yes, q_no, and b
+    if (market && market.version >= 2 && market.b && market.b > 0 && isBinaryMarket) {
       const b = market.b / SCALE;
       const qYes = (market.q_yes || 0) / SCALE;
       const qNo = (market.q_no || 0) / SCALE;
@@ -668,6 +671,17 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         stats[outcome.outcome_id] = {
           bestBid: price,
           bestAsk: price,
+          volume: market.total_collateral_in ? market.total_collateral_in / SCALE : 0,
+        };
+      });
+    } else if (market && market.version >= 2 && outcomes.length > 2) {
+      // Multi-outcome LMSR markets: use equal distribution since contract only stores q_yes/q_no
+      // This is a display-only fallback until multi-outcome LMSR is properly implemented
+      const equalProbability = 1 / outcomes.length;
+      outcomes.forEach(outcome => {
+        stats[outcome.outcome_id] = {
+          bestBid: equalProbability,
+          bestAsk: equalProbability,
           volume: market.total_collateral_in ? market.total_collateral_in / SCALE : 0,
         };
       });
