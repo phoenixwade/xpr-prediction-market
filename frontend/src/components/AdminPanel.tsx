@@ -82,6 +82,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     const [editMarketId, setEditMarketId] = useState('');
     const [editQuestion, setEditQuestion] = useState('');
     const [editCategory, setEditCategory] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editResolutionCriteria, setEditResolutionCriteria] = useState('');
     const [editImageUrl, setEditImageUrl] = useState('');
     const [editImageFile, setEditImageFile] = useState<File | null>(null);
     const [editImagePreview, setEditImagePreview] = useState('');
@@ -639,7 +641,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       }
     }, [session, activeTab, fetchAllMarketsForEdit]);
 
-    const handleEditMarketSelect = (marketId: string) => {
+    const handleEditMarketSelect = async (marketId: string) => {
     setEditMarketId(marketId);
     if (marketId) {
       const market = allMarkets.find(m => m.id === parseInt(marketId));
@@ -649,10 +651,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         setEditImageUrl(market.image_url);
         setEditImagePreview('');
         setEditImageFile(null);
+        
+        // Fetch description and resolution criteria from market_meta API
+        try {
+          const response = await fetch(`/api/market_meta.php?market_id=${marketId}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setEditDescription(data.description || '');
+              setEditResolutionCriteria(data.resolution_criteria || '');
+            } else {
+              setEditDescription('');
+              setEditResolutionCriteria('');
+            }
+          } else {
+            setEditDescription('');
+            setEditResolutionCriteria('');
+          }
+        } catch (error) {
+          console.error('Error fetching market meta:', error);
+          setEditDescription('');
+          setEditResolutionCriteria('');
+        }
       }
     } else {
       setEditQuestion('');
       setEditCategory('');
+      setEditDescription('');
+      setEditResolutionCriteria('');
       setEditImageUrl('');
       setEditImagePreview('');
       setEditImageFile(null);
@@ -763,6 +789,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
+      // Save description and resolution criteria to market_meta API
+      if (editDescription || editResolutionCriteria) {
+        try {
+          await fetch('/api/market_meta.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              market_id: parseInt(editMarketId),
+              description: editDescription,
+              resolution_criteria: editResolutionCriteria,
+            }),
+          });
+        } catch (metaError) {
+          console.error('Error saving market meta:', metaError);
+        }
+      }
+
       showToast('Market updated successfully!');
       // Refresh the markets list
       fetchAllMarketsForEdit();
@@ -770,6 +813,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       setEditMarketId('');
       setEditQuestion('');
       setEditCategory('');
+      setEditDescription('');
+      setEditResolutionCriteria('');
       setEditImageUrl('');
       setEditImageFile(null);
       setEditImagePreview('');
@@ -1247,6 +1292,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
                             <option value="Finance">Finance</option>
                             <option value="Other">Other</option>
                           </select>
+                        </div>
+
+                        <div className="form-group">
+                          <label>Description (Optional)</label>
+                          <textarea
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            placeholder="Provide additional context or details about this market..."
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="form-group">
+                          <label>Resolution Criteria</label>
+                          <textarea
+                            value={editResolutionCriteria}
+                            onChange={(e) => setEditResolutionCriteria(e.target.value)}
+                            placeholder="Please enter very detailed rules, dates, and a description on how the result is determined when the market is resolved."
+                            rows={4}
+                          />
                         </div>
 
                         <div className="form-group">
