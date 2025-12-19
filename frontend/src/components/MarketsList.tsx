@@ -441,7 +441,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                       </span>
                     </div>
                     <div className="market-total-invested">
-                      Total Invested: {market.totalInvested || 0} USDTEST
+                      Market Volume: {market.totalInvested || 0} USDTEST
                     </div>
                   </div>
                   {market.resolved && market.outcomes && (

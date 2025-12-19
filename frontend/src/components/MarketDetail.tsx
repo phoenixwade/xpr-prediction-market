@@ -695,8 +695,22 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     const outcome = outcomes.find(o => o.outcome_id === outcomeId);
     if (!outcome) return;
     
+    // For binary markets (Yes/No outcomes), normalize the side based on which row was clicked
+    // "Buy No" on the "No" row should bet AGAINST "No" (i.e., buy YES shares)
+    // "Buy Yes" on the "No" row should bet FOR "No" (i.e., buy NO shares)
+    let normalizedSide: 'yes' | 'no' = side;
+    const outcomeName = outcome.name.trim().toLowerCase();
+    
+    if (outcomeName === 'no') {
+      // On the "No" row, invert the button meaning
+      // "Buy Yes" on No row = buy NO shares (betting FOR the No outcome)
+      // "Buy No" on No row = buy YES shares (betting AGAINST the No outcome)
+      normalizedSide = side === 'yes' ? 'no' : 'yes';
+    }
+    // For "Yes" row or other outcomes, keep the side as-is
+    
     setBuyModalOutcome(outcome);
-    setBuyModalSide(side);
+    setBuyModalSide(normalizedSide);
     setBuyQuantity('');
     setLmsrQuote(null);
     setShowBuyModal(true);
@@ -738,12 +752,12 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       
       // For LMSR, we use a transfer with memo format: "buy:<market_id>:<outcome>:<min_shares>"
-      // The outcome is the outcome_id for the selected outcome
+      // The outcome is "yes" or "no" for binary LMSR markets
       // min_shares is for slippage protection (use 0 for no protection)
       // NOTE: Slippage protection disabled (min_shares=0) because the PHP quote API uses
       // hardcoded market state instead of fetching real q_yes/q_no from the blockchain.
       // This causes the quote's estimated shares to differ from the contract's calculation.
-      const outcomeStr = buyModalSide === 'yes' ? buyModalOutcome.outcome_id.toString() : buyModalOutcome.outcome_id.toString();
+      const outcomeStr = buyModalSide; // "yes" or "no" - the contract expects this format
       const minShares = 0; // Disabled until PHP API fetches real market state
       const memo = `buy:${marketId}:${outcomeStr}:${minShares}`;
 
