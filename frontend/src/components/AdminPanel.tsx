@@ -49,6 +49,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [marketType, setMarketType] = useState<'binary' | 'multi'>('binary');
   const [outcomes, setOutcomes] = useState<string[]>(['Yes', 'No']);
   const [createLoading, setCreateLoading] = useState(false);
+  const [description, setDescription] = useState('');
+  const [resolutionCriteria, setResolutionCriteria] = useState('');
 
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(false);
@@ -284,6 +286,42 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
+      // After market creation, fetch the latest market ID and save metadata
+      if (description || resolutionCriteria) {
+        try {
+          const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+          const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+          
+          // Fetch the latest market to get its ID
+          const result = await rpc.get_table_rows({
+            json: true,
+            code: contractName,
+            scope: contractName,
+            table: 'markets3',
+            limit: 1,
+            reverse: true,
+          });
+          
+          if (result.rows.length > 0) {
+            const latestMarketId = result.rows[0].id;
+            
+            // Save the metadata
+            await fetch('/api/market_meta.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                market_id: latestMarketId,
+                description: description,
+                resolution_criteria: resolutionCriteria,
+              }),
+            });
+          }
+        } catch (metaError) {
+          console.error('Error saving market metadata:', metaError);
+          // Don't fail the whole operation if metadata save fails
+        }
+      }
+
       showToast('Market created successfully!');
       setQuestion('');
       setCategory('');
@@ -293,6 +331,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       setImagePreview('');
       setMarketType('binary');
       setOutcomes(['Yes', 'No']);
+      setDescription('');
+      setResolutionCriteria('');
     } catch (error) {
       console.error('Error creating market:', error);
       showToast('Failed to create market: ' + error, 'error');
@@ -1071,6 +1111,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Description (Optional)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Provide additional context or details about this market..."
+                rows={3}
+                className="description-textarea"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Resolution Criteria</label>
+              <textarea
+                value={resolutionCriteria}
+                onChange={(e) => setResolutionCriteria(e.target.value)}
+                placeholder="Please enter very detailed rules, dates, and a description on how the result is determined when the market is resolved."
+                rows={4}
+                className="resolution-textarea"
+              />
             </div>
 
             <div className="form-group">
