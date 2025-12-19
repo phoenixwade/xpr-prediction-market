@@ -49,6 +49,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [marketType, setMarketType] = useState<'binary' | 'multi'>('binary');
   const [outcomes, setOutcomes] = useState<string[]>(['Yes', 'No']);
   const [createLoading, setCreateLoading] = useState(false);
+  const [description, setDescription] = useState('');
+  const [resolutionCriteria, setResolutionCriteria] = useState('');
 
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(false);
@@ -293,6 +295,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       setImagePreview('');
       setMarketType('binary');
       setOutcomes(['Yes', 'No']);
+      setDescription('');
+      setResolutionCriteria('');
     } catch (error) {
       console.error('Error creating market:', error);
       showToast('Failed to create market: ' + error, 'error');
@@ -1071,6 +1075,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Description (Optional)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Provide additional context or details about this market..."
+                rows={3}
+                className="description-textarea"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Resolution Criteria</label>
+              <textarea
+                value={resolutionCriteria}
+                onChange={(e) => setResolutionCriteria(e.target.value)}
+                placeholder="Please enter very detailed rules, dates, and a description on how the result is determined when the market is resolved."
+                rows={4}
+                className="resolution-textarea"
+              />
             </div>
 
             <div className="form-group">

@@ -89,6 +89,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [lmsrQuote, setLmsrQuote] = useState<any>(null);
         const [lmsrQuoteLoading, setLmsrQuoteLoading] = useState(false);
         const [lmsrPosition, setLmsrPosition] = useState<{sharesYes: number, sharesNo: number} | null>(null);
+        const [marketMeta, setMarketMeta] = useState<{description: string, resolution_criteria: string} | null>(null);
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -248,17 +249,33 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   }, [marketId]);
 
+  const fetchMarketMeta = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/market_meta.php?market_id=${marketId}`);
+      const data = await response.json();
+      if (data.success && data.data) {
+        setMarketMeta({
+          description: data.data.description || '',
+          resolution_criteria: data.data.resolution_criteria || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching market metadata:', error);
+    }
+  }, [marketId]);
+
   useEffect(() => {
     fetchMarketData();
     fetchComments();
     fetchActivity();
+    fetchMarketMeta();
     const marketInterval = setInterval(fetchMarketData, 5000);
     const activityInterval = setInterval(fetchActivity, 30000);
     return () => {
       clearInterval(marketInterval);
       clearInterval(activityInterval);
     };
-  }, [fetchMarketData, fetchComments, fetchActivity]);
+  }, [fetchMarketData, fetchComments, fetchActivity, fetchMarketMeta]);
 
   useEffect(() => {
     if (market?.category) {
@@ -1084,17 +1101,19 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
           <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
           
-          <div className="market-description-section">
-            <h3>Description</h3>
-            <p className="market-description-text">
-              {market.question}
-            </p>
-          </div>
+          {marketMeta?.description && (
+            <div className="market-description-section">
+              <h3>Description</h3>
+              <p className="market-description-text">
+                {marketMeta.description}
+              </p>
+            </div>
+          )}
           
           <div className="market-resolution-section">
             <h3>How this market will be resolved</h3>
-            <p className="market-resolution-text placeholder">
-              Resolution criteria will be provided by the market creator.
+            <p className={`market-resolution-text ${!marketMeta?.resolution_criteria ? 'placeholder' : ''}`}>
+              {marketMeta?.resolution_criteria || 'Resolution criteria will be provided by the market creator.'}
             </p>
           </div>
         </div>
