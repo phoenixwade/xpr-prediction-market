@@ -389,9 +389,9 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
                                             ? (outcome.outcome_id === 0 ? 'yes-option' : 'no-option')
                                             : 'other-option';
                                           // Get odds for this outcome
-                                          const odds = isBinaryMarket 
-                                            ? (outcome.outcome_id === 0 ? market.yesOdds : market.noOdds)
-                                            : Math.round(100 / market.outcomes_count);
+                                          // For multi-outcome markets, use same LMSR logic as detail page:
+                                          // outcome_id 0 = yesOdds, all others = noOdds
+                                          const odds = outcome.outcome_id === 0 ? market.yesOdds : market.noOdds;
                                           return (
                                             <div key={outcome.outcome_id} className={`probability-option ${optionClass}`}>
                                               <div className="probability-label">{outcome.name}</div>
