@@ -243,21 +243,31 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
     return `${window.location.origin}${window.location.pathname}?market=${marketId}`;
   };
 
+  // Get share URL that uses share.php for proper OG meta tags on social media
+  const getShareUrl = (marketId: number) => {
+    return `${window.location.origin}/share.php?market=${marketId}`;
+  };
+
   const handleShare = (marketId: number, platform: 'twitter' | 'facebook' | 'copy', e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = getMarketUrl(marketId);
     const market = markets.find(m => m.id === marketId);
     const text = market ? `Check out this prediction market: ${market.question}` : 'Check out this prediction market';
 
     switch (platform) {
       case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+        // Use share.php URL for Twitter to get proper OG image preview
+        const twitterUrl = getShareUrl(marketId);
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(twitterUrl)}`, '_blank');
         break;
       case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        // Use share.php URL for Facebook to get proper OG image preview
+        const fbUrl = getShareUrl(marketId);
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(fbUrl)}`, '_blank');
         break;
       case 'copy':
-        navigator.clipboard.writeText(url).then(() => {
+        // For copy, use direct market URL (user will paste in browser)
+        const copyUrl = getMarketUrl(marketId);
+        navigator.clipboard.writeText(copyUrl).then(() => {
           setCopiedMarketId(marketId);
           setTimeout(() => setCopiedMarketId(null), 2000);
         });

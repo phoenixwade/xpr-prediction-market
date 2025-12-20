@@ -90,6 +90,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [lmsrQuoteLoading, setLmsrQuoteLoading] = useState(false);
         const [lmsrPosition, setLmsrPosition] = useState<{sharesYes: number, sharesNo: number} | null>(null);
         const [marketMeta, setMarketMeta] = useState<{description: string, resolution_criteria: string} | null>(null);
+        const [participants, setParticipants] = useState<number | null>(null);
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -153,8 +154,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       
       setOrders(ordersResult.rows);
 
-      // Fetch LMSR position for the current user if logged in and market is LMSR (version >= 2)
-      if (session && marketResult.rows.length > 0 && marketResult.rows[0].version >= 2) {
+      // Fetch LMSR positions for participant count and user position (for LMSR markets version >= 2)
+      if (marketResult.rows.length > 0 && marketResult.rows[0].version >= 2) {
         try {
           const lmsrPosResult = await rpc.get_table_rows({
             code: contractName,
@@ -163,22 +164,31 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             limit: 100,
           });
           
-          const myLmsrPos = lmsrPosResult.rows.find(
-            (row: any) => row.user === session.auth.actor.toString()
-          );
+          // Set participants count (number of unique traders)
+          setParticipants(lmsrPosResult.rows.length);
           
-          if (myLmsrPos) {
-            setLmsrPosition({
-              sharesYes: myLmsrPos.shares_yes / 1_000_000,
-              sharesNo: myLmsrPos.shares_no / 1_000_000,
-            });
-          } else {
-            setLmsrPosition(null);
+          // Find current user's position if logged in
+          if (session) {
+            const myLmsrPos = lmsrPosResult.rows.find(
+              (row: any) => row.user === session.auth.actor.toString()
+            );
+            
+            if (myLmsrPos) {
+              setLmsrPosition({
+                sharesYes: myLmsrPos.shares_yes / 1_000_000,
+                sharesNo: myLmsrPos.shares_no / 1_000_000,
+              });
+            } else {
+              setLmsrPosition(null);
+            }
           }
         } catch (error) {
-          console.error('Error fetching LMSR position:', error);
+          console.error('Error fetching LMSR positions:', error);
           setLmsrPosition(null);
+          setParticipants(null);
         }
+      } else {
+        setParticipants(null);
       }
     } catch (error) {
       console.error('Error fetching market data:', error);
@@ -1119,6 +1129,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
             </span>
           </div>
           <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
+          {participants !== null && (
+            <p className="market-participants-detail">
+              {participants} {participants === 1 ? 'trader' : 'traders'}
+            </p>
+          )}
           
           {marketMeta?.description && (
             <div className="market-description-section">
@@ -1399,70 +1414,73 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
         )}
 
-        <div className="order-book">
-          <h3>
-            Order Book (Selected Outcome)
-            <Tooltip text="The order book shows all active buy (bids) and sell (asks) orders for the currently selected outcome. Orders are matched automatically when prices meet." position="right">
-              <span className="tooltip-icon">ℹ</span>
-            </Tooltip>
-          </h3>
-          <div className="order-book-grid">
-            <div className="bids">
-              <h4>
-                Bids (Buy)
-                <Tooltip text="Buy orders for 'Yes' shares. Higher prices are shown first." position="right">
-                  <span className="tooltip-icon">ℹ</span>
-                </Tooltip>
-              </h4>
-              <div className="order-list">
-                {bids.length === 0 ? (
-                  <div className="no-orders">No bids</div>
-                ) : (
-                  (() => {
-                    const maxQty = Math.max(...bids.map(o => o.quantity));
-                    return bids.map(order => (
-                      <div 
-                        key={order.order_id} 
-                        className="order-row"
-                        style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
-                      >
-                        <span className="price">{order.price} USDTEST</span>
-                        <span className="quantity">{order.quantity}</span>
-                      </div>
-                    ));
-                  })()
-                )}
+        {/* Only show order book for legacy markets (version < 2). LMSR markets use automated market maker. */}
+        {market && market.version < 2 && (
+          <div className="order-book">
+            <h3>
+              Order Book (Selected Outcome)
+              <Tooltip text="The order book shows all active buy (bids) and sell (asks) orders for the currently selected outcome. Orders are matched automatically when prices meet." position="right">
+                <span className="tooltip-icon">ℹ</span>
+              </Tooltip>
+            </h3>
+            <div className="order-book-grid">
+              <div className="bids">
+                <h4>
+                  Bids (Buy)
+                  <Tooltip text="Buy orders for 'Yes' shares. Higher prices are shown first." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </h4>
+                <div className="order-list">
+                  {bids.length === 0 ? (
+                    <div className="no-orders">No bids</div>
+                  ) : (
+                    (() => {
+                      const maxQty = Math.max(...bids.map(o => o.quantity));
+                      return bids.map(order => (
+                        <div 
+                          key={order.order_id} 
+                          className="order-row"
+                          style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
+                        >
+                          <span className="price">{order.price} USDTEST</span>
+                          <span className="quantity">{order.quantity}</span>
+                        </div>
+                      ));
+                    })()
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="asks">
-              <h4>
-                Asks (Sell)
-                <Tooltip text="Sell orders for 'Yes' shares. Lower prices are shown first." position="right">
-                  <span className="tooltip-icon">ℹ</span>
-                </Tooltip>
-              </h4>
-              <div className="order-list">
-                {asks.length === 0 ? (
-                  <div className="no-orders">No asks</div>
-                ) : (
-                  (() => {
-                    const maxQty = Math.max(...asks.map(o => o.quantity));
-                    return asks.map(order => (
-                      <div 
-                        key={order.order_id} 
-                        className="order-row"
-                        style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
-                      >
-                        <span className="price">{order.price} USDTEST</span>
-                        <span className="quantity">{order.quantity}</span>
-                      </div>
-                    ));
-                  })()
-                )}
+              <div className="asks">
+                <h4>
+                  Asks (Sell)
+                  <Tooltip text="Sell orders for 'Yes' shares. Lower prices are shown first." position="right">
+                    <span className="tooltip-icon">ℹ</span>
+                  </Tooltip>
+                </h4>
+                <div className="order-list">
+                  {asks.length === 0 ? (
+                    <div className="no-orders">No asks</div>
+                  ) : (
+                    (() => {
+                      const maxQty = Math.max(...asks.map(o => o.quantity));
+                      return asks.map(order => (
+                        <div 
+                          key={order.order_id} 
+                          className="order-row"
+                          style={{ '--depth-width': `${(order.quantity / maxQty) * 100}%` } as React.CSSProperties}
+                        >
+                          <span className="price">{order.price} USDTEST</span>
+                          <span className="quantity">{order.quantity}</span>
+                        </div>
+                      ));
+                    })()
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
                   </>
                 ) : (
