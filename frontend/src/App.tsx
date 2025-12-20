@@ -35,10 +35,15 @@ function App() {
       url.searchParams.set('page', opts.page);
     }
 
-    if (opts.market === null) {
+    // Use path-based URLs for markets: /market/123
+    if (typeof opts.market === 'number') {
+      url.pathname = `/market/${opts.market}`;
+      url.searchParams.delete('market'); // Clean up old query param if present
+      url.searchParams.delete('page'); // Markets page doesn't need page param
+    } else if (opts.market === null) {
+      // Going back to home/markets list - reset to root path
+      url.pathname = '/';
       url.searchParams.delete('market');
-    } else if (typeof opts.market === 'number') {
-      url.searchParams.set('market', String(opts.market));
     }
 
     window.history.pushState({}, '', url.toString());
@@ -49,11 +54,32 @@ function App() {
     const page = url.searchParams.get('page');
     const marketParam = url.searchParams.get('market');
 
+    // Parse path-based market URL: /market/123
+    const path = url.pathname.replace(/\/+$/, ''); // Remove trailing slashes
+    const segments = path.split('/').filter(Boolean);
+    let marketIdFromPath: number | null = null;
+    if (segments[0] === 'market' && segments[1]) {
+      const id = parseInt(segments[1], 10);
+      if (!Number.isNaN(id)) {
+        marketIdFromPath = id;
+      }
+    }
+
+    // Determine market ID (path takes precedence, fallback to query param for backwards compatibility)
+    const marketId = marketIdFromPath ?? (marketParam ? parseInt(marketParam, 10) : null);
+
     setShowHelp(false);
     setShowWhitepaper(false);
     setShowWhatIsXpred(false);
     setSelectedMarket(null);
     setLoginMessage(null);
+
+    // If we have a market ID (from path or query), show that market
+    if (marketId !== null && !Number.isNaN(marketId)) {
+      setSelectedMarket(marketId);
+      setActiveTab('markets');
+      return; // Market view takes precedence
+    }
 
     if (page === 'help') {
       setActiveTab('help');
@@ -89,17 +115,6 @@ function App() {
         } else {
           setActiveTab('markets');
         }
-
-    if (marketParam) {
-      const id = parseInt(marketParam, 10);
-      if (!Number.isNaN(id)) {
-        setSelectedMarket(id);
-        setActiveTab('markets');
-        setShowHelp(false);
-        setShowWhitepaper(false);
-        setShowWhatIsXpred(false);
-      }
-    }
   }, [updateUrl]);
 
   useEffect(() => {

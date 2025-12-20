@@ -20,7 +20,8 @@ $imageUrl = 'https://xpredicting.com/xpr_logo.png';
 $marketUrl = 'https://xpredicting.com/';
 
 if ($marketId > 0) {
-    $marketUrl = "https://xpredicting.com/?market={$marketId}";
+    // Use clean URL format: /market/123
+    $marketUrl = "https://xpredicting.com/market/{$marketId}";
     
     // Fetch market data from blockchain RPC
     $rpcEndpoint = 'https://proton.eosusa.io';

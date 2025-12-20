@@ -240,7 +240,7 @@ const MarketsList: React.FC<MarketsListProps> = ({ session, onSelectMarket }) =>
   const categories = Array.from(new Set(markets.map(m => m.category).filter(Boolean))).sort();
 
   const getMarketUrl = (marketId: number) => {
-    return `${window.location.origin}${window.location.pathname}?market=${marketId}`;
+    return `${window.location.origin}/market/${marketId}`;
   };
 
   // Get share URL that uses share.php for proper OG meta tags on social media
