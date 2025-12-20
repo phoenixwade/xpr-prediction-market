@@ -388,6 +388,13 @@ body {
   font-weight: 500;
 }
 
+.market-participants-detail {
+  font-size: 0.9rem;
+  color: #a78bfa;
+  font-weight: 500;
+  margin: 0.25rem 0;
+}
+
 .market-total-invested {
   font-size: 0.875rem;
   color: #e5e7eb;
