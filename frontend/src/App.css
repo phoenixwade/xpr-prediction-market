@@ -5399,6 +5399,14 @@ body {
   color: #10b981;
 }
 
+.buy-modal-payout .payout-disclaimer {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .buy-modal-actions {
   display: flex;
   gap: 1rem;

@@ -994,7 +994,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                       <strong>Yes: {lmsrQuote.new_odds_after_purchase?.yes?.toFixed(1)}% / No: {lmsrQuote.new_odds_after_purchase?.no?.toFixed(1)}%</strong>
                     </div>
                     <p className="buy-modal-payout">
-                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, you receive <strong>{lmsrQuote.estimated_shares?.toFixed(2)} USDTEST</strong>.
+                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, your estimated payout is up to <strong>{lmsrQuote.estimated_shares?.toFixed(2)} USDTEST</strong>.
+                      <span className="payout-disclaimer"> Final payout may be adjusted based on total pool at resolution.</span>
                     </p>
                   </div>
                 )}

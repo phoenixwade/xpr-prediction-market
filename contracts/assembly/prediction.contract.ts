@@ -430,28 +430,47 @@ export class PredictionMarketContract extends Contract {
 
     // Check if this is an LMSR market (version >= 2)
     if (market!.version >= 2) {
-      // LMSR claim logic
+      // LMSR claim logic with pool-bounded pro-rata payouts
+      // Per Jim's docs: "Winners share the pool pro-rata if funds are insufficient"
       const positionsLmsrTable = new TableStore<PositionLmsrTable>(this.receiver, Name.fromU64(market_id));
       let pos = positionsLmsrTable.get(user.N);
       
       check(pos != null, "No position found for user in this market");
       
-      // Determine winning shares based on outcome
+      // Determine user's winning shares based on outcome
       // outcome 0 = YES wins, outcome 1 = NO wins
-      let winning_shares: i64 = 0;
+      let user_winning_shares: i64 = 0;
       if (winning_outcome_id == 0) {
-        winning_shares = pos!.shares_yes;
+        user_winning_shares = pos!.shares_yes;
       } else {
-        winning_shares = pos!.shares_no;
+        user_winning_shares = pos!.shares_no;
       }
       
-      check(winning_shares > 0, "No winning position for user in this market");
+      check(user_winning_shares > 0, "No winning position for user in this market");
       
-      // Payout: 1 share = 1 USDTEST
-      // winning_shares is already in SCALE units (same as USDTEST base units), so use directly
-      payout = winning_shares;
+      // Total winning shares for this outcome (q_yes or q_no - lifetime totals, never decremented)
+      const total_winning_shares: i64 = (winning_outcome_id == 0) ? market!.q_yes : market!.q_no;
       
-      // Zero out the winning shares
+      // Pool available to winners: total collateral minus platform fees
+      // This is the money from all bettors that winners will share
+      let pool: i64 = market!.total_collateral_in - market!.collected_fees;
+      if (pool < 0) pool = 0;
+      
+      // Calculate payout using pool-bounded pro-rata logic
+      if (total_winning_shares <= 0 || pool <= 0) {
+        // Edge case: no winners or empty pool
+        payout = 0;
+      } else if (total_winning_shares <= pool) {
+        // Fully funded: 1 USDTEST per share (standard case)
+        payout = user_winning_shares;
+      } else {
+        // Underfunded: pro-rata share of the pool
+        // user_payout = user_shares * pool / total_winning_shares
+        // All values are in SCALE (micro units), safe integer math
+        payout = (user_winning_shares * pool) / total_winning_shares;
+      }
+      
+      // Zero out the user's winning shares (they've been claimed)
       if (winning_outcome_id == 0) {
         pos!.shares_yes = 0;
       } else {
@@ -459,8 +478,8 @@ export class PredictionMarketContract extends Contract {
       }
       positionsLmsrTable.update(pos!, this.receiver);
       
-      // Update market total_collateral_out
-      market!.total_collateral_out += winning_shares;
+      // Track how much this market has actually paid out
+      market!.total_collateral_out += payout;
       this.markets2Table.update(market!, this.receiver);
     } else {
       // Legacy order-book claim logic
