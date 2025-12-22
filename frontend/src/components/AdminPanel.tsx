@@ -3,7 +3,6 @@ import { JsonRpc } from '@proton/js';
 import MarketTemplates from './MarketTemplates';
 import ScheduledMarkets from './ScheduledMarkets';
 import ResolutionTools from './ResolutionTools';
-import AdminResolve, { isAdminUser } from './AdminResolve';
 
 interface Market {
   id: number;
@@ -33,11 +32,9 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) => {
-  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'edit' | 'resolve' | 'approve' | 'schedule' | 'forceresolve'>('income');
+  const [activeTab, setActiveTab] = useState<'income' | 'create' | 'edit' | 'resolve' | 'approve' | 'schedule'>('income');
   
-  // Check if current user is an admin
   const currentUser = session?.auth?.actor?.toString() || '';
-  const isAdmin = isAdminUser(currentUser);
   
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
@@ -620,10 +617,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       const markets = result.rows
         .filter((row: any) => {
           if (row.resolved) return false; // Only show unresolved markets
-          // Show market if user is admin OR is the creator (suggested_by)
-          const isUserAdmin = isAdminUser(currentUser);
-          const isCreator = row.suggested_by === currentUser;
-          return isUserAdmin || isCreator;
+          // Only show markets the user created (suggested_by)
+          // SuperAdmins use the SuperAdmin Panel to edit any market
+          return row.suggested_by === currentUser;
         })
         .map((row: any) => ({
           id: row.id,
@@ -979,15 +975,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         >
           Schedule Market
         </button>
-        {isAdmin && (
-          <button
-            className={activeTab === 'forceresolve' ? 'active' : ''}
-            onClick={() => setActiveTab('forceresolve')}
-            style={{ backgroundColor: activeTab === 'forceresolve' ? '#dc2626' : undefined }}
-          >
-            Force Resolve
-          </button>
-        )}
       </div>
 
       {activeTab === 'income' && (
@@ -1437,15 +1424,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
           </div>
           <ScheduledMarkets onScheduleMarket={handleScheduleMarket} />
           {scheduleLoading && <p className="loading-message">Scheduling market...</p>}
-        </div>
-      )}
-
-      {activeTab === 'forceresolve' && isAdmin && (
-        <div className="admin-section">
-          <AdminResolve 
-            session={session} 
-            contractName={process.env.REACT_APP_CONTRACT_NAME || 'prediction'} 
-          />
         </div>
       )}
 

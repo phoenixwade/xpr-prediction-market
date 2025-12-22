@@ -13,15 +13,16 @@ interface AdminResolveProps {
   contractName: string;
 }
 
-// Check if user is in the admin list from env
-const getAdminUsers = (): string[] => {
+// Check if user is a SuperAdmin (listed in REACT_APP_ADMIN_USERS env var)
+// SuperAdmins can edit ANY market, force resolve, and access privileged features
+const getSuperAdminUsers = (): string[] => {
   const adminList = process.env.REACT_APP_ADMIN_USERS || '';
   return adminList.split('|').map(u => u.trim().toLowerCase()).filter(u => u.length > 0);
 };
 
-export const isAdminUser = (username: string): boolean => {
-  const admins = getAdminUsers();
-  return admins.includes(username.toLowerCase());
+export const isSuperAdmin = (username: string): boolean => {
+  const superAdmins = getSuperAdminUsers();
+  return superAdmins.includes(username.toLowerCase());
 };
 
 const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) => {
