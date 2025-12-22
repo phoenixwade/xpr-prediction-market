@@ -694,12 +694,15 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       
       // Set prices based on LMSR probabilities
       // outcome_id 0 = pYes, all others = pNo
+      // Note: LMSR doesn't track per-outcome volume, so we don't show volume per row
+      // to avoid the confusing display of identical volumes for all outcomes
       outcomes.forEach(outcome => {
         const price = outcome.outcome_id === 0 ? pYes : pNo;
         stats[outcome.outcome_id] = {
           bestBid: price,
           bestAsk: price,
-          volume: market.total_collateral_in ? market.total_collateral_in / SCALE : 0,
+          // Don't show per-outcome volume for LMSR - it's misleading since we only have market-level volume
+          volume: undefined,
         };
       });
     } else {
@@ -959,8 +962,13 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 You are buying <strong>{buyModalSide === 'yes' ? 'YES' : 'NO'}</strong> shares for "{buyModalOutcome.name}".
                 {buyModalSide === 'yes' 
                   ? ' If this outcome wins, each share pays 1 USDTEST.'
-                  : ' If this outcome loses, each share pays 1 USDTEST.'}
+                  : ` If this outcome loses, you receive ${lmsrQuote?.estimated_shares?.toFixed(2) || 'your shares in'} USDTEST.`}
               </p>
+              {buyModalSide === 'no' && outcomes.length === 2 && (
+                <p className="buy-modal-note" style={{ fontSize: '0.85em', color: '#aaa', marginTop: '4px' }}>
+                  Note: Betting NO on "{buyModalOutcome.name}" is equivalent to betting YES on "{outcomes.find(o => o.outcome_id !== buyModalOutcome.outcome_id)?.name}".
+                </p>
+              )}
               <div className="buy-modal-form">
                 <label>
                   Amount (USDTEST to spend)
@@ -1241,6 +1249,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                         activityDescription = `placed ${activity.side?.toUpperCase()} order for ${activity.quantity} shares of "${outcomeName}" at ${priceValue} USDTEST`;
                         activityClass = activity.side === 'buy' ? 'activity-buy' : 'activity-sell';
                         break;
+                      case 'lmsrbuy':
+                        const lmsrOutcomeName = outcomes.find(o => o.outcome_id === activity.outcome_id)?.name || (activity.outcome_id === 0 ? 'Yes' : 'No');
+                        activityDescription = `bought ${activity.quantity} of "${lmsrOutcomeName}" shares`;
+                        activityClass = 'activity-buy';
+                        break;
                       case 'resolve':
                         const resolvedOutcome = outcomes.find(o => o.outcome_id === activity.outcome)?.name || `Outcome ${activity.outcome}`;
                         activityDescription = `resolved market to "${resolvedOutcome}"`;
@@ -1335,15 +1348,30 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 <div className="position-row yes">
                   <span className="position-outcome">{outcomes.find(o => o.outcome_id === 0)?.name || 'Yes'}</span>
                   <span className="position-shares">{lmsrPosition.sharesYes.toFixed(2)} shares</span>
+                  <button 
+                    className="position-sell-btn"
+                    onClick={() => showToast('Selling LMSR positions will be available soon. For now, wait for market resolution to claim winnings.', 'error')}
+                  >
+                    Sell
+                  </button>
                 </div>
               )}
               {lmsrPosition.sharesNo > 0 && (
                 <div className="position-row no">
                   <span className="position-outcome">{outcomes.find(o => o.outcome_id === 1)?.name || 'No'}</span>
                   <span className="position-shares">{lmsrPosition.sharesNo.toFixed(2)} shares</span>
+                  <button 
+                    className="position-sell-btn"
+                    onClick={() => showToast('Selling LMSR positions will be available soon. For now, wait for market resolution to claim winnings.', 'error')}
+                  >
+                    Sell
+                  </button>
                 </div>
               )}
             </div>
+            <p className="position-note" style={{ fontSize: '0.85em', color: '#aaa', marginTop: '8px' }}>
+              Winning shares pay 1 USDTEST each when the market resolves. Claim your winnings from the Portfolio page after resolution.
+            </p>
           </div>
         )}
 

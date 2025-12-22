@@ -83,7 +83,8 @@ if ($eventType) {
     $actionMap = [
         'createmkt' => 'createmkt',
         'placeorder' => 'placeorder',
-        'resolve' => 'resolve'
+        'resolve' => 'resolve',
+        'buy' => 'transfer'  // LMSR buys are done via transfer with memo
     ];
     
     if (isset($actionMap[$eventType])) {
@@ -172,6 +173,29 @@ foreach ($data['actions'] as $action) {
             
         case 'resolve':
             $activity['outcome'] = $actData['outcome'] ?? 0;
+            break;
+            
+        case 'transfer':
+            // LMSR buy actions are done via transfer with memo format: "buy:<market_id>:<outcome>:<min_shares>"
+            $memo = $actData['memo'] ?? '';
+            if (strpos($memo, 'buy:') === 0) {
+                $memoParts = explode(':', $memo);
+                if (count($memoParts) >= 3) {
+                    $memoMarketId = intval($memoParts[1]);
+                    // Only include if this transfer is for the requested market
+                    if ($memoMarketId !== $marketId) {
+                        continue 2; // Skip this action
+                    }
+                    $activity['type'] = 'lmsrbuy';
+                    $activity['market_id'] = $memoMarketId;
+                    $activity['outcome_id'] = $memoParts[2] === 'yes' ? 0 : 1;
+                    $activity['side'] = 'buy';
+                    $activity['quantity'] = $actData['quantity'] ?? '';
+                    $activity['user'] = $actData['from'] ?? $actor;
+                }
+            } else {
+                continue 2; // Skip non-buy transfers
+            }
             break;
     }
     

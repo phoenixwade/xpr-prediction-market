@@ -141,8 +141,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ account }) => {
                     if (!notification.read) {
                       markAsRead(notification.id);
                     }
+                    // Navigate to the notification target
                     if (notification.link) {
                       window.location.href = notification.link;
+                    } else if (notification.marketId) {
+                      // Fallback: use marketId to navigate to market page
+                      window.location.href = `/market/${notification.marketId}`;
                     }
                   }}
                 >

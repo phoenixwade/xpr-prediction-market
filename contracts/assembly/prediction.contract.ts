@@ -266,12 +266,14 @@ export class PredictionMarketContract extends Contract {
     @action("editmarket")
     editMarket(admin: Name, market_id: u64, question: string, category: string, image_url: string): void {
       requireAuth(admin);
-      // Allow contract owner or resolvers to edit markets
-      check(this.isAdmin(admin), "Only admin users can edit markets");
-    
+      
       const market = this.markets2Table.get(market_id);
       check(market != null, "Market not found");
       check(!market!.resolved, "Cannot edit resolved market");
+      
+      // Allow contract owner, resolvers, OR the market creator to edit markets
+      const isCreator = market!.suggested_by == admin;
+      check(this.isAdmin(admin) || isCreator, "Only admin users or market creator can edit markets");
     
       // Validate inputs
       check(question.length > 0, "Question cannot be empty");
