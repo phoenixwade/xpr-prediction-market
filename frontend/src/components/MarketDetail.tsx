@@ -1486,27 +1486,31 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               {lmsrPosition.sharesYes > 0 && (
                 <div className="position-row yes">
                   <span className="position-outcome">{outcomes.find(o => o.outcome_id === 0)?.name || 'Yes'}</span>
-                  <span className="position-shares">{lmsrPosition.sharesYes.toFixed(2)} shares</span>
-                  <button 
-                    className="position-sell-btn"
-                    onClick={() => handleOpenLmsrSellModal('yes')}
-                    disabled={market.resolved}
-                  >
-                    Sell
-                  </button>
+                  <span className="position-shares-with-sell">
+                    <span>{lmsrPosition.sharesYes.toFixed(2)} shares</span>
+                    <button 
+                      className="position-sell-btn"
+                      onClick={() => handleOpenLmsrSellModal('yes')}
+                      disabled={market.resolved}
+                    >
+                      Sell
+                    </button>
+                  </span>
                 </div>
               )}
               {lmsrPosition.sharesNo > 0 && (
                 <div className="position-row no">
                   <span className="position-outcome">{outcomes.find(o => o.outcome_id === 1)?.name || 'No'}</span>
-                  <span className="position-shares">{lmsrPosition.sharesNo.toFixed(2)} shares</span>
-                  <button 
-                    className="position-sell-btn"
-                    onClick={() => handleOpenLmsrSellModal('no')}
-                    disabled={market.resolved}
-                  >
-                    Sell
-                  </button>
+                  <span className="position-shares-with-sell">
+                    <span>{lmsrPosition.sharesNo.toFixed(2)} shares</span>
+                    <button 
+                      className="position-sell-btn"
+                      onClick={() => handleOpenLmsrSellModal('no')}
+                      disabled={market.resolved}
+                    >
+                      Sell
+                    </button>
+                  </span>
                 </div>
               )}
             </div>
