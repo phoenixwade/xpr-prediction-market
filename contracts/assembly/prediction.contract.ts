@@ -18,6 +18,7 @@ import {
   SCALE,
   lmsr_compute_shares_from_budget,
   lmsr_buy_cost,
+  lmsr_sell_payout,
   lmsr_fee,
   lmsr_probability_yes,
   DEFAULT_B,
@@ -180,6 +181,94 @@ export class PredictionMarketContract extends Contract {
     const shares_display = delta_q / SCALE;
     const outcome_name = outcome_is_yes ? "YES" : "NO";
     print(`LMSR Buy: ${from.toString()} bought ${shares_display} ${outcome_name} shares in market ${market_id}`);
+  }
+
+  // LMSR Sell action - allows users to sell shares back to the AMM
+  @action("lmsrsell")
+  lmsrSell(account: Name, market_id: u64, outcome: string, shares: i64, min_payout: i64 = 0): void {
+    requireAuth(account);
+    
+    // Parse outcome
+    const outcome_str = outcome.toLowerCase();
+    let outcome_is_yes: boolean;
+    if (outcome_str == "yes" || outcome_str == "0") {
+      outcome_is_yes = true;
+    } else if (outcome_str == "no" || outcome_str == "1") {
+      outcome_is_yes = false;
+    } else {
+      check(false, "Invalid outcome. Use 'yes', 'no', '0', or '1'");
+      return;
+    }
+    
+    // Load market
+    const market = this.markets2Table.get(market_id);
+    check(market != null, "Market not found");
+    check(!market!.resolved, "Market is already resolved");
+    check(market!.version >= 2, "Market does not support LMSR trading");
+    
+    const now = currentTimeSec();
+    check(i32(now) < market!.expire.secSinceEpoch(), "Market has expired");
+    
+    // shares parameter is in whole shares, convert to fixed-point
+    const delta_q = shares * SCALE;
+    check(delta_q > 0, "Must sell positive amount of shares");
+    
+    // Load user position
+    const positionsLmsrTable = new TableStore<PositionLmsrTable>(this.receiver, Name.fromU64(market_id));
+    let pos = positionsLmsrTable.get(account.N);
+    check(pos != null, "No position found for user in this market");
+    
+    // Check user has enough shares to sell
+    if (outcome_is_yes) {
+      check(pos!.shares_yes >= delta_q, "Insufficient YES shares to sell");
+    } else {
+      check(pos!.shares_no >= delta_q, "Insufficient NO shares to sell");
+    }
+    
+    // Check market has enough shares outstanding (should always be true if user has shares)
+    if (outcome_is_yes) {
+      check(market!.q_yes >= delta_q, "Market state error: insufficient YES shares outstanding");
+    } else {
+      check(market!.q_no >= delta_q, "Market state error: insufficient NO shares outstanding");
+    }
+    
+    // Compute payout using LMSR math (no fee on sells to match current "fee on buys only" model)
+    const raw_payout = lmsr_sell_payout(market!.q_yes, market!.q_no, market!.b, outcome_is_yes, delta_q);
+    check(raw_payout > 0, "Payout must be positive");
+    
+    // Slippage protection
+    check(raw_payout >= min_payout, "Slippage too high: payout less than minimum");
+    
+    // Update market state - decrement q_yes or q_no (current outstanding shares)
+    if (outcome_is_yes) {
+      market!.q_yes -= delta_q;
+    } else {
+      market!.q_no -= delta_q;
+    }
+    market!.total_collateral_out += raw_payout;
+    this.markets2Table.update(market!, this.receiver);
+    
+    // Update user position
+    if (outcome_is_yes) {
+      pos!.shares_yes -= delta_q;
+    } else {
+      pos!.shares_no -= delta_q;
+    }
+    pos!.updated_at = new TimePointSec(now);
+    positionsLmsrTable.update(pos!, this.receiver);
+    
+    // Send payout to user
+    const payoutAsset = new Asset(raw_payout, USDTEST_SYMBOL);
+    const transferAction = new InlineAction<Transfer>("transfer");
+    const action = transferAction.act(Name.fromString("tokencreate"), new PermissionLevel(this.receiver));
+    const transferParams = new Transfer(this.receiver, account, payoutAsset, "LMSR sell payout");
+    action.send(transferParams);
+    
+    // Log the sale
+    const shares_display = delta_q / SCALE;
+    const payout_display = raw_payout / SCALE;
+    const outcome_name = outcome_is_yes ? "YES" : "NO";
+    print(`LMSR Sell: ${account.toString()} sold ${shares_display} ${outcome_name} shares for ${payout_display} USDTEST in market ${market_id}`);
   }
 
   @action("withdraw")
