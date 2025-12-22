@@ -599,7 +599,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
-  // Fetch all markets for editing
+  // Fetch all markets for editing (filtered to markets user can edit)
   const fetchAllMarketsForEdit = useCallback(async () => {
     if (!session) return;
     
@@ -607,6 +607,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     try {
       const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      const currentUser = session.auth.actor.toString();
       
       const result = await rpc.get_table_rows({
         json: true,
@@ -617,7 +618,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       });
 
       const markets = result.rows
-        .filter((row: any) => !row.resolved) // Only show unresolved markets
+        .filter((row: any) => {
+          if (row.resolved) return false; // Only show unresolved markets
+          // Show market if user is admin OR is the creator (suggested_by)
+          const isUserAdmin = isAdminUser(currentUser);
+          const isCreator = row.suggested_by === currentUser;
+          return isUserAdmin || isCreator;
+        })
         .map((row: any) => ({
           id: row.id,
           question: row.question,
