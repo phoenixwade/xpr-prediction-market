@@ -6,6 +6,8 @@ import MarketsList from './components/MarketsList';
 import MarketDetail from './components/MarketDetail';
 import Portfolio from './components/Portfolio';
 import AdminPanel from './components/AdminPanel';
+import SuperAdminPanel from './components/SuperAdminPanel';
+import { isSuperAdmin } from './components/AdminResolve';
 import Footer from './components/Footer';
 import HowToUse from './components/HowToUse';
 import Tooltip from './components/Tooltip';
@@ -18,7 +20,7 @@ import MobileLayout from './components/MobileLayout';
 function App() {
   const [session, setSession] = useState<any>(null);
   const [selectedMarket, setSelectedMarket] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'help' | 'whitepaper' | 'whatisxpred' | 'leaderboard'>('markets');
+  const [activeTab, setActiveTab] = useState<'markets' | 'portfolio' | 'admin' | 'superadmin' | 'help' | 'whitepaper' | 'whatisxpred' | 'leaderboard'>('markets');
   const [showHelp, setShowHelp] = useState<boolean>(false);
   const [showWhitepaper, setShowWhitepaper] = useState<boolean>(false);
   const [showWhatIsXpred, setShowWhatIsXpred] = useState<boolean>(false);
@@ -109,6 +111,18 @@ function App() {
             updateUrl({ page: null, market: null });
           } else {
             setActiveTab('admin');
+          }
+        } else if (page === 'superadmin') {
+          if (!currentSession) {
+            setActiveTab('markets');
+            setLoginMessage('Please connect your wallet to access the SuperAdmin panel.');
+            updateUrl({ page: null, market: null });
+          } else if (!isSuperAdmin(currentSession.auth.actor.toString())) {
+            setActiveTab('markets');
+            setLoginMessage('You do not have SuperAdmin privileges.');
+            updateUrl({ page: null, market: null });
+          } else {
+            setActiveTab('superadmin');
           }
         } else if (page === 'leaderboard') {
           setActiveTab('leaderboard');
@@ -255,6 +269,8 @@ function App() {
         setActiveTab('portfolio');
       } else if (page === 'admin') {
         setActiveTab('admin');
+      } else if (page === 'superadmin') {
+        setActiveTab('superadmin');
       } else if (page === 'leaderboard') {
         setActiveTab('leaderboard');
       } else {
@@ -347,6 +363,15 @@ function App() {
                   Admin
                 </button>
               )}
+              {session && isSuperAdmin(session.auth.actor.toString()) && (
+                <button
+                  className={activeTab === 'superadmin' ? 'active' : ''}
+                  onClick={() => navigateTo('superadmin')}
+                  style={{ backgroundColor: activeTab === 'superadmin' ? '#dc2626' : undefined }}
+                >
+                  SuperAdmin
+                </button>
+              )}
                             <button
                               className={activeTab === 'leaderboard' ? 'active' : ''}
                               onClick={() => navigateTo('leaderboard')}
@@ -422,6 +447,9 @@ function App() {
               )}
                             {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'admin' && session && isXpredHolder && (
                               <AdminPanel session={session} xpredBalance={xpredBalance} />
+                            )}
+                            {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'superadmin' && session && isSuperAdmin(session.auth.actor.toString()) && (
+                              <SuperAdminPanel session={session} />
                             )}
                             {!showHelp && !showWhitepaper && !showWhatIsXpred && activeTab === 'leaderboard' && (
                               <Leaderboard timeframe="all" />
