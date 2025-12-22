@@ -20,11 +20,14 @@ export class Market2Table extends Table {
     public version: u8 = 2,           // 1 = legacy order-book, 2 = LMSR AMM
     public b: i64 = 500000000,        // Liquidity parameter (500 * SCALE, where SCALE = 1_000_000)
     public fee_bps: u16 = 100,        // Fee in basis points (100 = 1%)
-    public q_yes: i64 = 0,            // YES shares outstanding (fixed-point, scaled by SCALE)
-    public q_no: i64 = 0,             // NO shares outstanding (fixed-point, scaled by SCALE)
+    public q_yes: i64 = 0,            // YES shares outstanding (fixed-point, scaled by SCALE) - current net, decremented on sells
+    public q_no: i64 = 0,             // NO shares outstanding (fixed-point, scaled by SCALE) - current net, decremented on sells
     public collected_fees: i64 = 0,   // Accumulated fees in internal fixed-point units
     public total_collateral_in: i64 = 0,  // Total collateral deposited (internal units)
-    public total_collateral_out: i64 = 0  // Total collateral withdrawn (internal units)
+    public total_collateral_out: i64 = 0, // Total collateral withdrawn (sells + claims, internal units)
+    // Per-outcome volume tracking (added for UI display)
+    public volume_yes: i64 = 0,       // Total collateral spent on YES shares (internal units)
+    public volume_no: i64 = 0         // Total collateral spent on NO shares (internal units)
   ) {
     super();
   }

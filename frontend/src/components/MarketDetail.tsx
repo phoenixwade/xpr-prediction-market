@@ -91,6 +91,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [lmsrPosition, setLmsrPosition] = useState<{sharesYes: number, sharesNo: number} | null>(null);
         const [marketMeta, setMarketMeta] = useState<{description: string, resolution_criteria: string} | null>(null);
         const [participants, setParticipants] = useState<number | null>(null);
+        const [showLmsrSellModal, setShowLmsrSellModal] = useState(false);
+        const [lmsrSellOutcome, setLmsrSellOutcome] = useState<'yes' | 'no'>('yes');
+        const [lmsrSellQuantity, setLmsrSellQuantity] = useState('');
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -694,15 +697,18 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       
       // Set prices based on LMSR probabilities
       // outcome_id 0 = pYes, all others = pNo
-      // Note: LMSR doesn't track per-outcome volume, so we don't show volume per row
-      // to avoid the confusing display of identical volumes for all outcomes
+      // Per-outcome volume is now tracked in the contract (volume_yes, volume_no)
       outcomes.forEach(outcome => {
         const price = outcome.outcome_id === 0 ? pYes : pNo;
+        // Get per-outcome volume from contract (in micro units, divide by SCALE)
+        const rawVolume = outcome.outcome_id === 0 
+          ? ((market as any).volume_yes || 0) 
+          : ((market as any).volume_no || 0);
+        const volume = rawVolume / SCALE;
         stats[outcome.outcome_id] = {
           bestBid: price,
           bestAsk: price,
-          // Don't show per-outcome volume for LMSR - it's misleading since we only have market-level volume
-          volume: undefined,
+          volume: volume > 0 ? volume : undefined,
         };
       });
     } else {
@@ -891,6 +897,73 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     } catch (error) {
       console.error('Error placing sell order:', error);
       showToast('Failed to place sell order: ' + error, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenLmsrSellModal = (outcome: 'yes' | 'no') => {
+    setLmsrSellOutcome(outcome);
+    setLmsrSellQuantity('');
+    setShowLmsrSellModal(true);
+  };
+
+  const handleLmsrSellPercentage = (percentage: number) => {
+    if (!lmsrPosition) return;
+    const maxShares = lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo;
+    const amount = Math.floor(maxShares * (percentage / 100));
+    setLmsrSellQuantity(amount > 0 ? amount.toString() : '1');
+  };
+
+  const handleLmsrSell = async () => {
+    if (!session || !lmsrPosition) {
+      return;
+    }
+
+    const quantityInt = parseInt(lmsrSellQuantity);
+    if (isNaN(quantityInt) || quantityInt <= 0) {
+      showToast('Please enter a valid quantity', 'error');
+      return;
+    }
+
+    const maxShares = lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo;
+    if (quantityInt > maxShares) {
+      showToast(`Cannot sell more than ${maxShares.toFixed(2)} shares`, 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+
+      const actions: any[] = [{
+        account: contractName,
+        name: 'lmsrsell',
+        authorization: [{
+          actor: session.auth.actor,
+          permission: session.auth.permission,
+        }],
+        data: {
+          account: session.auth.actor.toString(),
+          market_id: marketId,
+          outcome: lmsrSellOutcome,
+          shares: quantityInt,
+          min_payout: 0, // No slippage protection for now
+        },
+      }];
+
+      await session.transact({ actions });
+
+      const outcomeName = lmsrSellOutcome === 'yes' 
+        ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes')
+        : (outcomes.find(o => o.outcome_id === 1)?.name || 'No');
+      showToast(`Sold ${quantityInt} ${outcomeName} shares`, 'success');
+      setShowLmsrSellModal(false);
+      setLmsrSellQuantity('');
+      fetchMarketData();
+    } catch (error) {
+      console.error('Error selling LMSR shares:', error);
+      showToast('Failed to sell shares: ' + error, 'error');
     } finally {
       setLoading(false);
     }
@@ -1107,6 +1180,72 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 disabled={loading || !sellQuantity || parseInt(sellQuantity) <= 0 || parseInt(sellQuantity) > sellModalOrder.quantity}
               >
                 {loading ? 'Placing Order...' : 'Sell'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLmsrSellModal && lmsrPosition && (
+        <div className="sell-modal-overlay" onClick={() => setShowLmsrSellModal(false)}>
+          <div className="sell-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sell-modal-header">
+              <h3>Sell {lmsrSellOutcome === 'yes' ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes') : (outcomes.find(o => o.outcome_id === 1)?.name || 'No')} Shares</h3>
+              <button className="sell-modal-close" onClick={() => setShowLmsrSellModal(false)}>×</button>
+            </div>
+            <div className="sell-modal-content">
+              <div className="sell-modal-info">
+                <div className="sell-info-row">
+                  <span className="sell-info-label">Outcome:</span>
+                  <span className="sell-info-value">{lmsrSellOutcome === 'yes' ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes') : (outcomes.find(o => o.outcome_id === 1)?.name || 'No')}</span>
+                </div>
+                <div className="sell-info-row">
+                  <span className="sell-info-label">Available to Sell:</span>
+                  <span className="sell-info-value">{(lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo).toFixed(2)} shares</span>
+                </div>
+              </div>
+              <div className="sell-modal-form">
+                <label>
+                  Shares to Sell (whole shares only)
+                  <input
+                    type="number"
+                    min="1"
+                    max={Math.floor(lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo)}
+                    step="1"
+                    value={lmsrSellQuantity}
+                    onChange={(e) => setLmsrSellQuantity(e.target.value)}
+                    placeholder="Enter quantity"
+                    autoFocus
+                  />
+                </label>
+                <div className="sell-percentage-buttons">
+                  <button type="button" onClick={() => handleLmsrSellPercentage(25)}>25%</button>
+                  <button type="button" onClick={() => handleLmsrSellPercentage(50)}>50%</button>
+                  <button type="button" onClick={() => handleLmsrSellPercentage(75)}>75%</button>
+                  <button type="button" onClick={() => handleLmsrSellPercentage(100)}>100%</button>
+                </div>
+                {lmsrSellQuantity && parseInt(lmsrSellQuantity) > 0 && (
+                  <p className="sell-modal-summary">
+                    You will sell <strong>{parseInt(lmsrSellQuantity)}</strong> {lmsrSellOutcome === 'yes' ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes') : (outcomes.find(o => o.outcome_id === 1)?.name || 'No')} shares.
+                    <br />
+                    <span style={{ fontSize: '0.85em', color: '#aaa' }}>Payout is calculated using LMSR pricing and sent directly to your wallet.</span>
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="sell-modal-actions">
+              <button 
+                className="sell-modal-cancel" 
+                onClick={() => setShowLmsrSellModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="sell-modal-confirm"
+                onClick={handleLmsrSell}
+                disabled={loading || !lmsrSellQuantity || parseInt(lmsrSellQuantity) <= 0 || parseInt(lmsrSellQuantity) > Math.floor(lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo)}
+              >
+                {loading ? 'Selling...' : 'Sell Shares'}
               </button>
             </div>
           </div>
@@ -1350,7 +1489,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                   <span className="position-shares">{lmsrPosition.sharesYes.toFixed(2)} shares</span>
                   <button 
                     className="position-sell-btn"
-                    onClick={() => showToast('Selling LMSR positions will be available soon. For now, wait for market resolution to claim winnings.', 'error')}
+                    onClick={() => handleOpenLmsrSellModal('yes')}
+                    disabled={market.resolved}
                   >
                     Sell
                   </button>
@@ -1362,7 +1502,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                   <span className="position-shares">{lmsrPosition.sharesNo.toFixed(2)} shares</span>
                   <button 
                     className="position-sell-btn"
-                    onClick={() => showToast('Selling LMSR positions will be available soon. For now, wait for market resolution to claim winnings.', 'error')}
+                    onClick={() => handleOpenLmsrSellModal('no')}
+                    disabled={market.resolved}
                   >
                     Sell
                   </button>
