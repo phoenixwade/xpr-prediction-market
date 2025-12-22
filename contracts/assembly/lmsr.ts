@@ -536,37 +536,6 @@ export function lmsr_buy_cost(
   return cost_after - cost_before;
 }
 
-// Compute payout for selling delta_q shares of an outcome
-// Returns the collateral payout in fixed-point (before any fees)
-// This is the inverse of lmsr_buy_cost: payout = cost_before - cost_after
-export function lmsr_sell_payout(
-  q_yes: i64,
-  q_no: i64,
-  b: i64,
-  outcome_is_yes: boolean,
-  delta_q: i64
-): i64 {
-  let new_q_yes = q_yes;
-  let new_q_no = q_no;
-  
-  if (outcome_is_yes) {
-    new_q_yes -= delta_q;
-  } else {
-    new_q_no -= delta_q;
-  }
-  
-  // Ensure we don't go negative
-  if (new_q_yes < 0) new_q_yes = 0;
-  if (new_q_no < 0) new_q_no = 0;
-  
-  const cost_before = lmsr_cost(q_yes, q_no, b);
-  const cost_after = lmsr_cost(new_q_yes, new_q_no, b);
-  
-  // Payout is the decrease in cost function
-  const payout = cost_before - cost_after;
-  return payout > 0 ? payout : 0;
-}
-
 // Compute implied probability for YES outcome
 // Returns probability * SCALE (e.g., 0.6 -> 600_000)
 export function lmsr_probability_yes(q_yes: i64, q_no: i64, b: i64): i64 {
