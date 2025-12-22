@@ -14,6 +14,90 @@ require_once __DIR__ . '/logger.php';
 // LMSR Math Constants
 define('SCALE', 1000000); // Fixed-point scale: 1.0 = 1,000,000
 
+// Load environment config
+function load_env_config() {
+    $envFile = __DIR__ . '/../../.env';
+    $config = [];
+    if (file_exists($envFile)) {
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) continue;
+            $parts = explode('=', $line, 2);
+            if (count($parts) === 2) {
+                $key = trim($parts[0]);
+                $value = trim($parts[1], " \t\n\r\0\x0B\"'");
+                $config[$key] = $value;
+            }
+        }
+    }
+    return $config;
+}
+
+// Fetch market state from blockchain
+function fetch_market_state($market_id) {
+    $config = load_env_config();
+    $rpcEndpoint = $config['PROTON_RPC'] ?? $config['REACT_APP_RPC_ENDPOINT'] ?? 'https://proton.eosusa.io';
+    $contractAccount = $config['CONTRACT_ACCOUNT'] ?? $config['REACT_APP_CONTRACT_NAME'] ?? 'xpredicting';
+    
+    $url = rtrim($rpcEndpoint, '/') . '/v1/chain/get_table_rows';
+    
+    $postData = json_encode([
+        'code' => $contractAccount,
+        'scope' => $contractAccount,
+        'table' => 'markets3',
+        'json' => true,
+        'lower_bound' => (string)$market_id,
+        'upper_bound' => (string)$market_id,
+        'limit' => 1
+    ]);
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+    
+    if ($curlError) {
+        throw new Exception("RPC request failed: " . $curlError);
+    }
+    
+    if ($httpCode !== 200) {
+        throw new Exception("RPC HTTP error: " . $httpCode);
+    }
+    
+    $data = json_decode($response, true);
+    if (!$data || !isset($data['rows']) || empty($data['rows'])) {
+        throw new Exception("Market not found: " . $market_id);
+    }
+    
+    $market = $data['rows'][0];
+    
+    // Check if this is an LMSR market (version >= 2)
+    $version = isset($market['version']) ? intval($market['version']) : 1;
+    if ($version < 2) {
+        throw new Exception("Market is not an LMSR market (version: $version)");
+    }
+    
+    // Extract LMSR parameters - these are stored as integers already scaled by SCALE
+    return [
+        'q_yes' => isset($market['q_yes']) ? intval($market['q_yes']) : 0,
+        'q_no' => isset($market['q_no']) ? intval($market['q_no']) : 0,
+        'b' => isset($market['b']) ? intval($market['b']) : 500 * SCALE,
+        'fee_bps' => isset($market['fee_bps']) ? intval($market['fee_bps']) : 100,
+        'version' => $version
+    ];
+}
+
 // Pre-computed exp lookup table for range [-10, 10] with step 0.01
 // This matches the contract's LUT for determinism
 function getExpLut() {
@@ -152,16 +236,26 @@ try {
     
     $outcome_is_yes = ($outcome === 'yes' || $outcome === '0');
     
-    // For now, use default LMSR parameters
-    // In production, these should be fetched from the blockchain
-    $q_yes = 0;
-    $q_no = 0;
-    $b = 500 * SCALE; // Default liquidity parameter
-    $fee_bps = 100; // 1% fee
-    
-    // TODO: Fetch actual market state from blockchain
-    // This would require an RPC call to the XPR Network
-    // For now, we'll use the defaults which represent a fresh market
+    // Fetch actual market state from blockchain
+    try {
+        $marketState = fetch_market_state($market_id);
+        $q_yes = $marketState['q_yes'];
+        $q_no = $marketState['q_no'];
+        $b = $marketState['b'];
+        $fee_bps = $marketState['fee_bps'];
+    } catch (Exception $e) {
+        // Log error and fall back to defaults for fresh markets
+        logApiRequest('lmsr_quote_market_fetch_error', 'GET', [
+            'market_id' => $market_id,
+            'error' => $e->getMessage()
+        ]);
+        
+        // Use defaults for fresh/unfound markets
+        $q_yes = 0;
+        $q_no = 0;
+        $b = 500 * SCALE;
+        $fee_bps = 100;
+    }
     
     // Convert spend amount to internal fixed-point units
     // USDTEST has 6 decimals, so spend_amount is already in USDTEST units
