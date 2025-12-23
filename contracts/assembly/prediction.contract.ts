@@ -332,7 +332,7 @@ export class PredictionMarketContract extends Contract {
       outcomesCount,
       new TimePointSec(0),
       1, // status = OPEN
-      EMPTY_NAME, // suggested_by
+      admin, // suggested_by = creator (allows them to edit their own market)
       EMPTY_NAME, // approved_by
       now, // created_at
       2, // version = 2 (LMSR)
