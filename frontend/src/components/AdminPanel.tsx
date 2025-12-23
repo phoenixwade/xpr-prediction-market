@@ -26,6 +26,27 @@ interface ProfitRound {
   total_profit: string;
 }
 
+// Interface for off-chain pending markets from scheduled_markets API
+interface ScheduledMarket {
+  id: number;
+  creator: string;
+  question: string;
+  description: string;
+  outcomes: string[];
+  category: string;
+  resolution_criteria: string;
+  scheduled_open_time: number;
+  scheduled_close_time: number;
+  auto_resolve: boolean;
+  resolution_source: string;
+  status: string;
+  created_at: number;
+  processed_at: number | null;
+  market_id: number | null;
+  error_message: string | null;
+  image_url: string;
+}
+
 interface AdminPanelProps {
   session: any;
   xpredBalance?: number;
@@ -58,7 +79,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [loadingOutcomes, setLoadingOutcomes] = useState(false);
   const [resolveLoading, setResolveLoading] = useState(false);
 
-  const [pendingMarkets, setPendingMarkets] = useState<Market[]>([]);
+  const [pendingMarkets, setPendingMarkets] = useState<ScheduledMarket[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
   const [approveLoading, setApproveLoading] = useState(false);
 
@@ -415,50 +436,31 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   }, [session]);
 
+  // Fetch pending markets from off-chain scheduled_markets API
+  // Markets with status "pending" or "ready" are awaiting admin approval
   const fetchPendingMarkets = useCallback(async () => {
     if (!session) return;
     
     setLoadingPending(true);
     try {
-      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
-      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      // Fetch both "pending" and "ready" markets (ready = scheduled time has passed, awaiting approval)
+      const [pendingResponse, readyResponse] = await Promise.all([
+        fetch('/api/scheduled_markets.php?status=pending'),
+        fetch('/api/scheduled_markets.php?status=ready')
+      ]);
       
-      const result = await rpc.get_table_rows({
-        json: true,
-        code: contractName,
-        scope: contractName,
-        table: 'markets3',
-        limit: 1000,
-      });
-
-      const pending = result.rows
-        .filter((row: any) => row.status === 0)
-        .map((row: any) => {
-          let expireSec = 0;
-          if (typeof row.expireTime === 'number') {
-            expireSec = row.expireTime;
-          } else if (typeof row.expire === 'number') {
-            expireSec = row.expire;
-          } else if (typeof row.expire === 'string') {
-            expireSec = Math.floor(new Date(row.expire + 'Z').getTime() / 1000);
-          } else if (row.expire?.seconds) {
-            expireSec = row.expire.seconds;
-          } else if (row.expire?.sec_since_epoch) {
-            expireSec = row.expire.sec_since_epoch;
-          }
-
-          return {
-            id: row.id,
-            admin: row.suggested_by || row.admin || null,
-            question: row.question,
-            category: row.category,
-            resolved: row.resolved || false,
-            expireTime: expireSec,
-            outcomes_count: row.outcomes_count || 2,
-          };
-        });
+      const pendingData = await pendingResponse.json();
+      const readyData = await readyResponse.json();
       
-      setPendingMarkets(pending);
+      const allPending: ScheduledMarket[] = [
+        ...(pendingData.scheduled_markets || []),
+        ...(readyData.scheduled_markets || [])
+      ];
+      
+      // Sort by created_at (oldest first)
+      allPending.sort((a, b) => a.created_at - b.created_at);
+      
+      setPendingMarkets(allPending);
     } catch (error) {
       console.error('Error fetching pending markets:', error);
     } finally {
@@ -556,27 +558,90 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
-  const handleApproveMarket = async (marketId: number) => {
+  // Approve a pending market: create it on-chain, then update the scheduled market status
+  const handleApproveMarket = async (scheduledMarket: ScheduledMarket) => {
     if (!session) return;
 
     setApproveLoading(true);
     try {
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
+      
+      // Validate expiry time - must be at least 24 hours in the future
+      const now = Math.floor(Date.now() / 1000);
+      let expireTime = scheduledMarket.scheduled_close_time;
+      const minExpire = now + 24 * 60 * 60; // 24 hours from now
+      
+      if (expireTime < minExpire) {
+        // Auto-adjust expiry to minimum required
+        expireTime = minExpire;
+        showToast('Expiry time adjusted to minimum 24 hours from now', 'success');
+      }
+      
+      // Create the market on-chain
       await session.transact({
         actions: [{
-          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-          name: 'approvemkt',
+          account: contractName,
+          name: 'createmkt',
           authorization: [{
             actor: session.auth.actor,
             permission: session.auth.permission,
           }],
           data: {
-            approver: session.auth.actor,
-            market_id: marketId
+            admin: session.auth.actor,
+            question: scheduledMarket.question,
+            category: scheduledMarket.category,
+            expireTime: expireTime,
+            image_url: scheduledMarket.image_url || '',
+            outcomes: scheduledMarket.outcomes.join(',')
           }
         }]
       });
 
-      showToast('Market approved successfully!');
+      // Get the newly created market ID by querying the latest market
+      const result = await rpc.get_table_rows({
+        json: true,
+        code: contractName,
+        scope: contractName,
+        table: 'markets3',
+        limit: 1,
+        reverse: true,
+      });
+
+      let newMarketId = 0;
+      if (result.rows.length > 0) {
+        newMarketId = result.rows[0].id;
+      }
+
+      // Save description and resolution criteria to market_meta API
+      if (scheduledMarket.description || scheduledMarket.resolution_criteria) {
+        try {
+          await fetch('/api/market_meta.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              market_id: newMarketId,
+              description: scheduledMarket.description,
+              resolution_criteria: scheduledMarket.resolution_criteria,
+            }),
+          });
+        } catch (metaError) {
+          console.error('Error saving market metadata:', metaError);
+        }
+      }
+
+      // Update the scheduled market status to "approved"
+      await fetch('/api/scheduled_markets.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: scheduledMarket.id,
+          action: 'approve',
+          market_id: newMarketId
+        }),
+      });
+
+      showToast('Market approved and created on-chain!');
       fetchPendingMarkets();
     } catch (error) {
       console.error('Error approving market:', error);
@@ -586,25 +651,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
-  const handleRejectMarket = async (marketId: number) => {
+  // Reject a pending market: update the scheduled market status to "rejected"
+  const handleRejectMarket = async (scheduledMarket: ScheduledMarket, reason?: string) => {
     if (!session) return;
 
     setApproveLoading(true);
     try {
-      await session.transact({
-        actions: [{
-          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-          name: 'rejectmkt',
-          authorization: [{
-            actor: session.auth.actor,
-            permission: session.auth.permission,
-          }],
-          data: {
-            approver: session.auth.actor,
-            market_id: marketId
-          }
-        }]
+      const response = await fetch('/api/scheduled_markets.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: scheduledMarket.id,
+          action: 'reject',
+          reason: reason || 'Rejected by admin'
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject market');
+      }
 
       showToast('Market rejected successfully!');
       fetchPendingMarkets();
@@ -1398,6 +1464,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       {activeTab === 'approve' && (
         <div className="admin-section">
           <h3>Pending Market Approvals</h3>
+          <p className="section-description">
+            Review and approve markets submitted by creators. Approved markets will be created on-chain and go live immediately.
+          </p>
           
           {loadingPending ? (
             <p className="loading-message">Loading pending markets...</p>
@@ -1410,20 +1479,33 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
                   <div className="pending-market-info">
                     <h4>{market.question}</h4>
                     <p><strong>Category:</strong> {market.category}</p>
-                    <p><strong>Suggested by:</strong> {market.admin}</p>
-                    <p><strong>Expires:</strong> {new Date(market.expireTime * 1000).toLocaleDateString()}</p>
-                    <p><strong>Outcomes:</strong> {market.outcomes_count}</p>
+                    <p><strong>Creator:</strong> {market.creator}</p>
+                    <p><strong>Status:</strong> <span className={`status-badge status-${market.status}`}>{market.status}</span></p>
+                    <p><strong>Expires:</strong> {new Date(market.scheduled_close_time * 1000).toLocaleString()}</p>
+                    <p><strong>Outcomes:</strong> {market.outcomes.join(', ')}</p>
+                    {market.description && (
+                      <p><strong>Description:</strong> {market.description.substring(0, 200)}{market.description.length > 200 ? '...' : ''}</p>
+                    )}
+                    {market.resolution_criteria && (
+                      <p><strong>Resolution Criteria:</strong> {market.resolution_criteria.substring(0, 200)}{market.resolution_criteria.length > 200 ? '...' : ''}</p>
+                    )}
+                    {market.image_url && (
+                      <div className="pending-market-image">
+                        <img src={market.image_url} alt="Market" style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />
+                      </div>
+                    )}
+                    <p className="submitted-date"><strong>Submitted:</strong> {new Date(market.created_at * 1000).toLocaleString()}</p>
                   </div>
                   <div className="pending-market-actions">
                     <button 
-                      onClick={() => handleApproveMarket(market.id)}
+                      onClick={() => handleApproveMarket(market)}
                       disabled={approveLoading}
                       className="approve-button"
                     >
-                      {approveLoading ? 'Processing...' : 'Approve'}
+                      {approveLoading ? 'Processing...' : 'Approve & Create'}
                     </button>
                     <button 
-                      onClick={() => handleRejectMarket(market.id)}
+                      onClick={() => handleRejectMarket(market)}
                       disabled={approveLoading}
                       className="reject-button"
                     >
