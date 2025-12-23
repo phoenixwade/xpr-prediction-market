@@ -184,8 +184,10 @@ export class PredictionMarketContract extends Contract {
   }
 
   // LMSR Sell action - allows users to sell shares back to the AMM
+  // shares_scaled: shares in fixed-point units (already multiplied by SCALE = 1_000_000)
+  // This allows selling fractional shares (e.g., 0.5 shares = 500_000)
   @action("lmsrsell")
-  lmsrSell(account: Name, market_id: u64, outcome: string, shares: i64, min_payout: i64 = 0): void {
+  lmsrSell(account: Name, market_id: u64, outcome: string, shares_scaled: i64, min_payout: i64 = 0): void {
     requireAuth(account);
     
     // Parse outcome
@@ -209,8 +211,9 @@ export class PredictionMarketContract extends Contract {
     const now = currentTimeSec();
     check(i32(now) < market!.expire.secSinceEpoch(), "Market has expired");
     
-    // shares parameter is in whole shares, convert to fixed-point
-    const delta_q = shares * SCALE;
+    // shares_scaled is already in fixed-point units (multiplied by SCALE)
+    // This allows fractional share selling (e.g., 0.5 shares = 500_000)
+    const delta_q = shares_scaled;
     check(delta_q > 0, "Must sell positive amount of shares");
     
     // Load user position

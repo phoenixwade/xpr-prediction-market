@@ -160,23 +160,32 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       // Fetch LMSR positions for participant count and user position (for LMSR markets version >= 2)
       if (marketResult.rows.length > 0 && marketResult.rows[0].version >= 2) {
         try {
+          // Query for participant count (separate from user position)
           const lmsrPosResult = await rpc.get_table_rows({
             code: contractName,
             scope: marketId.toString(),
             table: 'poslmsr',
-            limit: 100,
+            limit: 1000, // Increased limit for participant count
           });
           
           // Set participants count (number of unique traders)
           setParticipants(lmsrPosResult.rows.length);
           
-          // Find current user's position if logged in
+          // Query user's position directly using lower_bound/upper_bound for reliability
+          // This ensures we find the user's position even if there are many participants
           if (session) {
-            const myLmsrPos = lmsrPosResult.rows.find(
-              (row: any) => row.user === session.auth.actor.toString()
-            );
+            const userAccount = session.auth.actor.toString();
+            const userPosResult = await rpc.get_table_rows({
+              code: contractName,
+              scope: marketId.toString(),
+              table: 'poslmsr',
+              lower_bound: userAccount,
+              upper_bound: userAccount,
+              limit: 1,
+            });
             
-            if (myLmsrPos) {
+            if (userPosResult.rows.length > 0) {
+              const myLmsrPos = userPosResult.rows[0];
               setLmsrPosition({
                 sharesYes: myLmsrPos.shares_yes / 1_000_000,
                 sharesNo: myLmsrPos.shares_no / 1_000_000,
@@ -911,8 +920,11 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   const handleLmsrSellPercentage = (percentage: number) => {
     if (!lmsrPosition) return;
     const maxShares = lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo;
-    const amount = Math.floor(maxShares * (percentage / 100));
-    setLmsrSellQuantity(amount > 0 ? amount.toString() : '1');
+    // Calculate fractional amount based on percentage
+    const amount = maxShares * (percentage / 100);
+    // Round to 6 decimal places to match SCALE precision
+    const roundedAmount = Math.round(amount * 1_000_000) / 1_000_000;
+    setLmsrSellQuantity(roundedAmount > 0 ? roundedAmount.toString() : '0.000001');
   };
 
   const handleLmsrSell = async () => {
@@ -920,15 +932,24 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       return;
     }
 
-    const quantityInt = parseInt(lmsrSellQuantity);
-    if (isNaN(quantityInt) || quantityInt <= 0) {
+    // Parse as float to support fractional shares
+    const quantityFloat = parseFloat(lmsrSellQuantity);
+    if (isNaN(quantityFloat) || quantityFloat <= 0) {
       showToast('Please enter a valid quantity', 'error');
       return;
     }
 
     const maxShares = lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo;
-    if (quantityInt > maxShares) {
-      showToast(`Cannot sell more than ${maxShares.toFixed(2)} shares`, 'error');
+    if (quantityFloat > maxShares + 0.000001) { // Small epsilon for floating point comparison
+      showToast(`Cannot sell more than ${maxShares.toFixed(6)} shares`, 'error');
+      return;
+    }
+
+    // Convert to fixed-point units (multiply by SCALE = 1_000_000)
+    // This allows selling fractional shares (e.g., 0.5 shares = 500_000)
+    const sharesScaled = Math.round(quantityFloat * 1_000_000);
+    if (sharesScaled <= 0) {
+      showToast('Quantity too small', 'error');
       return;
     }
 
@@ -947,7 +968,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           account: session.auth.actor.toString(),
           market_id: marketId,
           outcome: lmsrSellOutcome,
-          shares: quantityInt,
+          shares_scaled: sharesScaled, // Send shares in fixed-point units
           min_payout: 0, // No slippage protection for now
         },
       }];
@@ -957,7 +978,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const outcomeName = lmsrSellOutcome === 'yes' 
         ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes')
         : (outcomes.find(o => o.outcome_id === 1)?.name || 'No');
-      showToast(`Sold ${quantityInt} ${outcomeName} shares`, 'success');
+      showToast(`Sold ${quantityFloat} ${outcomeName} shares`, 'success');
       setShowLmsrSellModal(false);
       setLmsrSellQuantity('');
       fetchMarketData();
@@ -1206,15 +1227,15 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               </div>
               <div className="sell-modal-form">
                 <label>
-                  Shares to Sell (whole shares only)
+                  Shares to Sell
                   <input
                     type="number"
-                    min="1"
-                    max={Math.floor(lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo)}
-                    step="1"
+                    min="0.000001"
+                    max={lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo}
+                    step="0.000001"
                     value={lmsrSellQuantity}
                     onChange={(e) => setLmsrSellQuantity(e.target.value)}
-                    placeholder="Enter quantity"
+                    placeholder="Enter quantity (e.g., 0.5)"
                     autoFocus
                   />
                 </label>
@@ -1224,9 +1245,9 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                   <button type="button" onClick={() => handleLmsrSellPercentage(75)}>75%</button>
                   <button type="button" onClick={() => handleLmsrSellPercentage(100)}>100%</button>
                 </div>
-                {lmsrSellQuantity && parseInt(lmsrSellQuantity) > 0 && (
+                {lmsrSellQuantity && parseFloat(lmsrSellQuantity) > 0 && (
                   <p className="sell-modal-summary">
-                    You will sell <strong>{parseInt(lmsrSellQuantity)}</strong> {lmsrSellOutcome === 'yes' ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes') : (outcomes.find(o => o.outcome_id === 1)?.name || 'No')} shares.
+                    You will sell <strong>{parseFloat(lmsrSellQuantity)}</strong> {lmsrSellOutcome === 'yes' ? (outcomes.find(o => o.outcome_id === 0)?.name || 'Yes') : (outcomes.find(o => o.outcome_id === 1)?.name || 'No')} shares.
                     <br />
                     <span style={{ fontSize: '0.85em', color: '#aaa' }}>Payout is calculated using LMSR pricing and sent directly to your wallet.</span>
                   </p>
@@ -1243,7 +1264,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               <button 
                 className="sell-modal-confirm"
                 onClick={handleLmsrSell}
-                disabled={loading || !lmsrSellQuantity || parseInt(lmsrSellQuantity) <= 0 || parseInt(lmsrSellQuantity) > Math.floor(lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo)}
+                disabled={loading || !lmsrSellQuantity || parseFloat(lmsrSellQuantity) <= 0 || parseFloat(lmsrSellQuantity) > (lmsrSellOutcome === 'yes' ? lmsrPosition.sharesYes : lmsrPosition.sharesNo) + 0.000001}
               >
                 {loading ? 'Selling...' : 'Sell Shares'}
               </button>
