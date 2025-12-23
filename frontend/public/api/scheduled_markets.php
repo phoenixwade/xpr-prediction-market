@@ -6,7 +6,7 @@
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -51,6 +51,19 @@ try {
     $db->exec('CREATE INDEX IF NOT EXISTS idx_status ON scheduled_markets(status)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_scheduled_open ON scheduled_markets(scheduled_open_time)');
     $db->exec('CREATE INDEX IF NOT EXISTS idx_creator ON scheduled_markets(creator)');
+    
+    // Migration: Add image_url column if it doesn't exist
+    $columns = $db->query("PRAGMA table_info(scheduled_markets)");
+    $hasImageUrl = false;
+    while ($col = $columns->fetchArray(SQLITE3_ASSOC)) {
+        if ($col['name'] === 'image_url') {
+            $hasImageUrl = true;
+            break;
+        }
+    }
+    if (!$hasImageUrl) {
+        $db->exec('ALTER TABLE scheduled_markets ADD COLUMN image_url TEXT DEFAULT ""');
+    }
     
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
@@ -101,11 +114,11 @@ try {
             INSERT INTO scheduled_markets (
                 creator, question, description, outcomes, category, 
                 resolution_criteria, scheduled_open_time, scheduled_close_time,
-                auto_resolve, resolution_source, created_at
+                auto_resolve, resolution_source, created_at, image_url
             ) VALUES (
                 :creator, :question, :description, :outcomes, :category,
                 :resolution_criteria, :scheduled_open_time, :scheduled_close_time,
-                :auto_resolve, :resolution_source, :created_at
+                :auto_resolve, :resolution_source, :created_at, :image_url
             )
         ');
         
@@ -120,6 +133,7 @@ try {
         $stmt->bindValue(':auto_resolve', $data['auto_resolve'] ? 1 : 0, SQLITE3_INTEGER);
         $stmt->bindValue(':resolution_source', $data['resolution_source'] ?? '', SQLITE3_TEXT);
         $stmt->bindValue(':created_at', $now, SQLITE3_INTEGER);
+        $stmt->bindValue(':image_url', $data['image_url'] ?? '', SQLITE3_TEXT);
         
         $stmt->execute();
         $id = $db->lastInsertRowID();
@@ -177,12 +191,143 @@ try {
                 'created_at' => intval($row['created_at']),
                 'processed_at' => $row['processed_at'] ? intval($row['processed_at']) : null,
                 'market_id' => $row['market_id'] ? intval($row['market_id']) : null,
-                'error_message' => $row['error_message']
+                'error_message' => $row['error_message'],
+                'image_url' => $row['image_url'] ?? ''
             ];
         }
         
         logApiRequest('scheduled_markets', 'GET', ['count' => count($markets)]);
         echo json_encode(['scheduled_markets' => $markets]);
+        
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+        // Handle approve/reject/update status
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        if (!isset($data['id'])) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required field: id']);
+            exit;
+        }
+        
+        $id = intval($data['id']);
+        $action = $data['action'] ?? '';
+        
+        // First, fetch the scheduled market to verify it exists
+        $stmt = $db->prepare('SELECT * FROM scheduled_markets WHERE id = :id');
+        $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $market = $result->fetchArray(SQLITE3_ASSOC);
+        
+        if (!$market) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Scheduled market not found']);
+            exit;
+        }
+        
+        if ($action === 'approve') {
+            // Mark as approved and store the on-chain market_id
+            if (!isset($data['market_id'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing required field: market_id for approval']);
+                exit;
+            }
+            
+            $stmt = $db->prepare('
+                UPDATE scheduled_markets 
+                SET status = "approved", market_id = :market_id, processed_at = :processed_at
+                WHERE id = :id
+            ');
+            $stmt->bindValue(':market_id', intval($data['market_id']), SQLITE3_INTEGER);
+            $stmt->bindValue(':processed_at', time(), SQLITE3_INTEGER);
+            $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+            $stmt->execute();
+            
+            logApiRequest('scheduled_markets', 'PUT', ['id' => $id, 'action' => 'approve', 'market_id' => $data['market_id']]);
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Market approved and created on-chain',
+                'market_id' => intval($data['market_id'])
+            ]);
+            
+        } elseif ($action === 'reject') {
+            // Mark as rejected with optional reason
+            $reason = $data['reason'] ?? 'Rejected by admin';
+            
+            $stmt = $db->prepare('
+                UPDATE scheduled_markets 
+                SET status = "rejected", error_message = :reason, processed_at = :processed_at
+                WHERE id = :id
+            ');
+            $stmt->bindValue(':reason', $reason, SQLITE3_TEXT);
+            $stmt->bindValue(':processed_at', time(), SQLITE3_INTEGER);
+            $stmt->bindValue(':id', $id, SQLITE3_INTEGER);
+            $stmt->execute();
+            
+            // Notify the creator about rejection
+            require_once __DIR__ . '/notify_helper.php';
+            createNotification(
+                $market['creator'],
+                'market',
+                'Market rejected',
+                "Your market \"{$market['question']}\" was rejected. Reason: $reason",
+                null,
+                '/admin'
+            );
+            
+            logApiRequest('scheduled_markets', 'PUT', ['id' => $id, 'action' => 'reject', 'reason' => $reason]);
+            echo json_encode(['success' => true, 'message' => 'Market rejected']);
+            
+        } elseif ($action === 'update') {
+            // Allow creator to update their pending market
+            if (!isset($data['creator']) || $data['creator'] !== $market['creator']) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Only the creator can update their market']);
+                exit;
+            }
+            
+            if ($market['status'] !== 'pending') {
+                http_response_code(400);
+                echo json_encode(['error' => 'Can only update pending markets']);
+                exit;
+            }
+            
+            // Build update query dynamically based on provided fields
+            $updateFields = [];
+            $params = [':id' => $id];
+            
+            $allowedFields = ['question', 'description', 'category', 'resolution_criteria', 'image_url', 'scheduled_close_time'];
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $updateFields[] = "$field = :$field";
+                    $params[":$field"] = $data[$field];
+                }
+            }
+            
+            if (isset($data['outcomes']) && is_array($data['outcomes'])) {
+                $updateFields[] = "outcomes = :outcomes";
+                $params[':outcomes'] = json_encode($data['outcomes']);
+            }
+            
+            if (empty($updateFields)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'No fields to update']);
+                exit;
+            }
+            
+            $query = 'UPDATE scheduled_markets SET ' . implode(', ', $updateFields) . ' WHERE id = :id';
+            $stmt = $db->prepare($query);
+            foreach ($params as $key => $value) {
+                $stmt->bindValue($key, $value);
+            }
+            $stmt->execute();
+            
+            logApiRequest('scheduled_markets', 'PUT', ['id' => $id, 'action' => 'update']);
+            echo json_encode(['success' => true, 'message' => 'Market updated']);
+            
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid action. Use: approve, reject, or update']);
+        }
         
     } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $data = json_decode(file_get_contents('php://input'), true);
