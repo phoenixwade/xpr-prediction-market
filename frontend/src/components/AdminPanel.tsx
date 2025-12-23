@@ -48,6 +48,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [createLoading, setCreateLoading] = useState(false);
   const [description, setDescription] = useState('');
   const [resolutionCriteria, setResolutionCriteria] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
 
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(false);
@@ -248,8 +249,26 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
-  const handleCreateMarket = async (e: React.FormEvent) => {
+  // Show preview before creating market
+  const handleShowPreview = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!session || !question || !category || !expireDate) {
+      showToast('Please fill in all fields', 'error');
+      return;
+    }
+
+    const validOutcomes = outcomes.filter(o => o.trim() !== '');
+    if (validOutcomes.length < 2) {
+      showToast('At least 2 outcomes are required', 'error');
+      return;
+    }
+
+    // Show the preview modal for user confirmation
+    setShowPreview(true);
+  };
+
+  // Actually create the market after user confirms preview
+  const handleCreateMarket = async () => {
     if (!session || !question || !category || !expireDate) {
       showToast('Please fill in all fields', 'error');
       return;
@@ -322,6 +341,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       }
 
       showToast('Market created successfully!');
+      setShowPreview(false);
       setQuestion('');
       setCategory('');
       setExpireDate('');
@@ -1058,7 +1078,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
           <MarketTemplates onSelectTemplate={handleSelectTemplate} />
           <h3>Create New Market</h3>
           <p className="template-hint">Select a template above to pre-fill the form, or create a custom market below.</p>
-          <form ref={createFormRef} onSubmit={handleCreateMarket} className="admin-form">
+          <form ref={createFormRef} onSubmit={handleShowPreview} className="admin-form">
             <div className="form-group">
               <label>Question</label>
               <input
@@ -1223,7 +1243,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
               disabled={createLoading}
               className="submit-button"
             >
-                    {createLoading ? 'Creating...' : 'Create Market'}
+                    Preview & Confirm
                   </button>
                 </form>
               </div>
@@ -1424,6 +1444,88 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
           </div>
           <ScheduledMarkets onScheduleMarket={handleScheduleMarket} />
           {scheduleLoading && <p className="loading-message">Scheduling market...</p>}
+        </div>
+      )}
+
+      {/* Market Preview Modal */}
+      {showPreview && (
+        <div className="modal-overlay" onClick={() => setShowPreview(false)}>
+          <div className="modal-content preview-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Review Your Market</h3>
+              <button className="modal-close" onClick={() => setShowPreview(false)}>×</button>
+            </div>
+            <div className="preview-content">
+              <div className="preview-warning">
+                <strong>Important:</strong> Please review all details carefully. Once created, markets cannot be edited by creators.
+              </div>
+              
+              <div className="preview-section">
+                <h4>Question</h4>
+                <p className="preview-question">{question}</p>
+              </div>
+
+              <div className="preview-row">
+                <div className="preview-section">
+                  <h4>Category</h4>
+                  <p>{category}</p>
+                </div>
+                <div className="preview-section">
+                  <h4>Expiration</h4>
+                  <p>{expireDate ? new Date(expireDate).toLocaleString() : 'Not set'}</p>
+                </div>
+              </div>
+
+              <div className="preview-section">
+                <h4>Outcomes</h4>
+                <ul className="preview-outcomes">
+                  {outcomes.filter(o => o.trim() !== '').map((outcome, index) => (
+                    <li key={index}>{outcome}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {description && (
+                <div className="preview-section">
+                  <h4>Description</h4>
+                  <p className="preview-description">{description}</p>
+                </div>
+              )}
+
+              {resolutionCriteria && (
+                <div className="preview-section">
+                  <h4>Resolution Criteria</h4>
+                  <p className="preview-resolution">{resolutionCriteria}</p>
+                </div>
+              )}
+
+              {(imageUrl || imagePreview) && (
+                <div className="preview-section">
+                  <h4>Market Image</h4>
+                  <div className="preview-image">
+                    <img src={imagePreview || imageUrl} alt="Market preview" />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button 
+                className="cancel-button" 
+                onClick={() => setShowPreview(false)}
+                disabled={createLoading}
+              >
+                Go Back & Edit
+              </button>
+              <button 
+                className="confirm-button" 
+                onClick={handleCreateMarket}
+                disabled={createLoading}
+              >
+                {createLoading ? 'Creating Market...' : 'Confirm & Create Market'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

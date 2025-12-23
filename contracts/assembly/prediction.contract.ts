@@ -332,7 +332,7 @@ export class PredictionMarketContract extends Contract {
       outcomesCount,
       new TimePointSec(0),
       1, // status = OPEN
-      admin, // suggested_by = creator (allows them to edit their own market)
+      EMPTY_NAME, // suggested_by (creators cannot edit after creation - use preview before submitting)
       EMPTY_NAME, // approved_by
       now, // created_at
       2, // version = 2 (LMSR)
@@ -363,9 +363,9 @@ export class PredictionMarketContract extends Contract {
       check(market != null, "Market not found");
       check(!market!.resolved, "Cannot edit resolved market");
       
-      // Allow contract owner, resolvers, OR the market creator to edit markets
-      const isCreator = market!.suggested_by == admin;
-      check(this.isAdmin(admin) || isCreator, "Only admin users or market creator can edit markets");
+      // Only allow contract owner and resolvers to edit markets (not creators)
+      // Creators should use the preview step before submitting to ensure accuracy
+      check(this.isAdmin(admin), "Only admin users can edit markets");
     
       // Validate inputs
       check(question.length > 0, "Question cannot be empty");
