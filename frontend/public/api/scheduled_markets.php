@@ -68,8 +68,8 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        // Validate required fields
-        $required = ['creator', 'question', 'description', 'outcomes', 'scheduled_open_time', 'scheduled_close_time'];
+        // Validate required fields (resolution_criteria is now mandatory for new markets)
+        $required = ['creator', 'question', 'description', 'outcomes', 'scheduled_open_time', 'scheduled_close_time', 'resolution_criteria'];
         foreach ($required as $field) {
             if (!isset($data[$field]) || (is_string($data[$field]) && empty(trim($data[$field])))) {
                 http_response_code(400);
