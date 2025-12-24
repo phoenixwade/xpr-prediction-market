@@ -301,14 +301,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
       return;
     }
 
+    // Validate resolution criteria is provided
+    if (!resolutionCriteria.trim()) {
+      showToast('Resolution criteria is required', 'error');
+      return;
+    }
+
     setCreateLoading(true);
     try {
+      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
+      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
       const expireTimestamp = Math.floor(new Date(expireDate).getTime() / 1000);
       const outcomesString = validOutcomes.join(',');
 
+      // Capture max market_id BEFORE creating the market to avoid race conditions
+      let maxMarketIdBefore = 0;
+      try {
+        const beforeResult = await rpc.get_table_rows({
+          json: true,
+          code: contractName,
+          scope: contractName,
+          table: 'markets3',
+          limit: 1,
+          reverse: true,
+        });
+        if (beforeResult.rows.length > 0) {
+          maxMarketIdBefore = beforeResult.rows[0].id;
+        }
+      } catch (e) {
+        console.error('Error fetching max market_id before creation:', e);
+      }
+
       await session.transact({
         actions: [{
-          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
+          account: contractName,
           name: 'createmkt',
           authorization: [{
             actor: session.auth.actor,
@@ -325,40 +351,50 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }],
       });
 
-      // After market creation, fetch the latest market ID and save metadata
-      if (description || resolutionCriteria) {
-        try {
-          const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.eosusa.io');
-          const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
-          
-          // Fetch the latest market to get its ID
-          const result = await rpc.get_table_rows({
-            json: true,
-            code: contractName,
-            scope: contractName,
-            table: 'markets3',
-            limit: 1,
-            reverse: true,
-          });
-          
-          if (result.rows.length > 0) {
-            const latestMarketId = result.rows[0].id;
-            
-            // Save the metadata
-            await fetch('/api/market_meta.php', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                market_id: latestMarketId,
-                description: description,
-                resolution_criteria: resolutionCriteria,
-              }),
-            });
+      // After market creation, find the new market by matching question + category + expireTime
+      // This is more reliable than just fetching the latest market
+      try {
+        // Fetch recent markets (those with id > maxMarketIdBefore)
+        const afterResult = await rpc.get_table_rows({
+          json: true,
+          code: contractName,
+          scope: contractName,
+          table: 'markets3',
+          lower_bound: maxMarketIdBefore + 1,
+          limit: 10,
+        });
+        
+        // Find the market that matches our creation parameters
+        let newMarketId = 0;
+        for (const market of afterResult.rows) {
+          if (market.question === question && 
+              market.category === category && 
+              market.expireTime === expireTimestamp) {
+            newMarketId = market.id;
+            break;
           }
-        } catch (metaError) {
-          console.error('Error saving market metadata:', metaError);
-          // Don't fail the whole operation if metadata save fails
         }
+        
+        // Fallback: if no match found, use the latest market with id > maxMarketIdBefore
+        if (newMarketId === 0 && afterResult.rows.length > 0) {
+          newMarketId = afterResult.rows[afterResult.rows.length - 1].id;
+        }
+        
+        if (newMarketId > 0) {
+          // Save the metadata
+          await fetch('/api/market_meta.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              market_id: newMarketId,
+              description: description,
+              resolution_criteria: resolutionCriteria,
+            }),
+          });
+        }
+      } catch (metaError) {
+        console.error('Error saving market metadata:', metaError);
+        // Don't fail the whole operation if metadata save fails
       }
 
       showToast('Market created successfully!');
@@ -562,6 +598,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const handleApproveMarket = async (scheduledMarket: ScheduledMarket) => {
     if (!session) return;
 
+    // Validate resolution criteria is provided before approving
+    if (!scheduledMarket.resolution_criteria || !scheduledMarket.resolution_criteria.trim()) {
+      showToast('Cannot approve market without resolution criteria', 'error');
+      return;
+    }
+
     setApproveLoading(true);
     try {
       const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
@@ -576,6 +618,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         // Auto-adjust expiry to minimum required
         expireTime = minExpire;
         showToast('Expiry time adjusted to minimum 24 hours from now', 'success');
+      }
+      
+      // Capture max market_id BEFORE creating the market to avoid race conditions
+      let maxMarketIdBefore = 0;
+      try {
+        const beforeResult = await rpc.get_table_rows({
+          json: true,
+          code: contractName,
+          scope: contractName,
+          table: 'markets3',
+          limit: 1,
+          reverse: true,
+        });
+        if (beforeResult.rows.length > 0) {
+          maxMarketIdBefore = beforeResult.rows[0].id;
+        }
+      } catch (e) {
+        console.error('Error fetching max market_id before creation:', e);
       }
       
       // Create the market on-chain
@@ -598,30 +658,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
         }]
       });
 
-      // Get the newly created market ID by querying the latest market
-      const result = await rpc.get_table_rows({
-        json: true,
-        code: contractName,
-        scope: contractName,
-        table: 'markets3',
-        limit: 1,
-        reverse: true,
-      });
-
+      // Find the new market by matching question + category + expireTime
+      // This is more reliable than just fetching the latest market
       let newMarketId = 0;
-      if (result.rows.length > 0) {
-        newMarketId = result.rows[0].id;
+      try {
+        const afterResult = await rpc.get_table_rows({
+          json: true,
+          code: contractName,
+          scope: contractName,
+          table: 'markets3',
+          lower_bound: maxMarketIdBefore + 1,
+          limit: 10,
+        });
+        
+        // Find the market that matches our creation parameters
+        for (const market of afterResult.rows) {
+          if (market.question === scheduledMarket.question && 
+              market.category === scheduledMarket.category && 
+              market.expireTime === expireTime) {
+            newMarketId = market.id;
+            break;
+          }
+        }
+        
+        // Fallback: if no match found, use the latest market with id > maxMarketIdBefore
+        if (newMarketId === 0 && afterResult.rows.length > 0) {
+          newMarketId = afterResult.rows[afterResult.rows.length - 1].id;
+        }
+      } catch (e) {
+        console.error('Error finding new market:', e);
       }
 
       // Save description and resolution criteria to market_meta API
-      if (scheduledMarket.description || scheduledMarket.resolution_criteria) {
+      if (newMarketId > 0) {
         try {
           await fetch('/api/market_meta.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               market_id: newMarketId,
-              description: scheduledMarket.description,
+              description: scheduledMarket.description || '',
               resolution_criteria: scheduledMarket.resolution_criteria,
             }),
           });
@@ -1250,13 +1326,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
             </div>
 
             <div className="form-group">
-              <label>Resolution Criteria</label>
+              <label>Resolution Criteria <span className="required-indicator">*</span></label>
               <textarea
                 value={resolutionCriteria}
                 onChange={(e) => setResolutionCriteria(e.target.value)}
                 placeholder="Please enter very detailed rules, dates, and a description on how the result is determined when the market is resolved."
                 rows={4}
                 className="resolution-textarea"
+                required
               />
             </div>
 
