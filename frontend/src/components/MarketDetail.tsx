@@ -994,6 +994,10 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     return <div className="loading">Loading market...</div>;
   }
 
+  // Check if market has expired (current time >= expiry time)
+  // Contract enforces this for both buy and sell actions
+  const isExpired = market.expireSec && Math.floor(Date.now() / 1000) >= market.expireSec;
+
   const filteredOrders = orders.filter(o => o.outcome_id === selectedOutcomeId);
   const bids = filteredOrders.filter(o => o.isBid).sort((a, b) => b.price - a.price);
   const asks = filteredOrders.filter(o => !o.isBid).sort((a, b) => a.price - b.price);
@@ -1292,8 +1296,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           <h2>{market.question}</h2>
           <div className="market-meta">
             <span className="category">{market.category}</span>
-            <span className={`status ${market.resolved ? 'resolved' : 'active'}`}>
-              {market.resolved ? 'Resolved' : 'Active'}
+            <span className={`status ${market.resolved ? 'resolved' : isExpired ? 'expired' : 'active'}`}>
+              {market.resolved ? 'Resolved' : isExpired ? 'Expired' : 'Active'}
             </span>
           </div>
           <p className="expiry">{getExpiryLabel(market.resolved, market.expireSec)}: {formatDate(market.expireSec, true)}</p>
@@ -1484,7 +1488,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                 outcome={outcome}
                 stats={outcomeStats[outcome.outcome_id] || {}}
                 selected={selectedOutcomeId === outcome.outcome_id}
-                disabled={!session || market.resolved}
+                disabled={!session || market.resolved || isExpired}
                 onClickYes={() => handleOutcomeButtonClick(outcome.outcome_id, 'yes')}
                 onClickNo={() => handleOutcomeButtonClick(outcome.outcome_id, 'no')}
               />
@@ -1512,7 +1516,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                     <button 
                       className="position-sell-btn"
                       onClick={() => handleOpenLmsrSellModal('yes')}
-                      disabled={market.resolved}
+                      disabled={market.resolved || isExpired}
                     >
                       Sell
                     </button>
@@ -1527,7 +1531,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                     <button 
                       className="position-sell-btn"
                       onClick={() => handleOpenLmsrSellModal('no')}
-                      disabled={market.resolved}
+                      disabled={market.resolved || isExpired}
                     >
                       Sell
                     </button>
