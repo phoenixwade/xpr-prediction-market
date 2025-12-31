@@ -665,3 +665,246 @@ export function lmsr_fee(
 // Default values
 export const DEFAULT_B: i64 = 500 * SCALE; // b = 500
 export const DEFAULT_FEE_BPS: u16 = 100; // 1% fee
+
+// ============================================================================
+// N-OUTCOME LMSR FUNCTIONS (Version 3)
+// ============================================================================
+// These functions generalize LMSR to N outcomes using the log-sum-exp trick
+// to prevent overflow: ln(Σ exp(x_i)) = max(x_i) + ln(Σ exp(x_i - max(x_i)))
+
+// Compute N-outcome LMSR cost function: C(q) = b * ln(Σ exp(q_i/b))
+// q_values: array of quantities for each outcome (in fixed-point)
+// b: liquidity parameter (in fixed-point)
+// Returns cost in fixed-point
+export function lmsr_cost_n(q_values: i64[], b: i64): i64 {
+  if (b <= 0 || q_values.length == 0) return 0;
+  
+  const n = q_values.length;
+  
+  // Compute ratios q_i/b and find max for log-sum-exp trick
+  const ratios: i64[] = new Array<i64>(n);
+  let max_ratio: i64 = I64.MIN_VALUE;
+  
+  for (let i = 0; i < n; i++) {
+    ratios[i] = (q_values[i] * SCALE) / b;
+    if (ratios[i] > max_ratio) {
+      max_ratio = ratios[i];
+    }
+  }
+  
+  // Compute sum of exp(ratio_i - max_ratio) to keep values small
+  let sum_exp: i64 = 0;
+  for (let i = 0; i < n; i++) {
+    const shifted = ratios[i] - max_ratio;
+    sum_exp += exp_fixed(shifted);
+  }
+  
+  // ln(Σ exp(x_i)) = max + ln(Σ exp(x_i - max))
+  const ln_sum = ln_fixed(sum_exp) + max_ratio;
+  
+  // Return b * ln(sum) / SCALE
+  return (b * ln_sum) / SCALE;
+}
+
+// Compute cost to buy delta_q shares of outcome_id
+// q_values: current quantities for all outcomes
+// outcome_id: which outcome to buy (0 to N-1)
+// delta_q: number of shares to buy (in fixed-point)
+// Returns cost in fixed-point
+export function lmsr_buy_cost_n(
+  q_values: i64[],
+  b: i64,
+  outcome_id: i32,
+  delta_q: i64
+): i64 {
+  if (outcome_id < 0 || outcome_id >= q_values.length) return 0;
+  
+  // Create new array with updated quantity
+  const new_q: i64[] = new Array<i64>(q_values.length);
+  for (let i = 0; i < q_values.length; i++) {
+    new_q[i] = q_values[i];
+  }
+  new_q[outcome_id] += delta_q;
+  
+  const cost_before = lmsr_cost_n(q_values, b);
+  const cost_after = lmsr_cost_n(new_q, b);
+  
+  return cost_after - cost_before;
+}
+
+// Compute payout for selling delta_q shares of outcome_id
+// Returns payout in fixed-point (before fees)
+export function lmsr_sell_payout_n(
+  q_values: i64[],
+  b: i64,
+  outcome_id: i32,
+  delta_q: i64
+): i64 {
+  if (outcome_id < 0 || outcome_id >= q_values.length) return 0;
+  
+  // Create new array with decreased quantity
+  const new_q: i64[] = new Array<i64>(q_values.length);
+  for (let i = 0; i < q_values.length; i++) {
+    new_q[i] = q_values[i];
+  }
+  new_q[outcome_id] -= delta_q;
+  if (new_q[outcome_id] < 0) new_q[outcome_id] = 0;
+  
+  const cost_before = lmsr_cost_n(q_values, b);
+  const cost_after = lmsr_cost_n(new_q, b);
+  
+  const payout = cost_before - cost_after;
+  return payout > 0 ? payout : 0;
+}
+
+// Compute probability for a specific outcome
+// Returns probability * SCALE (e.g., 0.25 -> 250_000)
+export function lmsr_probability_n(q_values: i64[], b: i64, outcome_id: i32): i64 {
+  if (b <= 0 || q_values.length == 0 || outcome_id < 0 || outcome_id >= q_values.length) {
+    return SCALE / (q_values.length as i64); // Equal probability if invalid
+  }
+  
+  const n = q_values.length;
+  
+  // Compute ratios and find max for log-sum-exp trick
+  const ratios: i64[] = new Array<i64>(n);
+  let max_ratio: i64 = I64.MIN_VALUE;
+  
+  for (let i = 0; i < n; i++) {
+    ratios[i] = (q_values[i] * SCALE) / b;
+    if (ratios[i] > max_ratio) {
+      max_ratio = ratios[i];
+    }
+  }
+  
+  // Compute exp(ratio_i - max) for numerical stability
+  let sum_exp: i64 = 0;
+  let exp_outcome: i64 = 0;
+  
+  for (let i = 0; i < n; i++) {
+    const shifted = ratios[i] - max_ratio;
+    const exp_val = exp_fixed(shifted);
+    sum_exp += exp_val;
+    if (i == outcome_id) {
+      exp_outcome = exp_val;
+    }
+  }
+  
+  if (sum_exp == 0) return SCALE / (n as i64);
+  
+  // p_i = exp(x_i) / Σ exp(x_j) = exp(x_i - max) / Σ exp(x_j - max)
+  return (exp_outcome * SCALE) / sum_exp;
+}
+
+// Compute all probabilities for N outcomes
+// Returns array of probabilities * SCALE
+export function lmsr_probabilities_n(q_values: i64[], b: i64): i64[] {
+  const n = q_values.length;
+  const probs: i64[] = new Array<i64>(n);
+  
+  if (b <= 0 || n == 0) {
+    const equal_prob = SCALE / (n as i64);
+    for (let i = 0; i < n; i++) {
+      probs[i] = equal_prob;
+    }
+    return probs;
+  }
+  
+  // Compute ratios and find max
+  const ratios: i64[] = new Array<i64>(n);
+  let max_ratio: i64 = I64.MIN_VALUE;
+  
+  for (let i = 0; i < n; i++) {
+    ratios[i] = (q_values[i] * SCALE) / b;
+    if (ratios[i] > max_ratio) {
+      max_ratio = ratios[i];
+    }
+  }
+  
+  // Compute exp values and sum
+  const exp_vals: i64[] = new Array<i64>(n);
+  let sum_exp: i64 = 0;
+  
+  for (let i = 0; i < n; i++) {
+    exp_vals[i] = exp_fixed(ratios[i] - max_ratio);
+    sum_exp += exp_vals[i];
+  }
+  
+  if (sum_exp == 0) {
+    const equal_prob = SCALE / (n as i64);
+    for (let i = 0; i < n; i++) {
+      probs[i] = equal_prob;
+    }
+    return probs;
+  }
+  
+  // Compute probabilities
+  for (let i = 0; i < n; i++) {
+    probs[i] = (exp_vals[i] * SCALE) / sum_exp;
+  }
+  
+  return probs;
+}
+
+// Binary search to find delta_q given a budget for N-outcome LMSR
+export function lmsr_compute_shares_from_budget_n(
+  q_values: i64[],
+  b: i64,
+  outcome_id: i32,
+  budget: i64,
+  fee_bps: u16
+): i64 {
+  if (budget <= 0 || outcome_id < 0 || outcome_id >= q_values.length) return 0;
+  
+  // Find upper bound
+  let max_delta: i64 = SCALE;
+  while (max_delta < budget * 10) {
+    const cost = lmsr_buy_cost_n(q_values, b, outcome_id, max_delta);
+    const fee = (cost * (fee_bps as i64)) / 10000;
+    if (cost + fee > budget) break;
+    max_delta *= 2;
+  }
+  
+  // Binary search
+  let lo: i64 = 0;
+  let hi: i64 = max_delta;
+  
+  for (let i = 0; i < 32; i++) {
+    const mid = (lo + hi) / 2;
+    const cost = lmsr_buy_cost_n(q_values, b, outcome_id, mid);
+    const fee = (cost * (fee_bps as i64)) / 10000;
+    
+    if (cost + fee <= budget) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  
+  return lo;
+}
+
+// Compute total charge for N-outcome buy
+export function lmsr_total_charge_n(
+  q_values: i64[],
+  b: i64,
+  outcome_id: i32,
+  delta_q: i64,
+  fee_bps: u16
+): i64 {
+  const cost = lmsr_buy_cost_n(q_values, b, outcome_id, delta_q);
+  const fee = (cost * (fee_bps as i64)) / 10000;
+  return cost + fee;
+}
+
+// Get fee for N-outcome buy
+export function lmsr_fee_n(
+  q_values: i64[],
+  b: i64,
+  outcome_id: i32,
+  delta_q: i64,
+  fee_bps: u16
+): i64 {
+  const cost = lmsr_buy_cost_n(q_values, b, outcome_id, delta_q);
+  return (cost * (fee_bps as i64)) / 10000;
+}

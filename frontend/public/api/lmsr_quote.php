@@ -89,13 +89,74 @@ function fetch_market_state($market_id) {
     }
     
     // Extract LMSR parameters - these are stored as integers already scaled by SCALE
-    return [
+    $result = [
         'q_yes' => isset($market['q_yes']) ? intval($market['q_yes']) : 0,
         'q_no' => isset($market['q_no']) ? intval($market['q_no']) : 0,
         'b' => isset($market['b']) ? intval($market['b']) : 500 * SCALE,
         'fee_bps' => isset($market['fee_bps']) ? intval($market['fee_bps']) : 100,
-        'version' => $version
+        'version' => $version,
+        'outcomes_count' => isset($market['outcomes_count']) ? intval($market['outcomes_count']) : 2
     ];
+    
+    // For version=3 markets, fetch outcome states
+    if ($version == 3) {
+        $result['outcome_states'] = fetch_outcome_states($market_id, $result['outcomes_count']);
+    }
+    
+    return $result;
+}
+
+// Fetch outcome states for N-outcome LMSR markets (version=3)
+function fetch_outcome_states($market_id, $outcomes_count) {
+    $config = load_env_config();
+    $rpcEndpoint = $config['PROTON_RPC'] ?? $config['REACT_APP_RPC_ENDPOINT'] ?? 'https://proton.eosusa.io';
+    $contractAccount = $config['CONTRACT_ACCOUNT'] ?? $config['REACT_APP_CONTRACT_NAME'] ?? 'xpredicting';
+    
+    $url = rtrim($rpcEndpoint, '/') . '/v1/chain/get_table_rows';
+    
+    // OutcomeStateTable is scoped by market_id
+    $postData = json_encode([
+        'code' => $contractAccount,
+        'scope' => (string)$market_id,
+        'table' => 'outstate',
+        'json' => true,
+        'limit' => $outcomes_count
+    ]);
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ]);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200) {
+        return [];
+    }
+    
+    $data = json_decode($response, true);
+    if (!$data || !isset($data['rows'])) {
+        return [];
+    }
+    
+    $states = [];
+    foreach ($data['rows'] as $row) {
+        $states[] = [
+            'outcome_id' => intval($row['outcome_id'] ?? 0),
+            'q' => intval($row['q'] ?? 0),
+            'volume' => intval($row['volume'] ?? 0)
+        ];
+    }
+    
+    return $states;
 }
 
 // Pre-computed exp lookup table for range [-10, 10] with step 0.01
@@ -215,6 +276,160 @@ function lmsr_compute_shares_from_budget($q_yes, $q_no, $b, $outcome_is_yes, $bu
     return $lo;
 }
 
+// ============================================================================
+// N-OUTCOME LMSR FUNCTIONS (Version 3)
+// ============================================================================
+
+// N-outcome LMSR cost function: C(q) = b * ln(sum(exp(q_i/b)))
+// Uses log-sum-exp trick for numerical stability
+function lmsr_cost_n($q_values, $b) {
+    if ($b <= 0 || empty($q_values)) return 0;
+    
+    $n = count($q_values);
+    
+    // Compute ratios and find max for log-sum-exp trick
+    $ratios = [];
+    $max_ratio = PHP_INT_MIN;
+    foreach ($q_values as $q) {
+        $ratio = ($q * SCALE) / $b;
+        $ratios[] = $ratio;
+        if ($ratio > $max_ratio) $max_ratio = $ratio;
+    }
+    
+    // Compute sum of exp(ratio - max_ratio)
+    $sum_exp = 0;
+    foreach ($ratios as $ratio) {
+        $sum_exp += exp_fixed($ratio - $max_ratio);
+    }
+    
+    // ln(sum(exp(x_i))) = max + ln(sum(exp(x_i - max)))
+    $ln_sum = ln_fixed($sum_exp) + $max_ratio;
+    
+    return ($b * $ln_sum) / SCALE;
+}
+
+// N-outcome buy cost
+function lmsr_buy_cost_n($q_values, $b, $outcome_id, $delta_q) {
+    if ($outcome_id < 0 || $outcome_id >= count($q_values)) return 0;
+    
+    $new_q = $q_values;
+    $new_q[$outcome_id] += $delta_q;
+    
+    $cost_before = lmsr_cost_n($q_values, $b);
+    $cost_after = lmsr_cost_n($new_q, $b);
+    
+    return $cost_after - $cost_before;
+}
+
+// N-outcome probability for a specific outcome
+function lmsr_probability_n($q_values, $b, $outcome_id) {
+    if ($b <= 0 || empty($q_values) || $outcome_id < 0 || $outcome_id >= count($q_values)) {
+        return SCALE / count($q_values);
+    }
+    
+    $n = count($q_values);
+    
+    // Compute ratios and find max
+    $ratios = [];
+    $max_ratio = PHP_INT_MIN;
+    foreach ($q_values as $q) {
+        $ratio = ($q * SCALE) / $b;
+        $ratios[] = $ratio;
+        if ($ratio > $max_ratio) $max_ratio = $ratio;
+    }
+    
+    // Compute exp values
+    $sum_exp = 0;
+    $exp_outcome = 0;
+    foreach ($ratios as $i => $ratio) {
+        $exp_val = exp_fixed($ratio - $max_ratio);
+        $sum_exp += $exp_val;
+        if ($i == $outcome_id) $exp_outcome = $exp_val;
+    }
+    
+    if ($sum_exp == 0) return SCALE / $n;
+    
+    return ($exp_outcome * SCALE) / $sum_exp;
+}
+
+// N-outcome all probabilities
+function lmsr_probabilities_n($q_values, $b) {
+    $n = count($q_values);
+    $probs = [];
+    
+    if ($b <= 0 || $n == 0) {
+        $equal_prob = SCALE / $n;
+        for ($i = 0; $i < $n; $i++) {
+            $probs[] = $equal_prob;
+        }
+        return $probs;
+    }
+    
+    // Compute ratios and find max
+    $ratios = [];
+    $max_ratio = PHP_INT_MIN;
+    foreach ($q_values as $q) {
+        $ratio = ($q * SCALE) / $b;
+        $ratios[] = $ratio;
+        if ($ratio > $max_ratio) $max_ratio = $ratio;
+    }
+    
+    // Compute exp values and sum
+    $exp_vals = [];
+    $sum_exp = 0;
+    foreach ($ratios as $ratio) {
+        $exp_val = exp_fixed($ratio - $max_ratio);
+        $exp_vals[] = $exp_val;
+        $sum_exp += $exp_val;
+    }
+    
+    if ($sum_exp == 0) {
+        $equal_prob = SCALE / $n;
+        for ($i = 0; $i < $n; $i++) {
+            $probs[] = $equal_prob;
+        }
+        return $probs;
+    }
+    
+    foreach ($exp_vals as $exp_val) {
+        $probs[] = ($exp_val * SCALE) / $sum_exp;
+    }
+    
+    return $probs;
+}
+
+// N-outcome binary search for shares from budget
+function lmsr_compute_shares_from_budget_n($q_values, $b, $outcome_id, $budget, $fee_bps) {
+    if ($budget <= 0 || $outcome_id < 0 || $outcome_id >= count($q_values)) return 0;
+    
+    // Find upper bound
+    $max_delta = SCALE;
+    while ($max_delta < $budget * 10) {
+        $cost = lmsr_buy_cost_n($q_values, $b, $outcome_id, $max_delta);
+        $fee = ($cost * $fee_bps) / 10000;
+        if ($cost + $fee > $budget) break;
+        $max_delta *= 2;
+    }
+    
+    // Binary search
+    $lo = 0;
+    $hi = $max_delta;
+    
+    for ($i = 0; $i < 32; $i++) {
+        $mid = intval(($lo + $hi) / 2);
+        $cost = lmsr_buy_cost_n($q_values, $b, $outcome_id, $mid);
+        $fee = ($cost * $fee_bps) / 10000;
+        
+        if ($cost + $fee <= $budget) {
+            $lo = $mid;
+        } else {
+            $hi = $mid;
+        }
+    }
+    
+    return $lo;
+}
+
 try {
     // Get parameters
     $market_id = intval($_GET['market_id'] ?? $_POST['market_id'] ?? 0);
@@ -234,101 +449,179 @@ try {
         exit;
     }
     
-    $outcome_is_yes = ($outcome === 'yes' || $outcome === '0');
-    
     // Fetch actual market state from blockchain
+    $marketState = null;
     try {
         $marketState = fetch_market_state($market_id);
-        $q_yes = $marketState['q_yes'];
-        $q_no = $marketState['q_no'];
-        $b = $marketState['b'];
-        $fee_bps = $marketState['fee_bps'];
     } catch (Exception $e) {
-        // Log error and fall back to defaults for fresh markets
         logApiRequest('lmsr_quote_market_fetch_error', 'GET', [
             'market_id' => $market_id,
             'error' => $e->getMessage()
         ]);
         
         // Use defaults for fresh/unfound markets
-        $q_yes = 0;
-        $q_no = 0;
-        $b = 500 * SCALE;
-        $fee_bps = 100;
+        $marketState = [
+            'q_yes' => 0,
+            'q_no' => 0,
+            'b' => 500 * SCALE,
+            'fee_bps' => 100,
+            'version' => 2,
+            'outcomes_count' => 2
+        ];
     }
+    
+    $b = $marketState['b'];
+    $fee_bps = $marketState['fee_bps'];
+    $version = $marketState['version'];
     
     // Convert spend amount to internal fixed-point units
-    // USDTEST has 6 decimals, so spend_amount is already in USDTEST units
-    // We multiply by SCALE for internal fixed-point representation
     $budget_micro = intval($spend_amount * SCALE);
     
-    // Compute shares
-    $delta_q = lmsr_compute_shares_from_budget($q_yes, $q_no, $b, $outcome_is_yes, $budget_micro, $fee_bps);
-    
-    // Compute actual cost and fee
-    $raw_cost = lmsr_buy_cost($q_yes, $q_no, $b, $outcome_is_yes, $delta_q);
-    $fee = ($raw_cost * $fee_bps) / 10000;
-    $total_charge = $raw_cost + $fee;
-    $refund = $budget_micro - $total_charge;
-    
-    // Compute new odds after purchase
-    $new_q_yes = $q_yes;
-    $new_q_no = $q_no;
-    if ($outcome_is_yes) {
-        $new_q_yes += $delta_q;
+    // Route to appropriate handler based on market version
+    if ($version == 3 && isset($marketState['outcome_states'])) {
+        // N-outcome LMSR (version 3)
+        $outcome_id = intval($outcome);
+        $outcome_states = $marketState['outcome_states'];
+        $outcomes_count = $marketState['outcomes_count'];
+        
+        // Build q_values array from outcome states
+        $q_values = array_fill(0, $outcomes_count, 0);
+        foreach ($outcome_states as $state) {
+            $q_values[$state['outcome_id']] = $state['q'];
+        }
+        
+        // Validate outcome_id
+        if ($outcome_id < 0 || $outcome_id >= $outcomes_count) {
+            http_response_code(400);
+            echo json_encode(['error' => "Invalid outcome_id: $outcome_id (market has $outcomes_count outcomes)"]);
+            exit;
+        }
+        
+        // Compute shares
+        $delta_q = lmsr_compute_shares_from_budget_n($q_values, $b, $outcome_id, $budget_micro, $fee_bps);
+        
+        // Compute actual cost and fee
+        $raw_cost = lmsr_buy_cost_n($q_values, $b, $outcome_id, $delta_q);
+        $fee = ($raw_cost * $fee_bps) / 10000;
+        $total_charge = $raw_cost + $fee;
+        $refund = $budget_micro - $total_charge;
+        
+        // Compute current and new probabilities
+        $current_probs = lmsr_probabilities_n($q_values, $b);
+        
+        $new_q = $q_values;
+        $new_q[$outcome_id] += $delta_q;
+        $new_probs = lmsr_probabilities_n($new_q, $b);
+        
+        // Convert to display values
+        $shares_display = $delta_q / SCALE;
+        $cost_display = $raw_cost / SCALE;
+        $fee_display = $fee / SCALE;
+        $total_display = $total_charge / SCALE;
+        $refund_display = max(0, $refund / SCALE);
+        $avg_price_display = $delta_q > 0 ? ($total_charge / $delta_q) : 0;
+        $min_shares = intval($delta_q * 0.98 / SCALE);
+        
+        // Build odds arrays
+        $current_odds = [];
+        $new_odds = [];
+        for ($i = 0; $i < $outcomes_count; $i++) {
+            $current_odds[$i] = $current_probs[$i] / SCALE * 100;
+            $new_odds[$i] = $new_probs[$i] / SCALE * 100;
+        }
+        
+        logApiRequest('lmsr_quote_n', 'GET', [
+            'market_id' => $market_id,
+            'outcome_id' => $outcome_id,
+            'spend_amount' => $spend_amount,
+            'shares' => $shares_display
+        ]);
+        
+        echo json_encode([
+            'market_id' => $market_id,
+            'version' => 3,
+            'outcome_id' => $outcome_id,
+            'spend_amount' => $spend_amount,
+            'estimated_shares' => $shares_display,
+            'raw_cost' => $cost_display,
+            'fee' => $fee_display,
+            'total_charge' => $total_display,
+            'refund' => $refund_display,
+            'avg_price_per_share' => $avg_price_display,
+            'min_shares_for_slippage' => $min_shares,
+            'current_odds' => $current_odds,
+            'new_odds_after_purchase' => $new_odds,
+            'memo_format' => "buy:{$market_id}:{$outcome_id}:{$min_shares}"
+        ]);
     } else {
-        $new_q_no += $delta_q;
+        // Binary LMSR (version 2)
+        $outcome_is_yes = ($outcome === 'yes' || $outcome === '0');
+        $q_yes = $marketState['q_yes'];
+        $q_no = $marketState['q_no'];
+        
+        // Compute shares
+        $delta_q = lmsr_compute_shares_from_budget($q_yes, $q_no, $b, $outcome_is_yes, $budget_micro, $fee_bps);
+        
+        // Compute actual cost and fee
+        $raw_cost = lmsr_buy_cost($q_yes, $q_no, $b, $outcome_is_yes, $delta_q);
+        $fee = ($raw_cost * $fee_bps) / 10000;
+        $total_charge = $raw_cost + $fee;
+        $refund = $budget_micro - $total_charge;
+        
+        // Compute new odds after purchase
+        $new_q_yes = $q_yes;
+        $new_q_no = $q_no;
+        if ($outcome_is_yes) {
+            $new_q_yes += $delta_q;
+        } else {
+            $new_q_no += $delta_q;
+        }
+        $new_prob_yes = lmsr_probability_yes($new_q_yes, $new_q_no, $b);
+        $new_prob_no = SCALE - $new_prob_yes;
+        
+        // Current odds
+        $current_prob_yes = lmsr_probability_yes($q_yes, $q_no, $b);
+        $current_prob_no = SCALE - $current_prob_yes;
+        
+        // Convert to display values
+        $shares_display = $delta_q / SCALE;
+        $cost_display = $raw_cost / SCALE;
+        $fee_display = $fee / SCALE;
+        $total_display = $total_charge / SCALE;
+        $refund_display = max(0, $refund / SCALE);
+        $avg_price_display = $delta_q > 0 ? ($total_charge / $delta_q) : 0;
+        $min_shares = intval($delta_q * 0.98 / SCALE);
+        
+        logApiRequest('lmsr_quote', 'GET', [
+            'market_id' => $market_id,
+            'outcome' => $outcome,
+            'spend_amount' => $spend_amount,
+            'shares' => $shares_display
+        ]);
+        
+        echo json_encode([
+            'market_id' => $market_id,
+            'version' => 2,
+            'outcome' => $outcome_is_yes ? 'yes' : 'no',
+            'spend_amount' => $spend_amount,
+            'estimated_shares' => $shares_display,
+            'raw_cost' => $cost_display,
+            'fee' => $fee_display,
+            'total_charge' => $total_display,
+            'refund' => $refund_display,
+            'avg_price_per_share' => $avg_price_display,
+            'min_shares_for_slippage' => $min_shares,
+            'current_odds' => [
+                'yes' => $current_prob_yes / SCALE * 100,
+                'no' => $current_prob_no / SCALE * 100
+            ],
+            'new_odds_after_purchase' => [
+                'yes' => $new_prob_yes / SCALE * 100,
+                'no' => $new_prob_no / SCALE * 100
+            ],
+            'memo_format' => "buy:{$market_id}:{$outcome}:{$min_shares}"
+        ]);
     }
-    $new_prob_yes = lmsr_probability_yes($new_q_yes, $new_q_no, $b);
-    $new_prob_no = SCALE - $new_prob_yes;
-    
-    // Current odds
-    $current_prob_yes = lmsr_probability_yes($q_yes, $q_no, $b);
-    $current_prob_no = SCALE - $current_prob_yes;
-    
-    // Convert to display values
-    $shares_display = $delta_q / SCALE;
-    $cost_display = $raw_cost / SCALE;
-    $fee_display = $fee / SCALE;
-    $total_display = $total_charge / SCALE;
-    $refund_display = max(0, $refund / SCALE);
-    
-    // Compute average price per share
-    // total_charge and delta_q are both in SCALE units, so the ratio gives us the price in SCALE units
-    // We need to convert to display units (divide by SCALE once, not twice)
-    $avg_price_display = $delta_q > 0 ? ($total_charge / $delta_q) : 0;
-    
-    // Suggested min_shares for slippage protection (2% tolerance)
-    $min_shares = intval($delta_q * 0.98 / SCALE);
-    
-    logApiRequest('lmsr_quote', 'GET', [
-        'market_id' => $market_id,
-        'outcome' => $outcome,
-        'spend_amount' => $spend_amount,
-        'shares' => $shares_display
-    ]);
-    
-    echo json_encode([
-        'market_id' => $market_id,
-        'outcome' => $outcome_is_yes ? 'yes' : 'no',
-        'spend_amount' => $spend_amount,
-        'estimated_shares' => $shares_display,
-        'raw_cost' => $cost_display,
-        'fee' => $fee_display,
-        'total_charge' => $total_display,
-        'refund' => $refund_display,
-        'avg_price_per_share' => $avg_price_display,
-        'min_shares_for_slippage' => $min_shares,
-        'current_odds' => [
-            'yes' => $current_prob_yes / SCALE * 100,
-            'no' => $current_prob_no / SCALE * 100
-        ],
-        'new_odds_after_purchase' => [
-            'yes' => $new_prob_yes / SCALE * 100,
-            'no' => $new_prob_no / SCALE * 100
-        ],
-        'memo_format' => "buy:{$market_id}:{$outcome}:{$min_shares}"
-    ]);
     
 } catch (Exception $e) {
     logApiRequest('lmsr_quote', 'GET', ['error' => $e->getMessage()]);
