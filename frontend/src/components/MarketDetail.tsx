@@ -511,22 +511,24 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     const outcome = outcomes.find(o => o.outcome_id === outcomeId);
     if (!outcome) return;
     
-    // For binary markets (Yes/No outcomes), normalize the side based on which row was clicked
-    // "Buy No" on the "No" row should bet AGAINST "No" (i.e., buy YES shares)
-    // "Buy Yes" on the "No" row should bet FOR "No" (i.e., buy NO shares)
-    let normalizedSide: 'yes' | 'no' = side;
-    const outcomeName = outcome.name.trim().toLowerCase();
+    setBuyModalOutcome(outcome);
+    setBuyModalSide(side);
+    setBuyQuantity('');
+    setLmsrQuote(null);
+    setShowBuyModal(true);
+  };
+
+  // For binary markets with single-button mode, clicking "Buy" on a row buys shares for that outcome
+  const handleBuyForOutcome = (outcomeId: number) => {
+    const outcome = outcomes.find(o => o.outcome_id === outcomeId);
+    if (!outcome) return;
     
-    if (outcomeName === 'no') {
-      // On the "No" row, invert the button meaning
-      // "Buy Yes" on No row = buy NO shares (betting FOR the No outcome)
-      // "Buy No" on No row = buy YES shares (betting AGAINST the No outcome)
-      normalizedSide = side === 'yes' ? 'no' : 'yes';
-    }
-    // For "Yes" row or other outcomes, keep the side as-is
+    // Determine which side based on the outcome name
+    const outcomeName = outcome.name.trim().toLowerCase();
+    const side: 'yes' | 'no' = outcomeName === 'no' ? 'no' : 'yes';
     
     setBuyModalOutcome(outcome);
-    setBuyModalSide(normalizedSide);
+    setBuyModalSide(side);
     setBuyQuantity('');
     setLmsrQuote(null);
     setShowBuyModal(true);
@@ -1249,17 +1251,23 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
           </div>
           {outcomes
             .sort((a, b) => a.display_order - b.display_order)
-            .map(outcome => (
-              <OutcomeRow
-                key={outcome.outcome_id}
-                outcome={outcome}
-                stats={outcomeStats[outcome.outcome_id] || {}}
-                selected={selectedOutcomeId === outcome.outcome_id}
-                disabled={!session || market.resolved || isExpired}
-                onClickYes={() => handleOutcomeButtonClick(outcome.outcome_id, 'yes')}
-                onClickNo={() => handleOutcomeButtonClick(outcome.outcome_id, 'no')}
-              />
-            ))}
+            .map(outcome => {
+              // Use single-button mode for binary markets (exactly 2 outcomes)
+              const isBinaryMarket = outcomes.length === 2;
+              return (
+                <OutcomeRow
+                  key={outcome.outcome_id}
+                  outcome={outcome}
+                  stats={outcomeStats[outcome.outcome_id] || {}}
+                  selected={selectedOutcomeId === outcome.outcome_id}
+                  disabled={!session || market.resolved || isExpired}
+                  onClickYes={() => handleOutcomeButtonClick(outcome.outcome_id, 'yes')}
+                  onClickNo={() => handleOutcomeButtonClick(outcome.outcome_id, 'no')}
+                  singleButtonMode={isBinaryMarket}
+                  onClickBuy={() => handleBuyForOutcome(outcome.outcome_id)}
+                />
+              );
+            })}
           <div className="outcomes-helper-text">
             <p><strong>Buy</strong> - Buy YES or NO shares. Odds shift in real time as live bets are made.</p>
             <p><strong>Sell</strong> - You can sell at any time if you own shares, or wait until the market resolves.</p>

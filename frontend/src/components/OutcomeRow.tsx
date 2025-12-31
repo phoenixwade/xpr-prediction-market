@@ -20,6 +20,10 @@ interface OutcomeRowProps {
   disabled: boolean;
   onClickYes: () => void;
   onClickNo: () => void;
+  /** For binary markets, show only a single "Buy" button instead of Yes/No buttons */
+  singleButtonMode?: boolean;
+  /** Handler for single button mode - buys shares for this outcome */
+  onClickBuy?: () => void;
 }
 
 const OutcomeRow: React.FC<OutcomeRowProps> = ({
@@ -29,6 +33,8 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
   disabled,
   onClickYes,
   onClickNo,
+  singleButtonMode = false,
+  onClickBuy,
 }) => {
   const yesPrice = stats.bestAsk ?? stats.bestBid ?? 0;
 
@@ -64,20 +70,32 @@ const OutcomeRow: React.FC<OutcomeRowProps> = ({
       </div>
       
       <div className="outcome-actions">
-        <button
-          className="outcome-btn yes-btn"
-          onClick={onClickYes}
-          disabled={disabled}
-        >
-          Buy Yes
-        </button>
-        <button
-          className="outcome-btn no-btn"
-          onClick={onClickNo}
-          disabled={disabled}
-        >
-          Buy No
-        </button>
+        {singleButtonMode ? (
+          <button
+            className="outcome-btn buy-btn"
+            onClick={onClickBuy}
+            disabled={disabled}
+          >
+            Buy
+          </button>
+        ) : (
+          <>
+            <button
+              className="outcome-btn yes-btn"
+              onClick={onClickYes}
+              disabled={disabled}
+            >
+              Buy Yes
+            </button>
+            <button
+              className="outcome-btn no-btn"
+              onClick={onClickNo}
+              disabled={disabled}
+            >
+              Buy No
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
