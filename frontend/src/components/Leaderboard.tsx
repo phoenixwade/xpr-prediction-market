@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -19,11 +19,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ timeframe }) => {
   const [sortBy, setSortBy] = useState<'volume' | 'trades' | 'winRate' | 'profitLoss'>('volume');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchLeaderboard();
-  }, [timeframe, sortBy]);
-
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL || ''}/api/leaderboard.php?timeframe=${timeframe}&sort=${sortBy}`
@@ -37,7 +33,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ timeframe }) => {
       console.error('Error fetching leaderboard:', error);
       setLoading(false);
     }
-  };
+  }, [timeframe, sortBy]);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) return '🥇';
