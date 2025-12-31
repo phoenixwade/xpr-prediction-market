@@ -523,8 +523,8 @@ export class PredictionMarketContract extends Contract {
     // For version=3 markets, initialize OutcomeStateTable with q=0 for each outcome
     if (marketVersion == 3) {
       const outcomeStateTable = new TableStore<OutcomeStateTable>(this.receiver, Name.fromU64(newId));
-      for (let i = 0; i < outcomesCount; i++) {
-        const outcomeState = new OutcomeStateTable(i as u8, 0, 0);
+      for (let i: u8 = 0; i < outcomesCount; i++) {
+        const outcomeState = new OutcomeStateTable(i, 0, 0);
         outcomeStateTable.set(outcomeState, this.receiver);
       }
     }
