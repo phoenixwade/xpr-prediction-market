@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { normalizeTimestamp } from '../utils/dateUtils';
 
 interface Market {
@@ -22,11 +22,7 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
   const [evidenceUrl, setEvidenceUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetchUnresolvedMarkets();
-  }, []);
-
-  const fetchUnresolvedMarkets = async () => {
+  const fetchUnresolvedMarkets = useCallback(async () => {
     try {
       const { JsonRpc } = await import('@proton/js');
       const rpc = new JsonRpc([process.env.REACT_APP_RPC_URL || 'https://proton.eosusa.io']);
@@ -66,7 +62,11 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
     } catch (error) {
       console.error('Error fetching unresolved markets:', error);
     }
-  };
+  }, [contractName]);
+
+  useEffect(() => {
+    fetchUnresolvedMarkets();
+  }, [fetchUnresolvedMarkets]);
 
     const handleResolve = async () => {
       if (!selectedMarket || selectedOutcome === null) {

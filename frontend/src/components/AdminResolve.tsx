@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { normalizeTimestamp } from '../utils/dateUtils';
 
 interface Market {
@@ -33,11 +33,7 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
   const [loading, setLoading] = useState(false);
   const [fetchingMarkets, setFetchingMarkets] = useState(true);
 
-  useEffect(() => {
-    fetchAllMarkets();
-  }, []);
-
-  const fetchAllMarkets = async () => {
+  const fetchAllMarkets = useCallback(async () => {
     setFetchingMarkets(true);
     try {
       const { JsonRpc } = await import('@proton/js');
@@ -76,7 +72,11 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
     } finally {
       setFetchingMarkets(false);
     }
-  };
+  }, [contractName]);
+
+  useEffect(() => {
+    fetchAllMarkets();
+  }, [fetchAllMarkets]);
 
   const handleForceResolve = async () => {
     if (!selectedMarket || selectedOutcome === null) {

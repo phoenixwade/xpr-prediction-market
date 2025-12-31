@@ -4,22 +4,6 @@ import MarketTemplates from './MarketTemplates';
 import ScheduledMarkets from './ScheduledMarkets';
 import ResolutionTools from './ResolutionTools';
 
-interface Market {
-  id: number;
-  admin: string;
-  question: string;
-  category: string;
-  resolved: boolean;
-  expireTime: number;
-  outcomes_count: number;
-}
-
-interface Outcome {
-  outcome_id: number;
-  name: string;
-  display_order: number;
-}
-
 interface ProfitRound {
   round_id: number;
   timestamp: number;
@@ -55,8 +39,6 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) => {
   const [activeTab, setActiveTab] = useState<'income' | 'create' | 'edit' | 'resolve' | 'approve' | 'schedule'>('income');
   
-  const currentUser = session?.auth?.actor?.toString() || '';
-  
   const [question, setQuestion] = useState('');
   const [category, setCategory] = useState('');
   const [expireDate, setExpireDate] = useState('');
@@ -71,13 +53,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   const [resolutionCriteria, setResolutionCriteria] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
-  const [markets, setMarkets] = useState<Market[]>([]);
-  const [loadingMarkets, setLoadingMarkets] = useState(false);
-  const [resolveMarketId, setResolveMarketId] = useState('');
-  const [resolveOutcomeId, setResolveOutcomeId] = useState<number>(0);
-  const [marketOutcomes, setMarketOutcomes] = useState<Outcome[]>([]);
-  const [loadingOutcomes, setLoadingOutcomes] = useState(false);
-  const [resolveLoading, setResolveLoading] = useState(false);
 
   const [pendingMarkets, setPendingMarkets] = useState<ScheduledMarket[]>([]);
   const [loadingPending, setLoadingPending] = useState(false);
@@ -417,61 +392,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
     }
   };
 
-  const fetchMarkets = useCallback(async () => {
-    if (!session) return;
-    
-    setLoadingMarkets(true);
-    try {
-      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
-      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
-      
-      const result = await rpc.get_table_rows({
-        json: true,
-        code: contractName,
-        scope: contractName,
-        table: 'markets3',
-        limit: 1000,
-      });
-
-      const nowSec = Math.floor(Date.now() / 1000);
-
-      const allMarkets: Market[] = result.rows.map((row: any) => {
-        let expireSec = 0;
-        if (typeof row.expireTime === 'number') {
-          expireSec = row.expireTime;
-        } else if (typeof row.expire === 'number') {
-          expireSec = row.expire;
-        } else if (typeof row.expire === 'string') {
-          expireSec = Math.floor(new Date(row.expire + 'Z').getTime() / 1000);
-        } else if (row.expire?.seconds) {
-          expireSec = row.expire.seconds;
-        } else if (row.expire?.sec_since_epoch) {
-          expireSec = row.expire.sec_since_epoch;
-        }
-
-        return {
-          id: row.id,
-          admin: row.admin || null,
-          question: row.question,
-          category: row.category,
-          resolved: row.resolved || false,
-          expireTime: expireSec,
-          outcomes_count: row.outcomes_count || 2,
-        };
-      });
-
-      const eligibleMarkets = allMarkets.filter(
-        market => !market.resolved && market.expireTime > 0 && market.expireTime <= nowSec
-      );
-
-      setMarkets(eligibleMarkets);
-    } catch (error) {
-      console.error('Error fetching markets:', error);
-    } finally {
-      setLoadingMarkets(false);
-    }
-  }, [session]);
-
   // Fetch pending markets from off-chain scheduled_markets API
   // Markets with status "pending" or "ready" are awaiting admin approval
   const fetchPendingMarkets = useCallback(async () => {
@@ -505,94 +425,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ session, xpredBalance = 0 }) =>
   }, [session]);
 
       useEffect(() => {
-        if (session && activeTab === 'resolve') {
-          fetchMarkets();
-        } else if (session && activeTab === 'approve') {
+        if (session && activeTab === 'approve') {
           fetchPendingMarkets();
         }
-      }, [session, activeTab, fetchMarkets, fetchPendingMarkets]);
-
-  const fetchMarketOutcomes = async (marketId: string) => {
-    if (!marketId) return;
-    
-    setLoadingOutcomes(true);
-    try {
-      const rpc = new JsonRpc(process.env.REACT_APP_RPC_ENDPOINT || process.env.REACT_APP_PROTON_ENDPOINT || 'https://proton.greymass.com');
-      const contractName = process.env.REACT_APP_CONTRACT_NAME || 'prediction';
-      
-      const result = await rpc.get_table_rows({
-        json: true,
-        code: contractName,
-        scope: marketId,
-        table: 'outcomes',
-        limit: 100,
-      });
-
-      const outcomes: Outcome[] = result.rows.map((row: any) => ({
-        outcome_id: row.outcome_id,
-        name: row.name,
-        display_order: row.display_order,
-      }));
-
-      outcomes.sort((a, b) => a.display_order - b.display_order);
-      setMarketOutcomes(outcomes);
-      
-      if (outcomes.length > 0) {
-        setResolveOutcomeId(outcomes[0].outcome_id);
-      }
-    } catch (error) {
-      console.error('Error fetching outcomes:', error);
-      setMarketOutcomes([]);
-    } finally {
-      setLoadingOutcomes(false);
-    }
-  };
-
-  const handleMarketSelect = (marketId: string) => {
-    setResolveMarketId(marketId);
-    if (marketId) {
-      fetchMarketOutcomes(marketId);
-    } else {
-      setMarketOutcomes([]);
-    }
-  };
-
-  const handleResolveMarket = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!session || !resolveMarketId) {
-      showToast('Please select a market', 'error');
-      return;
-    }
-
-    setResolveLoading(true);
-    try {
-      await session.transact({
-        actions: [{
-          account: process.env.REACT_APP_CONTRACT_NAME || 'prediction',
-          name: 'resolve',
-          authorization: [{
-            actor: session.auth.actor,
-            permission: session.auth.permission,
-          }],
-          data: {
-            admin: session.auth.actor,
-            market_id: parseInt(resolveMarketId),
-            winning_outcome_id: resolveOutcomeId,
-          },
-        }],
-      });
-
-      showToast('Market resolved successfully!');
-      setResolveMarketId('');
-      setMarketOutcomes([]);
-      fetchMarkets();
-    } catch (error) {
-      console.error('Error resolving market:', error);
-      showToast('Failed to resolve market: ' + error, 'error');
-    } finally {
-      setResolveLoading(false);
-    }
-  };
+      }, [session, activeTab, fetchPendingMarkets]);
 
   // Approve a pending market: create it on-chain, then update the scheduled market status
   const handleApproveMarket = async (scheduledMarket: ScheduledMarket) => {
