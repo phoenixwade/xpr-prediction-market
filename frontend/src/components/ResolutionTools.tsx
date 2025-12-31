@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { normalizeTimestamp } from '../utils/dateUtils';
 
 interface Market {
   id: number;
   question: string;
   outcomes: Array<{ outcome_id: number; name: string }>;
   resolved: boolean;
-  close_time: number;
+  expire: number;
 }
 
 interface ResolutionToolsProps {
@@ -38,8 +39,11 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
         reverse: true
       });
 
+      // Filter for unresolved markets that have expired
+      // Use normalizeTimestamp to handle various timestamp formats from the blockchain
+      const now = Math.floor(Date.now() / 1000);
       const unresolvedMarkets = result.rows.filter((m: any) => 
-        !m.resolved && m.close_time < Math.floor(Date.now() / 1000)
+        !m.resolved && normalizeTimestamp(m.expire) <= now
       );
 
       const marketsWithOutcomes = await Promise.all(
@@ -52,6 +56,7 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
           });
           return {
             ...market,
+            expire: normalizeTimestamp(market.expire),
             outcomes: outcomesResult.rows
           };
         })
@@ -137,7 +142,7 @@ const ResolutionTools: React.FC<ResolutionToolsProps> = ({ session, contractName
               >
                 <div className="market-question">{market.question}</div>
                 <div className="market-meta">
-                  Market #{market.id} • Closed {new Date(market.close_time * 1000).toLocaleDateString()}
+                  Market #{market.id} • Closed {new Date(market.expire * 1000).toLocaleDateString()}
                 </div>
               </div>
             ))}

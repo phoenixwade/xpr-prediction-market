@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { normalizeTimestamp } from '../utils/dateUtils';
 
 interface Market {
   id: number;
   question: string;
   outcomes: Array<{ outcome_id: number; name: string }>;
   resolved: boolean;
-  close_time: number;
+  expire: number;
 }
 
 interface AdminResolveProps {
@@ -63,6 +64,7 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
           });
           return {
             ...market,
+            expire: normalizeTimestamp(market.expire),
             outcomes: outcomesResult.rows
           };
         })
@@ -123,8 +125,8 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
     return date.toLocaleString();
   };
 
-  const isMarketClosed = (closeTime: number) => {
-    return closeTime < Math.floor(Date.now() / 1000);
+  const isMarketClosed = (expireTime: number) => {
+    return expireTime <= Math.floor(Date.now() / 1000);
   };
 
   return (
@@ -162,12 +164,12 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
                 </div>
                 <div className="market-meta" style={{ fontSize: '0.85em', color: '#9ca3af' }}>
                   Market #{market.id} | 
-                  Close: {formatDate(market.close_time)} |
+                  Expires: {formatDate(market.expire)} |
                   <span style={{ 
-                    color: isMarketClosed(market.close_time) ? '#10b981' : '#f59e0b',
+                    color: isMarketClosed(market.expire) ? '#10b981' : '#f59e0b',
                     marginLeft: '4px'
                   }}>
-                    {isMarketClosed(market.close_time) ? 'CLOSED' : 'STILL OPEN'}
+                    {isMarketClosed(market.expire) ? 'CLOSED' : 'STILL OPEN'}
                   </span>
                 </div>
               </div>
@@ -186,7 +188,7 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
         }}>
           <h4>Force Resolve: {selectedMarket.question}</h4>
           
-          {!isMarketClosed(selectedMarket.close_time) && (
+          {!isMarketClosed(selectedMarket.expire) && (
             <div style={{ 
               backgroundColor: 'rgba(245, 158, 11, 0.2)', 
               padding: '10px', 
@@ -194,7 +196,7 @@ const AdminResolve: React.FC<AdminResolveProps> = ({ session, contractName }) =>
               marginBottom: '15px',
               color: '#f59e0b'
             }}>
-              Warning: This market has not closed yet (closes {formatDate(selectedMarket.close_time)})
+              Warning: This market has not closed yet (expires {formatDate(selectedMarket.expire)})
             </div>
           )}
           
