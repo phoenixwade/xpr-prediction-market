@@ -453,12 +453,36 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     const stats: Record<number, { bestBid?: number; bestAsk?: number; volume?: number }> = {};
     const SCALE = 1_000_000;
     
-    // For LMSR markets (version >= 2), calculate prices from q_yes, q_no, and b
-    // Note: The contract only stores q_yes/q_no (binary), so for multi-outcome markets:
-    // - outcome_id 0 gets pYes (probability of first outcome)
-    // - all other outcomes get pNo (probability of "not first outcome")
-    // This reflects actual betting activity even though it's not true multi-outcome LMSR
-    if (market && market.version >= 2 && market.b && market.b > 0) {
+    // For N-outcome LMSR markets (version == 3), calculate prices using true N-outcome LMSR
+    // Each outcome has its own q value stored in outcome_states
+    if (market && market.version === 3 && market.b && market.b > 0 && (market as any).outcome_states) {
+      const b = market.b / SCALE;
+      const outcomeStates = (market as any).outcome_states as Array<{ outcome_id: number; q: number; volume: number }>;
+      
+      // Get q values for all outcomes
+      const qValues = outcomes.map(outcome => {
+        const state = outcomeStates.find(s => s.outcome_id === outcome.outcome_id);
+        return (state?.q || 0) / SCALE;
+      });
+      
+      // N-outcome LMSR probability using log-sum-exp trick for numerical stability
+      // P(i) = exp(q_i/b) / sum(exp(q_j/b))
+      const maxQ = Math.max(...qValues.map(q => q / b));
+      const expValues = qValues.map(q => Math.exp(q / b - maxQ));
+      const sumExp = expValues.reduce((sum, exp) => sum + exp, 0);
+      
+      outcomes.forEach((outcome, idx) => {
+        const price = expValues[idx] / sumExp;
+        const state = outcomeStates.find(s => s.outcome_id === outcome.outcome_id);
+        const volume = (state?.volume || 0) / SCALE;
+        stats[outcome.outcome_id] = {
+          bestBid: price,
+          bestAsk: price,
+          volume: volume > 0 ? volume : undefined,
+        };
+      });
+    } else if (market && market.version === 2 && market.b && market.b > 0) {
+      // Binary LMSR markets (version == 2) - uses q_yes/q_no
       const b = market.b / SCALE;
       const qYes = (market.q_yes || 0) / SCALE;
       const qNo = (market.q_no || 0) / SCALE;
@@ -472,8 +496,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       const pNo = expNo / total;
       
       // Set prices based on LMSR probabilities
-      // outcome_id 0 = pYes, all others = pNo
-      // Per-outcome volume is now tracked in the contract (volume_yes, volume_no)
+      // outcome_id 0 = pYes, outcome_id 1 = pNo
       outcomes.forEach(outcome => {
         const price = outcome.outcome_id === 0 ? pYes : pNo;
         // Get per-outcome volume from contract (in micro units, divide by SCALE)
