@@ -294,7 +294,9 @@ try {
     $refund_display = max(0, $refund / SCALE);
     
     // Compute average price per share
-    $avg_price = $delta_q > 0 ? $total_charge / $delta_q : 0;
+    // total_charge and delta_q are both in SCALE units, so the ratio gives us the price in SCALE units
+    // We need to convert to display units (divide by SCALE once, not twice)
+    $avg_price_display = $delta_q > 0 ? ($total_charge / $delta_q) : 0;
     
     // Suggested min_shares for slippage protection (2% tolerance)
     $min_shares = intval($delta_q * 0.98 / SCALE);
@@ -315,7 +317,7 @@ try {
         'fee' => $fee_display,
         'total_charge' => $total_display,
         'refund' => $refund_display,
-        'avg_price_per_share' => $avg_price / SCALE,
+        'avg_price_per_share' => $avg_price_display,
         'min_shares_for_slippage' => $min_shares,
         'current_odds' => [
             'yes' => $current_prob_yes / SCALE * 100,

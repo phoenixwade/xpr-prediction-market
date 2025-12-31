@@ -826,8 +826,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               <p className="buy-modal-description">
                 You are buying <strong>{buyModalSide === 'yes' ? 'YES' : 'NO'}</strong> shares for "{buyModalOutcome.name}".
                 {buyModalSide === 'yes' 
-                  ? ' If this outcome wins, each share pays 1 USDTEST.'
-                  : ` If this outcome loses, you receive ${lmsrQuote?.estimated_shares?.toFixed(2) || 'your shares in'} USDTEST.`}
+                  ? ' If this outcome wins, you receive 1 USDTEST per share.'
+                  : ' If this outcome does NOT happen, you receive 1 USDTEST per share.'}
               </p>
               {buyModalSide === 'no' && outcomes.length === 2 && (
                 <p className="buy-modal-note" style={{ fontSize: '0.85em', color: '#aaa', marginTop: '4px' }}>
@@ -877,7 +877,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                       <strong>Yes: {lmsrQuote.new_odds_after_purchase?.yes?.toFixed(1)}% / No: {lmsrQuote.new_odds_after_purchase?.no?.toFixed(1)}%</strong>
                     </div>
                     <p className="buy-modal-payout">
-                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome loses'}, your estimated payout is up to <strong>{lmsrQuote.estimated_shares?.toFixed(2)} USDTEST</strong>.
+                      If {buyModalSide === 'yes' ? 'this outcome wins' : 'this outcome does NOT happen'}, your estimated payout is up to <strong>{lmsrQuote.estimated_shares?.toFixed(2)} USDTEST</strong>.
                       <span className="payout-disclaimer"> Final payout may be adjusted based on total pool at resolution.</span>
                     </p>
                   </div>
