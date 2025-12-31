@@ -30,6 +30,13 @@ echo_error() {
 build_contracts() {
     echo_info "Building contracts..."
     cd "$SCRIPT_DIR"
+    
+    # Install dependencies if node_modules doesn't exist or package.json is newer
+    if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+        echo_info "Installing dependencies..."
+        npm install
+    fi
+    
     npm run build:all
     echo_info "Build complete!"
 }
