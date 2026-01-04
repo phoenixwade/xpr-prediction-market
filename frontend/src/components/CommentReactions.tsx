@@ -1,51 +1,41 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 
-interface ReactionData {
+export interface ReactionData {
   emoji: string;
   count: number;
   users: string[];
 }
 
-interface ReactionsResponse {
-  success: boolean;
-  reactions: Record<string, ReactionData>;
-  total: number;
-  user_reaction: string | null;
-  reaction_types: Record<string, string>;
-}
-
-interface MarketReactionsProps {
+interface CommentReactionsProps {
+  commentId: number;
   marketId: number;
   session: any;
+  reactions?: Record<string, ReactionData>;
+  userReaction?: string | null;
+  onReactionChange?: () => void;
 }
 
-const REACTION_ORDER = ['like', 'love', 'wow', 'sad', 'angry', 'fire'];
+export const REACTION_ORDER = ['like', 'love', 'wow', 'sad', 'angry', 'fire'];
 
-const MarketReactions: React.FC<MarketReactionsProps> = ({ marketId, session }) => {
-  const [reactions, setReactions] = useState<Record<string, ReactionData>>({});
-  const [userReaction, setUserReaction] = useState<string | null>(null);
+export const DEFAULT_REACTIONS: Record<string, ReactionData> = {
+  like: { emoji: '👍', count: 0, users: [] },
+  love: { emoji: '❤️', count: 0, users: [] },
+  sad: { emoji: '😢', count: 0, users: [] },
+  angry: { emoji: '😠', count: 0, users: [] },
+  wow: { emoji: '😮', count: 0, users: [] },
+  fire: { emoji: '💯', count: 0, users: [] },
+};
+
+const CommentReactions: React.FC<CommentReactionsProps> = ({ 
+  commentId, 
+  marketId, 
+  session, 
+  reactions = DEFAULT_REACTIONS,
+  userReaction = null,
+  onReactionChange
+}) => {
   const [loading, setLoading] = useState(false);
   const [hoveredReaction, setHoveredReaction] = useState<string | null>(null);
-
-  const fetchReactions = useCallback(async () => {
-    try {
-      const userAccount = session?.auth?.actor?.toString() || '';
-      const url = `/api/reactions.php?market_id=${marketId}${userAccount ? `&user_account=${userAccount}` : ''}`;
-      const response = await fetch(url);
-      const data: ReactionsResponse = await response.json();
-      
-      if (data.success) {
-        setReactions(data.reactions);
-        setUserReaction(data.user_reaction);
-      }
-    } catch (error) {
-      console.error('Error fetching reactions:', error);
-    }
-  }, [marketId, session]);
-
-  useEffect(() => {
-    fetchReactions();
-  }, [fetchReactions]);
 
   const handleReaction = async (reactionType: string) => {
     if (!session) {
@@ -61,6 +51,7 @@ const MarketReactions: React.FC<MarketReactionsProps> = ({ marketId, session }) 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          comment_id: commentId,
           market_id: marketId,
           user_account: session.auth.actor.toString(),
           reaction_type: reactionType,
@@ -70,8 +61,10 @@ const MarketReactions: React.FC<MarketReactionsProps> = ({ marketId, session }) 
       const data = await response.json();
       
       if (data.success) {
-        // Refresh reactions to get updated counts
-        await fetchReactions();
+        // Notify parent to refresh reactions
+        if (onReactionChange) {
+          onReactionChange();
+        }
       } else {
         console.error('Failed to update reaction:', data.error);
       }
@@ -145,4 +138,4 @@ const MarketReactions: React.FC<MarketReactionsProps> = ({ marketId, session }) 
   );
 };
 
-export default MarketReactions;
+export default CommentReactions;

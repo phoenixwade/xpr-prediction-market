@@ -3,7 +3,7 @@ import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 import OutcomeRow from './OutcomeRow';
 import MultiOutcomeChart from './MultiOutcomeChart';
-import MarketReactions from './MarketReactions';
+import CommentReactions, { ReactionData, DEFAULT_REACTIONS } from './CommentReactions';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
@@ -92,6 +92,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
         const [showLmsrSellModal, setShowLmsrSellModal] = useState(false);
         const [lmsrSellOutcome, setLmsrSellOutcome] = useState<'yes' | 'no'>('yes');
         const [lmsrSellQuantity, setLmsrSellQuantity] = useState('');
+        const [commentReactions, setCommentReactions] = useState<Record<number, Record<string, ReactionData>>>({});
+        const [userCommentReactions, setUserCommentReactions] = useState<Record<number, string | null>>({});
 
       const dismissTradingGuide = () => {
         setShowTradingGuide(false);
@@ -220,6 +222,21 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
     }
   }, [marketId]);
 
+  const fetchCommentReactions = useCallback(async () => {
+    try {
+      const userAccount = session?.auth?.actor?.toString() || '';
+      const url = `/api/reactions.php?market_id=${marketId}${userAccount ? `&user_account=${userAccount}` : ''}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.success) {
+        setCommentReactions(data.reactions_by_comment || {});
+        setUserCommentReactions(data.user_reactions || {});
+      }
+    } catch (error) {
+      console.error('Error fetching comment reactions:', error);
+    }
+  }, [marketId, session]);
+
   const fetchActivity = useCallback(async () => {
     try {
       setActivityLoading(true);
@@ -287,6 +304,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
   useEffect(() => {
     fetchMarketData();
     fetchComments();
+    fetchCommentReactions();
     fetchActivity();
     fetchMarketMeta();
     const marketInterval = setInterval(fetchMarketData, 5000);
@@ -295,7 +313,7 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
       clearInterval(marketInterval);
       clearInterval(activityInterval);
     };
-  }, [fetchMarketData, fetchComments, fetchActivity, fetchMarketMeta]);
+  }, [fetchMarketData, fetchComments, fetchCommentReactions, fetchActivity, fetchMarketMeta]);
 
   useEffect(() => {
     if (market?.category) {
@@ -1115,8 +1133,6 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               {marketMeta?.resolution_criteria || 'Resolution criteria will be provided by the market creator.'}
             </p>
           </div>
-          
-          <MarketReactions marketId={marketId} session={session} />
         </div>
       </div>
 
@@ -1544,6 +1560,14 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                             )}
                           </div>
                         )}
+                        <CommentReactions
+                          commentId={comment.id}
+                          marketId={marketId}
+                          session={session}
+                          reactions={commentReactions[comment.id] || DEFAULT_REACTIONS}
+                          userReaction={userCommentReactions[comment.id] || null}
+                          onReactionChange={fetchCommentReactions}
+                        />
                       </div>
                       
                       {comments
@@ -1569,6 +1593,14 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
                                 )}
                               </div>
                             )}
+                            <CommentReactions
+                              commentId={reply.id}
+                              marketId={marketId}
+                              session={session}
+                              reactions={commentReactions[reply.id] || DEFAULT_REACTIONS}
+                              userReaction={userCommentReactions[reply.id] || null}
+                              onReactionChange={fetchCommentReactions}
+                            />
                           </div>
                         ))
                       }
