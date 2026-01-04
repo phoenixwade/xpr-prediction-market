@@ -3,6 +3,7 @@ import { JsonRpc } from '@proton/js';
 import Tooltip from './Tooltip';
 import OutcomeRow from './OutcomeRow';
 import MultiOutcomeChart from './MultiOutcomeChart';
+import MarketReactions from './MarketReactions';
 import { normalizeTimestamp, getExpiryLabel, formatDate } from '../utils/dateUtils';
 
 interface Order {
@@ -1114,6 +1115,8 @@ const MarketDetail: React.FC<MarketDetailProps> = ({ session, marketId, onBack }
               {marketMeta?.resolution_criteria || 'Resolution criteria will be provided by the market creator.'}
             </p>
           </div>
+          
+          <MarketReactions marketId={marketId} session={session} />
         </div>
       </div>
 
